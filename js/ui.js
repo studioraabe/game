@@ -185,6 +185,12 @@ export function updateHealthBar() {
     // Clear existing segments
     healthContainer.innerHTML = '';
     
+    // NEW: Add critical class when low health
+    if (gameState.lives <= 1 && gameState.shieldCharges === 0) {
+        healthContainer.classList.add('critical-health');
+    } else {
+        healthContainer.classList.remove('critical-health');
+    }
     // Add shield class to container if ANY shields are active
     if (gameState.shieldCharges > 0) {
         healthContainer.classList.add('shield-active');

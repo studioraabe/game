@@ -6,6 +6,8 @@ import { resetPlayer } from './player.js';
 import { resetBulletBoxesFound } from '../entities.js';
 import { clearArrays, obstacleTimer, bulletBoxesFound } from '../entities.js';
 import { loadHighScore, checkAchievements, activeDropBuffs, loadAchievements, loadGlobalHighscores, updateDropBuffs } from '../systems.js';
+import { updateDamageEffects, resetDamageEffects } from '../enhanced-damage-system.js';
+
 
 // Resume Transition für Sound Overlay
 export let resumeTransition = {
@@ -136,6 +138,11 @@ export function resetGame() {
     window.bulletBoxesFound = 0;
     
     gameState.needsRedraw = true;
+	
+	 resetDamageEffects();
+    
+    gameState.needsRedraw = true;
+	
 }
 
 export function update() {
@@ -190,6 +197,8 @@ export function update() {
     window.updateEffects();
     window.updateBatProjectiles();
     updateDropBuffs();
+	
+	updateDamageEffects();
     
     const gameOver = window.checkCollisions();
     if (gameOver) {

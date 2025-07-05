@@ -6,6 +6,8 @@ import { player } from './core/player.js';
 import { gameState } from './core/gameState.js';
 import { soundManager, rollForDrop, collectDrop } from './systems.js';
 import { createDamageNumber } from './ui-enhancements.js';
+import { triggerDamageEffects } from './enhanced-damage-system.js';
+
 
 // Entity Arrays
 export const obstacles = [];
@@ -212,18 +214,21 @@ export function updateBatProjectiles(gameStateParam) {
         
         // Check collision with player
         if (!isPlayerInvulnerable(gameStateParam) &&
-            projectile.x < player.x + player.width &&
-            projectile.x + projectile.size > player.x &&
-            projectile.y < player.y + player.height &&
-            projectile.y + projectile.size > player.y) {
-            
-            // CORRUPTION EFFECT
-            gameStateParam.isCorrupted = true;
-            gameStateParam.corruptionTimer = 180;
-            gameStateParam.postDamageInvulnerability = 30;
-            
-            createBloodParticles(player.x + player.width/2, player.y + player.height/2);
-            createScorePopup(player.x + player.width/2, player.y - 20, 'BLOOD CURSED!');
+    projectile.x < player.x + player.width &&
+    projectile.x + projectile.size > player.x &&
+    projectile.y < player.y + player.height &&
+    projectile.y + projectile.size > player.y) {
+    
+    // CORRUPTION EFFECT
+    gameStateParam.isCorrupted = true;
+    gameStateParam.corruptionTimer = 180;
+    gameStateParam.postDamageInvulnerability = 30;
+    
+    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
+    createScorePopup(player.x + player.width/2, player.y - 20, 'BLOOD CURSED!');
+    
+    // NEW: Corruption damage effects
+    triggerDamageEffects(gameStateParam, 'corruption');
             
             // Impact particles
             for (let p = 0; p < 12; p++) {
@@ -1245,65 +1250,91 @@ export function checkCollisions(gameStateParam) {
 }
 
 // ✅ NEUE ZENTRALE DAMAGE-HANDLING FUNKTION
-function handleDamage(gameStateParam, damageSource, obstacleIndex = -1) {
-    // 1. SHIELD CHECK ZUERST
+
+
+
+function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCategory = 'enemy') {
+    console.log(`🎯 Damage from ${damageSource} (${damageCategory})`);
+    
+    // 1. SHIELD CHECK FIRST
     if (gameStateParam.shieldCharges > 0) {
-        // Shield absorbiert den Schaden
+        const wasLastShield = gameStateParam.shieldCharges === 1;
         gameStateParam.shieldCharges--;
         
         if (gameStateParam.shieldCharges <= 0) {
+            // Last shield broken
             gameStateParam.hasShield = false;
             gameStateParam.shieldCharges = 0;
             createScorePopup(player.x + player.width/2, player.y, 'Shield Broken!');
+            
+            // NEW: Enhanced shield break effects
+            triggerDamageEffects(gameStateParam, 'shield');
+            
         } else {
+            // Shield absorbed damage
             createScorePopup(player.x + player.width/2, player.y, 
                 `Shield: ${gameStateParam.shieldCharges} left`);
+            
+            // NEW: Shield hit effects
+            triggerDamageEffects(gameStateParam, 'shield');
         }
         
-        // Obstacle entfernen (falls es ein Enemy war)
-        if (obstacleIndex >= 0) {
+        // Remove obstacle and set invulnerability
+        if (obstacleIndex >= 0 && obstacles[obstacleIndex]) {
             obstacles.splice(obstacleIndex, 1);
         }
-        
-        // Kurze Invulnerability nach Shield-Hit
-        gameStateParam.postDamageInvulnerability = 60; // 1 Sekunde
+        gameStateParam.postDamageInvulnerability = 60;
         player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
         
-        soundManager.hit();
+        if (!wasLastShield) {
+            soundManager.hit(); // Normal shield hit sound
+        }
         
-        // ✅ WICHTIG: KEIN Leben verloren, nur Shield!
-        return false; // KEIN Game Over
+        return false; // No game over
     }
     
-    // 2. KEIN SHIELD - Leben verlieren
+    // 2. NO SHIELD - HEALTH DAMAGE
     gameStateParam.lives--;
     gameStateParam.damageThisLevel++;
     createBloodParticles(player.x + player.width/2, player.y + player.height/2);
     
-    // Invulnerability nach Schaden setzen
-    gameStateParam.postDamageInvulnerability = 120; // 2 Sekunden
+    // NEW: Enhanced health damage effects
+    triggerDamageEffects(gameStateParam, 'health');
+    
+    // Set invulnerability and reset stats
+    gameStateParam.postDamageInvulnerability = 120;
     player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
     
-    // Stats reset
     gameStateParam.bulletsHit = 0;
     gameStateParam.comboCount = 0;
     gameStateParam.comboTimer = 0;
     gameStateParam.consecutiveHits = 0;
     
-    // Obstacle entfernen (falls es ein Enemy war)
-    if (obstacleIndex >= 0) {
+    // Remove obstacle
+    if (obstacleIndex >= 0 && obstacles[obstacleIndex]) {
         obstacles.splice(obstacleIndex, 1);
     }
     
     soundManager.hit();
     
-    // Game Over check
+    // Check for game over
     if (gameStateParam.lives <= 0) {
         return true; // Game Over
     }
     
-    return false; // Schaden genommen, aber nicht tot
+    return false; // Continue playing
 }
+
+
+
+
+
+
+
+
+
+
+
 
 // ✅ KORRIGIERTE INVULNERABILITY CHECK
 export function isPlayerInvulnerable(gameStateParam) {

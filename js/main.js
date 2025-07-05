@@ -61,6 +61,19 @@ import {
 
 import { render } from './rendering/renderer.js';
 
+
+import { 
+    triggerDamageEffects, 
+    updateDamageEffects, 
+    resetDamageEffects,
+    initDamageEffects,
+    setComboGlow,
+    clearComboGlow,
+    damageEffectsDebug
+} from './enhanced-damage-system.js';
+
+
+
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -149,6 +162,12 @@ window.update = () => {
     // Enhanced displays werden nur bei Bedarf aktualisiert
 };
 
+
+
+window.triggerDamageEffects = triggerDamageEffects;
+window.updateDamageEffects = updateDamageEffects;
+window.resetDamageEffects = resetDamageEffects;
+
 // Initialize game
 function init() {
     console.log('Dungeon Runner V1.0 - Modular Edition');
@@ -158,6 +177,9 @@ function init() {
     applyTheme();
     loadGame();
     initEnvironmentElements();
+	
+	
+	initDamageEffects();
     
     // Initialize sound system
     soundManager.init();

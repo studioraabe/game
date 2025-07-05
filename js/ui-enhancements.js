@@ -4,6 +4,8 @@ import { gameState } from './core/gameState.js';
 import { activeDropBuffs } from './systems.js';
 import { DROP_INFO, DROP_CONFIG, CANVAS } from './core/constants.js';
 import { camera } from './core/camera.js';
+import { setComboGlow, clearComboGlow } from './enhanced-damage-system.js';
+
 
 // Initialize enhanced UI containers
 export function initEnhancedContainers() {
@@ -126,37 +128,26 @@ export function updateEnhancedComboDisplay() {
         const canvas = document.getElementById('gameCanvas');
         const container = document.getElementById('gameContainer');
 
-        if (canvas && gameState.comboCount >= 20) {
-            const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 10);
-            const comboColor = getComboColor(gameState.comboCount);
-            
-            // Option 1: Container-Glow (empfohlen)
-            if (container) {
-                // Stelle sicher dass overflow visible ist für den Glow
-                const currentOverflow = container.style.overflow;
-                if (currentOverflow === 'hidden') {
-                    container.style.overflow = 'visible';
-                }
-                
-                container.style.boxShadow = `
-                    0 0 ${glowIntensity * 2}px ${comboColor}, 
-                    0 0 ${glowIntensity * 4}px ${comboColor}40,
-                    inset 0 0 ${glowIntensity}px ${comboColor}20
-                `;
-            }
-            
-            // Option 2: Canvas-Glow als Fallback
-            canvas.style.boxShadow = `0 0 ${glowIntensity}px ${comboColor}`;
-            
-        } else {
-            // Reset both when combo ends
-            if (canvas) canvas.style.boxShadow = '';
-            if (container) {
-                container.style.boxShadow = '';
-                // Optional: overflow zurücksetzen falls nötig
-                // container.style.overflow = 'hidden';
-            }
-        }
+           if (canvas && gameState.comboCount >= 20) {
+        const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 10);
+        const comboColor = getComboColor(gameState.comboCount);
+        
+        // NEW: Use enhanced glow system
+        setComboGlow(glowIntensity, comboColor);
+        
+        // REMOVE these old lines:
+        // container.style.boxShadow = ... // DELETE
+        // canvas.style.boxShadow = ... // DELETE
+        
+    } else {
+        // Clear combo glow when no combo
+        clearComboGlow();
+        
+        // REMOVE these old lines:
+        // if (canvas) canvas.style.boxShadow = ''; // DELETE  
+        // if (container) container.style.boxShadow = ''; // DELETE
+    }
+
     }
 }
 
