@@ -1,10 +1,9 @@
-// systems.js - Alle Game Systems (Achievements, Drops, Sound, Highscores, Cache) - FPS KORRIGIERT
+// systems.js - Alle Game Systems mit File-based Banned Words System
 
 import { ACHIEVEMENTS, DROP_CONFIG, DropType, DROP_INFO, HIGHSCORE_API } from './core/constants.js';
 import { gameState } from './core/gameState.js';
 import { createScorePopup, drops } from './entities.js';
 import { showAchievementPopup } from './ui-enhancements.js';
-
 
 // Achievement System
 export function checkAchievements() {
@@ -32,13 +31,11 @@ export function unlockAchievement(id) {
     
     switch(id) {
         case 'firstBlood':
-            // Higher drop rates - handled in rollForDrop
             break;
-       case 'untouchable':
-    // Start with 1 shield charge instead of just hasShield = true
-    gameState.shieldCharges = 1;
-    gameState.hasShield = true;
-    break;
+        case 'untouchable':
+            gameState.shieldCharges = 1;
+            gameState.hasShield = true;
+            break;
         case 'sharpshooter':
             window.gameState.hasPiercingBullets = true;
             break;
@@ -68,8 +65,6 @@ window.loadGlobalHighscores = loadGlobalHighscores;
 
 // Drop System
 export const activeDropBuffs = {};
-
-// Make it globally available
 window.activeDropBuffs = activeDropBuffs;
 
 export function createDrop(x, y, type) {
@@ -86,7 +81,6 @@ export function createDrop(x, y, type) {
         info: dropInfo
     });
     
-    // Create drop particles
     for (let i = 0; i < 8; i++) {
         window.dropParticles.push({
             x: x + 12,
@@ -108,7 +102,6 @@ export function rollForDrop(enemyType, x, y) {
     if (enemyType === 'alphaWolf') {
         dropConfig = DROP_CONFIG.boss;
         
-        // Guaranteed drop at high combo
         if (gameState.comboCount >= 20) {
             const items = dropConfig.items;
             const selectedDrop = selectDropFromItems(items);
@@ -176,19 +169,16 @@ export function collectDrop(drop) {
             createScorePopup(drop.x, drop.y, 'Jump Boost!');
             break;
             
-case DropType.SHIELD:
-    // Stack shields bis zu 5
-    if (gameState.shieldCharges < 5) {
-        gameState.shieldCharges++;
-        gameState.hasShield = true;
-        createScorePopup(drop.x, drop.y, `Shield +1 (${gameState.shieldCharges}x)`);
-    } else {
-        // Max shields erreicht - Bonus Score stattdessen
-        gameState.score += 500 * gameState.scoreMultiplier;
-        createScorePopup(drop.x, drop.y, '+500 Shield Bonus!');
-    }
-    break;
-
+        case DropType.SHIELD:
+            if (gameState.shieldCharges < 5) {
+                gameState.shieldCharges++;
+                gameState.hasShield = true;
+                createScorePopup(drop.x, drop.y, `Shield +1 (${gameState.shieldCharges}x)`);
+            } else {
+                gameState.score += 500 * gameState.scoreMultiplier;
+                createScorePopup(drop.x, drop.y, '+500 Shield Bonus!');
+            }
+            break;
             
         case DropType.SCORE_MULTIPLIER:
             activeDropBuffs.scoreMultiplier = Math.min(
@@ -228,7 +218,6 @@ case DropType.SHIELD:
 }
 
 export function updateDropBuffs() {
-    // FPS-normalisiert: Verwende deltaTime für konsistente Buff-Zeiten
     Object.keys(activeDropBuffs).forEach(buff => {
         activeDropBuffs[buff] -= gameState.deltaTime;
         if (activeDropBuffs[buff] <= 0) {
@@ -255,15 +244,449 @@ export function updateDropBuffs() {
     });
 }
 
-// Finale SoundManager Klasse - ohne Debug-Logs
-// Finale SoundManager Klasse - ohne Debug-Logs
+// ========================================
+// ENHANCED HIGHSCORE VALIDATOR WITH FILE-BASED BANNED WORDS
+// ========================================
+
+class HighscoreValidator {
+    constructor() {
+        this.maxScore = 1000000;
+        this.minScore = 100;
+        this.maxNameLength = 20;
+        this.bannedWords = ['admin', 'test']; // Fallback words
+        this.bannedWordsLoaded = false;
+        this.suspiciousScores = new Set();
+        
+        // Load banned words from file
+        this.loadBannedWords();
+    }
+
+    // Load banned words from text file
+    async loadBannedWords() {
+        try {
+            console.log('📚 Loading banned words list...');
+            
+            // Try multiple file locations
+            const possiblePaths = [
+                '../assets/banned-words.txt'
+            ];
+
+            let wordsLoaded = false;
+
+            for (const path of possiblePaths) {
+                try {
+                    const response = await fetch(path);
+                    if (response.ok) {
+                        const text = await response.text();
+                        this.parseBannedWords(text);
+                        console.log(`✅ Banned words loaded from: ${path}`);
+                        console.log(`📊 Total banned words: ${this.bannedWords.length}`);
+                        wordsLoaded = true;
+                        break;
+                    }
+                } catch (error) {
+                    // Continue to next path
+                    continue;
+                }
+            }
+
+            if (!wordsLoaded) {
+                console.warn('⚠️ Could not load banned words file. Using default list.');
+                this.loadDefaultBannedWords();
+            }
+
+            this.bannedWordsLoaded = true;
+
+        } catch (error) {
+            console.error('❌ Error loading banned words:', error);
+            this.loadDefaultBannedWords();
+            this.bannedWordsLoaded = true;
+        }
+    }
+
+    // Parse banned words from text content
+    parseBannedWords(text) {
+        const words = text
+            .split('\n')                    // Split by lines
+            .map(line => line.trim())       // Remove whitespace
+            .filter(line => line.length > 0) // Remove empty lines
+            .filter(line => !line.startsWith('#')) // Remove comments
+            .filter(line => !line.startsWith('//')) // Remove comments
+            .map(word => word.toLowerCase()) // Convert to lowercase
+            .filter(word => word.length > 1) // Remove single characters
+            .filter((word, index, arr) => arr.indexOf(word) === index); // Remove duplicates
+
+        this.bannedWords = words;
+    }
+
+    // Fallback default banned words
+    loadDefaultBannedWords() {
+        this.bannedWords = [
+            'admin', 'administrator', 'root', 'system',
+            'test', 'testing', 'debug', 'dev',
+            'hack', 'hacker', 'cheat', 'cheater',
+            'bot', 'script', 'auto', 'fake',
+            'fuck', 'shit', 'damn', 'ass',
+            'nazi', 'hitler', 'kill', 'die',
+            'nigger', 'nigga', 'faggot', 'retard',
+            'bitch', 'whore', 'slut', 'cunt',
+            'penis', 'vagina', 'sex', 'porn'
+        ];
+        console.log('📝 Using default banned words list');
+    }
+
+    // Enhanced name validation with async support
+    async validateName(name) {
+        // Wait for banned words to load if they haven't yet
+        if (!this.bannedWordsLoaded) {
+            await this.waitForBannedWords();
+        }
+
+        if (!name || typeof name !== 'string') return false;
+        if (name.length === 0 || name.length > this.maxNameLength) return false;
+        if (name.trim() !== name) return false;
+
+        const lowerName = name.toLowerCase();
+
+        // Check against loaded banned words
+        for (const banned of this.bannedWords) {
+            if (lowerName.includes(banned)) {
+                console.warn(`🚫 Name blocked: contains "${banned}"`);
+                return false;
+            }
+        }
+
+        // Additional pattern checks
+        if (/^[0-9]+$/.test(name)) return false; // All numbers
+        if (/(.)\1{4,}/.test(name)) return false; // Too many repeated chars
+        if (/^(admin|mod|owner)/i.test(name)) return false; // Authority claims
+
+        return true;
+    }
+
+    // Wait for banned words to finish loading
+    waitForBannedWords(timeout = 5000) {
+        return new Promise((resolve) => {
+            const startTime = Date.now();
+            const checkLoaded = () => {
+                if (this.bannedWordsLoaded || (Date.now() - startTime > timeout)) {
+                    resolve();
+                } else {
+                    setTimeout(checkLoaded, 100);
+                }
+            };
+            checkLoaded();
+        });
+    }
+
+    // Debug function to show current banned words
+    getBannedWords() {
+        return {
+            loaded: this.bannedWordsLoaded,
+            count: this.bannedWords.length,
+            words: this.bannedWords
+        };
+    }
+
+    // Add word to banned list (runtime)
+    addBannedWord(word) {
+        const cleanWord = word.toLowerCase().trim();
+        if (cleanWord && !this.bannedWords.includes(cleanWord)) {
+            this.bannedWords.push(cleanWord);
+            console.log(`🚫 Added banned word: "${cleanWord}"`);
+            return true;
+        }
+        return false;
+    }
+
+    // Remove word from banned list (runtime)
+    removeBannedWord(word) {
+        const cleanWord = word.toLowerCase().trim();
+        const index = this.bannedWords.indexOf(cleanWord);
+        if (index > -1) {
+            this.bannedWords.splice(index, 1);
+            console.log(`✅ Removed banned word: "${cleanWord}"`);
+            return true;
+        }
+        return false;
+    }
+
+    // Generate a simple hash for score verification
+    generateScoreHash(playerName, score, timestamp) {
+        const data = `${playerName}${score}${timestamp}retro_runner_secret_2024`;
+        let hash = 0;
+        for (let i = 0; i < data.length; i++) {
+            const char = data.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36);
+    }
+
+    // Validate score legitimacy
+    validateScore(score, gameTimeMs, level) {
+        const checks = {
+            valid: true,
+            reasons: []
+        };
+
+        if (score > this.maxScore) {
+            checks.valid = false;
+            checks.reasons.push('Score too high');
+        }
+
+        if (score < 0) {
+            checks.valid = false;
+            checks.reasons.push('Negative score');
+        }
+
+        const minTimeForScore = Math.max(30000, score / 100);
+        if (gameTimeMs < minTimeForScore && score > 10000) {
+            checks.valid = false;
+            checks.reasons.push('Score too high for game time');
+        }
+
+        const expectedMaxScore = level * 5000;
+        if (score > expectedMaxScore * 3) {
+            checks.valid = false;
+            checks.reasons.push('Score inconsistent with level');
+        }
+
+        if (score > 50000 && score % 10000 === 0) {
+            checks.reasons.push('Suspiciously round number');
+            this.suspiciousScores.add(score);
+        }
+
+        return checks;
+    }
+
+    canSubmitScore() {
+        const lastSubmission = localStorage.getItem('lastHighscoreSubmission');
+        const now = Date.now();
+        
+        if (lastSubmission) {
+            const timeDiff = now - parseInt(lastSubmission);
+            if (timeDiff < 60000) {
+                return false;
+            }
+        }
+        
+        localStorage.setItem('lastHighscoreSubmission', now.toString());
+        return true;
+    }
+}
+
+// Create validator instance
+const validator = new HighscoreValidator();
+
+// Enhanced save function with async name validation
+export async function saveGlobalHighscoreSecure(playerName, score, gameData = {}) {
+    console.log('🔒 Validating highscore submission...');
+
+    if (!validator.canSubmitScore()) {
+        console.warn('⚠️ Rate limited: Please wait before submitting another score');
+        return false;
+    }
+
+    // Async name validation
+    const nameValid = await validator.validateName(playerName);
+    if (!nameValid) {
+        console.warn('⚠️ Invalid player name');
+        alert('Invalid name. Please choose a different name.');
+        return false;
+    }
+
+    const gameTime = gameData.gameTime || Date.now() - (gameData.startTime || Date.now() - 60000);
+    const level = gameData.level || 1;
+    const validation = validator.validateScore(score, gameTime, level);
+
+    if (!validation.valid) {
+        console.warn('⚠️ Score validation failed:', validation.reasons);
+        console.warn('Score appears to be manipulated. Submission blocked.');
+        return false;
+    }
+
+    const timestamp = Date.now();
+    const hash = validator.generateScoreHash(playerName, score, timestamp);
+
+    const newEntry = {
+        name: playerName.substring(0, 20),
+        score: score,
+        date: new Date(timestamp).toISOString(),
+        hash: hash,
+        level: level,
+        gameTime: Math.floor(gameTime / 1000),
+        isNew: true,
+        version: '1.0'
+    };
+
+    if (validation.reasons.length > 0) {
+        newEntry.suspicious = validation.reasons;
+        console.warn('⚠️ Score marked as suspicious:', validation.reasons);
+    }
+
+    globalHighscores.push(newEntry);
+    globalHighscores.sort((a, b) => b.score - a.score);
+    globalHighscores = globalHighscores.slice(0, 10);
+
+    try {
+        const response = await fetch(HIGHSCORE_API.URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'RetroRunner/1.0'
+            },
+            body: JSON.stringify({ 
+                scores: globalHighscores,
+                lastUpdate: timestamp,
+                version: '1.0'
+            })
+        });
+
+        if (response.ok) {
+            console.log('✅ Secure highscore saved!');
+            displayHighscoresSecure();
+            return true;
+        } else {
+            console.error('❌ Failed to save:', response.status);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Network error:', error);
+        displayHighscoresSecure();
+        return false;
+    }
+}
+
+// Enhanced display with security indicators
+export function displayHighscoresSecure() {
+    const allLists = document.querySelectorAll('#highscoreList');
+    
+    allLists.forEach(list => {
+        if (globalHighscores.length === 0) {
+            list.innerHTML = '<p>No highscores yet - be the first!</p>';
+        } else {
+            const top10 = globalHighscores.slice(0, 10);
+            list.innerHTML = top10.map((entry, index) => {
+                const isNewEntry = entry.isNew === true;
+                const isSuspicious = entry.suspicious && entry.suspicious.length > 0;
+                const isVerified = entry.hash && entry.gameTime;
+                
+                let highlightClass = '';
+                let badges = '';
+                
+                if (isNewEntry) {
+                    highlightClass += 'highscore-new ';
+                    badges += ' <span class="new-badge">NEW!</span>';
+                }
+                
+                if (isSuspicious) {
+                    highlightClass += 'highscore-suspicious ';
+                    badges += ' <span class="suspicious-badge" title="Suspicious score">⚠️</span>';
+                }
+                
+                if (isVerified) {
+                    badges += ' <span class="verified-badge" title="Verified legitimate">✓</span>';
+                }
+                
+                return `
+                    <div class="highscore-entry ${highlightClass}">
+                        <span>${index + 1}. ${entry.name}${badges}</span>
+                        <span>${entry.score.toLocaleString()}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+    });
+    
+    // Clean up flags after display
+    setTimeout(() => {
+        globalHighscores.forEach(entry => {
+            if (entry.isNew) delete entry.isNew;
+        });
+    }, 5000);
+}
+
+// Enhanced check function with game data
+export function checkForTop10ScoreSecure(score, gameData = {}) {
+    if (score < validator.minScore) return;
+    
+    const isTop10 = globalHighscores.length < 10 || 
+                    score > (globalHighscores[9]?.score || 0);
+    
+    if (isTop10) {
+        let position = 1;
+        for (let i = 0; i < Math.min(globalHighscores.length, 10); i++) {
+            if (score <= globalHighscores[i].score) {
+                position = i + 2;
+            } else {
+                break;
+            }
+        }
+        
+        const playerName = prompt(
+            `🏆 TOP 10 SCORE! Position #${position} with ${score.toLocaleString()} points!\n\nEnter your name:`
+        )?.trim() || 'Anonymous';
+        
+        // Enhanced save with game data
+        saveGlobalHighscoreSecure(playerName, score, gameData).then(success => {
+            if (success) {
+                setTimeout(() => displayHighscoresSecure(), 100);
+            } else {
+                alert('Score validation failed. Please play normally to submit scores.');
+            }
+        });
+    }
+}
+
+// Track game session for validation
+export class GameSessionTracker {
+    constructor() {
+        this.startTime = Date.now();
+        this.events = [];
+        this.maxEvents = 100;
+    }
+
+    recordEvent(type, data = {}) {
+        this.events.push({
+            type,
+            timestamp: Date.now() - this.startTime,
+            data
+        });
+        
+        if (this.events.length > this.maxEvents) {
+            this.events.shift();
+        }
+    }
+
+    getGameData(score, level) {
+        return {
+            startTime: this.startTime,
+            gameTime: Date.now() - this.startTime,
+            level: level,
+            score: score,
+            eventCount: this.events.length,
+            version: '1.0'
+        };
+    }
+
+    isSessionValid() {
+        const gameTime = Date.now() - this.startTime;
+        return gameTime > 30000 && this.events.length > 10;
+    }
+}
+
+// Initialize session tracker
+export const sessionTracker = new GameSessionTracker();
+
+// Sound Manager
 export class SoundManager {
     constructor() {
         this.audioContext = null;
         this.isMuted = false;
         this.backgroundMusic = null;
-        this.musicVolume = 0.3; // 30% Lautstärke für Hintergrundmusik
-        this.sfxVolume = 0.1;   // 10% für Sound Effects
+        this.musicVolume = 0.3;
+        this.sfxVolume = 0.1;
     }
 
     init() {
@@ -273,7 +696,6 @@ export class SoundManager {
         this.initBackgroundMusic();
     }
 
-    // Hintergrundmusik initialisieren
     initBackgroundMusic() {
         if (this.backgroundMusic) return;
         
@@ -282,13 +704,11 @@ export class SoundManager {
         this.backgroundMusic.volume = this.musicVolume;
         this.backgroundMusic.preload = 'auto';
         
-        // Minimales Error handling
         this.backgroundMusic.addEventListener('error', (e) => {
             console.warn('Background music loading failed:', e);
         });
     }
 
-    // Hintergrundmusik starten
     startBackgroundMusic() {
         if (!this.backgroundMusic) {
             this.initBackgroundMusic();
@@ -303,7 +723,6 @@ export class SoundManager {
         
         if (playPromise !== undefined) {
             playPromise.catch(error => {
-                // Autoplay-Policy: Musik beim nächsten User-Click starten
                 const startMusicOnClick = () => {
                     this.backgroundMusic.play().catch(() => {});
                 };
@@ -313,24 +732,21 @@ export class SoundManager {
         }
     }
 
-    // Hintergrundmusik pausieren
     pauseBackgroundMusic() {
         if (this.backgroundMusic && !this.backgroundMusic.paused) {
             this.backgroundMusic.pause();
         }
     }
 
-    // Hintergrundmusik fortsetzen
     resumeBackgroundMusic() {
         if (this.backgroundMusic && this.backgroundMusic.paused && !this.isMuted) {
             const playPromise = this.backgroundMusic.play();
             if (playPromise !== undefined) {
-                playPromise.catch(() => {}); // Ignore autoplay errors
+                playPromise.catch(() => {});
             }
         }
     }
 
-    // Hintergrundmusik komplett stoppen (für Game Over)
     stopBackgroundMusic() {
         if (this.backgroundMusic) {
             this.backgroundMusic.pause();
@@ -338,7 +754,6 @@ export class SoundManager {
         }
     }
 
-    // Sound Effects
     play(frequency, duration, type = 'sine') {
         if (!this.audioContext || this.isMuted) return;
         
@@ -358,7 +773,6 @@ export class SoundManager {
         oscillator.stop(this.audioContext.currentTime + duration);
     }
 
-    // Game Sound Effects
     jump() { this.play(200, 0.2, 'square'); }
     shoot() { 
         this.play(800, 0.05, 'sawtooth');
@@ -380,7 +794,6 @@ export class SoundManager {
         this.play(800, 0.3, 'sine'); 
     }
 
-    // Mute Toggle - mit Pause/Resume statt Stop
     toggleMute() {
         this.isMuted = !this.isMuted;
         const muteIcon = document.getElementById('muteIcon');
@@ -389,15 +802,14 @@ export class SoundManager {
         if (this.isMuted) {
             if (muteIcon) muteIcon.textContent = '🔇';
             if (muteButton) muteButton.classList.add('muted');
-            this.pauseBackgroundMusic(); // Pause statt Stop
+            this.pauseBackgroundMusic();
         } else {
             if (muteIcon) muteIcon.textContent = '🔊';
             if (muteButton) muteButton.classList.remove('muted');
-            this.resumeBackgroundMusic(); // Resume statt Start
+            this.resumeBackgroundMusic();
         }
     }
 
-    // Volume Controls
     setMusicVolume(volume) {
         this.musicVolume = Math.max(0, Math.min(1, volume));
         if (this.backgroundMusic) {
@@ -409,30 +821,10 @@ export class SoundManager {
         this.sfxVolume = Math.max(0, Math.min(1, volume));
     }
 }
-// Integration in dein bestehendes System:
-// 1. In main.js oder wo auch immer du startGame() aufrufst:
-/*
-export function startGame() {
-    soundManager.init();
-    if (soundManager.audioContext) {
-        soundManager.audioContext.resume();
-    }
-    soundManager.startBackgroundMusic(); // Diese Zeile hinzufügen
-    
-    // ... rest deines Codes
-}
-*/
 
-// 2. Bei Game Over:
-/*
-export function gameOver() {
-    soundManager.stopBackgroundMusic(); // Optional: Musik stoppen
-    // ... rest deines Codes
-}
-*/
 export const soundManager = new SoundManager();
 
-// Highscore System
+// Highscore System (Original functions for compatibility)
 export let globalHighscores = [];
 
 export async function loadGlobalHighscores() {
@@ -446,16 +838,16 @@ export async function loadGlobalHighscores() {
             console.log('Data received:', data);
             globalHighscores = data.scores || [];
             console.log('Highscores array:', globalHighscores);
-            displayHighscores();
+            displayHighscoresSecure();
         } else if (response.status === 400) {
             console.log('Basket does not exist yet (400)');
             globalHighscores = [];
-            displayHighscores();
+            displayHighscoresSecure();
         }
     } catch (error) {
         console.error('Error loading highscores:', error);
         globalHighscores = [];
-        displayHighscores();
+        displayHighscoresSecure();
     }
 }
 
@@ -463,7 +855,8 @@ export async function saveGlobalHighscore(playerName, score) {
     const newEntry = {
         name: playerName.substring(0, 20),
         score: score,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        isNew: true
     };
     
     globalHighscores.push(newEntry);
@@ -481,32 +874,18 @@ export async function saveGlobalHighscore(playerName, score) {
         
         if (response.ok) {
             console.log('Highscore saved!');
+            displayHighscoresSecure();
         } else {
             console.error('Failed to save:', response.status);
         }
     } catch (error) {
         console.log('Could not save highscore:', error);
+        displayHighscoresSecure();
     }
 }
 
 export function displayHighscores() {
-    const allLists = document.querySelectorAll('#highscoreList');
-    
-    allLists.forEach(list => {
-        if (globalHighscores.length === 0) {
-            list.innerHTML = '<p>No highscores yet - be the first!</p>';
-        } else {
-            const top10 = globalHighscores.slice(0, 10);
-            list.innerHTML = top10.map((entry, index) => {
-                return `
-                    <div class="highscore-entry">
-                        <span>${index + 1}. ${entry.name}</span>
-                        <span>${entry.score.toLocaleString()}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-    });
+    displayHighscoresSecure();
 }
 
 export function checkForTop10Score(score) {
@@ -529,8 +908,104 @@ export function checkForTop10Score(score) {
             '🏆 TOP 10 SCORE! Position #' + position + ' with ' + score.toLocaleString() + ' points!\n\nEnter your name:'
         ) || 'Anonymous';
         
-        saveGlobalHighscore(playerName, score);
+        saveGlobalHighscore(playerName, score).then(() => {
+            setTimeout(() => {
+                displayHighscoresSecure();
+            }, 100);
+        });
     }
+}
+
+// Reset functions
+export function resetLocalHighscore() {
+    localStorage.removeItem('dungeonHighScore');
+    gameState.highScore = 0;
+    console.log("🔄 Local highscore reset!");
+    
+    const highscoreElements = document.querySelectorAll('#highscoreValue');
+    highscoreElements.forEach(el => el.textContent = '0');
+    
+    return true;
+}
+
+export async function resetGlobalHighscores(confirm = false) {
+    if (!confirm) {
+        console.warn("⚠️ Use resetGlobalHighscores(true) to confirm deletion of ALL global highscores!");
+        return false;
+    }
+    
+    try {
+        const response = await fetch(HIGHSCORE_API.URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ scores: [] })
+        });
+        
+        if (response.ok) {
+            globalHighscores = [];
+            displayHighscoresSecure();
+            console.log("🔄 Global highscores reset successfully!");
+            return true;
+        } else {
+            console.error("❌ Failed to reset global highscores:", response.status);
+            return false;
+        }
+    } catch (error) {
+        console.error("❌ Error resetting global highscores:", error);
+        return false;
+    }
+}
+
+export async function resetAllHighscores(confirm = false) {
+    if (!confirm) {
+        console.warn("⚠️ Use resetAllHighscores(true) to confirm deletion of ALL highscores!");
+        return false;
+    }
+    
+    resetLocalHighscore();
+    const globalReset = await resetGlobalHighscores(true);
+    
+    if (globalReset) {
+        console.log("🔄 ALL highscores reset successfully!");
+        return true;
+    } else {
+        console.log("🔄 Local highscore reset, but global reset failed.");
+        return false;
+    }
+}
+
+export async function addTestHighscores() {
+    const testScores = [
+        { name: "TestPlayer1", score: 50000, date: new Date().toISOString() },
+        { name: "TestPlayer2", score: 45000, date: new Date().toISOString() },
+        { name: "TestPlayer3", score: 40000, date: new Date().toISOString() },
+        { name: "TestPlayer4", score: 35000, date: new Date().toISOString() },
+        { name: "TestPlayer5", score: 30000, date: new Date().toISOString() }
+    ];
+    
+    globalHighscores = testScores;
+    
+    try {
+        const response = await fetch(HIGHSCORE_API.URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ scores: testScores })
+        });
+        
+        if (response.ok) {
+            displayHighscoresSecure();
+            console.log("🧪 Test highscores added!");
+            return true;
+        }
+    } catch (error) {
+        console.error("❌ Failed to add test highscores:", error);
+    }
+    
+    return false;
 }
 
 export function loadHighScore() {
@@ -561,8 +1036,49 @@ export class GameCache {
 
 export const gameCache = new GameCache();
 
+// Make enhanced functions available globally
+window.saveGlobalHighscoreSecure = saveGlobalHighscoreSecure;
+window.displayHighscoresSecure = displayHighscoresSecure;
+window.checkForTop10ScoreSecure = checkForTop10ScoreSecure;
+window.sessionTracker = sessionTracker;
+window.validator = validator;
+window.resetLocalHighscore = resetLocalHighscore;
+window.resetGlobalHighscores = resetGlobalHighscores;
+window.resetAllHighscores = resetAllHighscores;
+window.addTestHighscores = addTestHighscores;
+
+// Debug functions for banned words
+window.getBannedWords = () => validator.getBannedWords();
+window.addBannedWord = (word) => validator.addBannedWord(word);
+window.removeBannedWord = (word) => validator.removeBannedWord(word);
+
 // Initialize immediately when module loads
 if (!window.loadAchievements) {
     window.loadAchievements = loadAchievements;
     window.loadGlobalHighscores = loadGlobalHighscores;
 }
+
+console.log(`
+🚫 BANNED WORDS SYSTEM LOADED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 DEBUG COMMANDS:
+getBannedWords()           - Show current banned words
+addBannedWord("word")      - Add word to banned list
+removeBannedWord("word")   - Remove word from banned list
+
+📁 FILE LOCATIONS TRIED:
+- assets/banned-words.txt
+- data/banned-words.txt  
+- config/banned-words.txt
+- banned-words.txt
+
+🔒 SECURITY FEATURES:
+- File-based banned words loading
+- Async name validation
+- Score legitimacy checks
+- Rate limiting protection
+- Session tracking
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
