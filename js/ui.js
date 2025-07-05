@@ -1,4 +1,4 @@
-// ui.js - All UI Functions (Screen Management, HUD Updates, Menu Handling)
+// ui.js - All UI Functions with Enhanced Countdown System
 
 import { GameState, DUNGEON_THEME } from './core/constants.js';
 import { gameState, resetGame, startGameLoop, stopGameLoop, resumeTransition } from './core/gameState.js';
@@ -19,6 +19,10 @@ let volumes = {
 };
 let savedVolumes = { ...volumes };
 
+// Enhanced Countdown System
+let countdownActive = false;
+let countdownType = 'resume'; // 'resume', 'start', 'restart'
+
 // Sound Overlay Pause System
 let gameWasPausedByVolumeOverlay = false;
 
@@ -35,6 +39,128 @@ export function showScreen(screenId) {
     hideAllScreens();
     const element = document.getElementById(screenId);
     if (element) element.style.display = 'block';
+}
+
+// Enhanced Countdown Function - now handles all game transitions
+function showUniversalCountdown(type = 'resume', callback = null) {
+    if (countdownActive) return; // Prevent multiple countdowns
+    
+    countdownActive = true;
+    countdownType = type;
+    
+    // Create or get countdown overlay
+    let countdownOverlay = document.getElementById('universalCountdown');
+    if (!countdownOverlay) {
+        countdownOverlay = document.createElement('div');
+        countdownOverlay.id = 'universalCountdown';
+        countdownOverlay.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff88;
+            font-size: 72px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: bold;
+            padding: 40px 60px;
+            border-radius: 20px;
+            border: 3px solid #00ff88;
+            box-shadow: 0 0 50px rgba(0, 255, 136, 0.5);
+            z-index: 2000;
+            text-align: center;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+            animation: countdownPulse 0.5s ease-in-out;
+        `;
+        document.getElementById('gameContainer').appendChild(countdownOverlay);
+    }
+    
+    // Add countdown pulse animation to document if not exists
+    if (!document.querySelector('#countdownStyles')) {
+        const style = document.createElement('style');
+        style.id = 'countdownStyles';
+        style.textContent = `
+            @keyframes countdownPulse {
+                0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+                100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            }
+            
+            @keyframes countdownNumber {
+                0% { transform: scale(1.3); opacity: 0; }
+                50% { transform: scale(1.1); opacity: 1; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            
+            @keyframes countdownGo {
+                0% { transform: scale(1); color: #00ff88; }
+                50% { transform: scale(1.2); color: #00ff88; }
+                100% { transform: scale(1.1); color: #00ff88; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    let countdown = 3;
+    countdownOverlay.style.display = 'block';
+    
+    // Set initial message based on type
+    const messages = {
+        'start': 'READY?',
+        'restart': 'RESTARTING...',
+        'resume': 'RESUMING...'
+    };
+    
+    countdownOverlay.innerHTML = `
+        <div style="font-size: 32px; margin-bottom: 10px; color: #ffffff;">
+            ${messages[type]}
+        </div>
+        <div style="animation: countdownNumber 0.6s ease-out;">${countdown}</div>
+    `;
+    
+    // Play countdown sound
+    soundManager.pickup(); // Initial sound
+    
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        
+        if (countdown > 0) {
+            countdownOverlay.innerHTML = `
+                <div style="font-size: 32px; margin-bottom: 10px; color: #ffffff;">
+                    ${messages[type]}
+                </div>
+                <div style="animation: countdownNumber 0.6s ease-out;">${countdown}</div>
+            `;
+            soundManager.pickup(); // Countdown tick sound
+        } else {
+            // Final "GO!" message
+            countdownOverlay.innerHTML = `
+                <div style="font-size: 48px; animation: countdownGo 0.8s ease-out;">
+                    GO!
+                </div>
+            `;
+            soundManager.powerUp(); // Final GO sound
+            
+            setTimeout(() => {
+                countdownOverlay.style.display = 'none';
+                countdownActive = false;
+                
+                // Execute the callback after countdown
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
+                
+                // Clear resume transition if it was active
+                if (resumeTransition.active) {
+                    resumeTransition.active = false;
+                    const canvas = document.getElementById('gameCanvas');
+                    if (canvas) canvas.style.opacity = 1;
+                }
+            }, 800); // Show GO! for 0.8 seconds
+            
+            clearInterval(countdownInterval);
+        }
+    }, 800); // Each number shows for 0.8 seconds
 }
 
 // HUD Updates
@@ -153,48 +279,48 @@ export function updateHighScore() {
     document.getElementById('highscoreValue').textContent = gameState.highScore;
 }
 
-// Menu Handling
+// Menu Handling with Enhanced Countdown
 export function startGame() {
     soundManager.init();
     if (soundManager.audioContext) {
         soundManager.audioContext.resume();
     }
-    soundManager.startBackgroundMusic();
     
-    gameState.currentState = GameState.PLAYING;
-    gameState.gameRunning = true;
-    resetGame();
     hideAllScreens();
     
-    // Initialize enhanced containers immediately
-    initEnhancedContainers();
-    
-    updateUI();
-    startGameLoop();
-    
-    // Force an immediate update of enhanced displays
-    setTimeout(() => {
-        updateEnhancedDisplays();
-    }, 100);
+    showUniversalCountdown('start', () => {
+        gameState.currentState = GameState.PLAYING;
+        gameState.gameRunning = true;
+        resetGame();
+        
+        soundManager.startBackgroundMusic();
+        initEnhancedContainers();
+        updateUI();
+        startGameLoop();
+        
+        setTimeout(() => {
+            updateEnhancedDisplays();
+        }, 100);
+    });
 }
 
 export function restartGame() {
-    gameState.currentState = GameState.PLAYING;
-    gameState.gameRunning = true;
-    resetGame();
+    gameState.gameRunning = false;
     hideAllScreens();
     
-    soundManager.startBackgroundMusic();
-    
-    // Reinitialize enhanced containers
-    initEnhancedContainers();
-    
-    updateUI();
-    
-    // Force update of enhanced displays
-    setTimeout(() => {
-        updateEnhancedDisplays();
-    }, 100);
+    showUniversalCountdown('restart', () => {
+        gameState.currentState = GameState.PLAYING;
+        gameState.gameRunning = true;
+        resetGame();
+        
+        soundManager.startBackgroundMusic();
+        initEnhancedContainers();
+        updateUI();
+        
+        setTimeout(() => {
+            updateEnhancedDisplays();
+        }, 100);
+    });
 }
 
 export function pauseGame() {
@@ -202,7 +328,6 @@ export function pauseGame() {
         gameState.currentState = GameState.PAUSED;
         gameState.gameRunning = false;
         
-        // Musik pausieren statt stoppen
         soundManager.pauseBackgroundMusic();
         
         updatePauseScreen();
@@ -212,13 +337,14 @@ export function pauseGame() {
 
 export function resumeGame() {
     if (gameState.currentState === GameState.PAUSED) {
-        gameState.currentState = GameState.PLAYING;
-        gameState.gameRunning = true;
-        
-        // Musik fortsetzen
-        soundManager.resumeBackgroundMusic();
-        
         hideAllScreens();
+        
+        showUniversalCountdown('resume', () => {
+            gameState.currentState = GameState.PLAYING;
+            gameState.gameRunning = true;
+            
+            soundManager.resumeBackgroundMusic();
+        });
     }
 }
 
@@ -226,7 +352,6 @@ export function gameOver() {
     gameState.currentState = GameState.GAME_OVER;
     gameState.gameRunning = false;
     
-    // Musik komplett stoppen bei Game Over (mit Reset auf Anfang)
     soundManager.stopBackgroundMusic();
     
     updateHighScore();
@@ -270,11 +395,12 @@ export function chooseBuff(buffType) {
     // Grant temporary invulnerability
     gameState.postBuffInvulnerability = 120;
     
-    // Resume game
-    gameState.currentState = GameState.PLAYING;
-    gameState.gameRunning = true;
     hideAllScreens();
-    updateUI();
+    showUniversalCountdown('resume', () => {
+        gameState.currentState = GameState.PLAYING;
+        gameState.gameRunning = true;
+        updateUI();
+    });
 }
 
 // Theme Application
@@ -347,60 +473,10 @@ function toggleVolumeOverlay() {
 }
 
 function startSmoothResume() {
-    resumeTransition.active = true;
-    resumeTransition.progress = 0;
-    
-    // Spiel wieder aktivieren aber mit Transition
-    gameState.gameRunning = true;
-    soundManager.resumeBackgroundMusic();
-    
-    // Zeige Resume-Countdown
-    showResumeCountdown();
-}
-
-function showResumeCountdown() {
-    // Countdown-Overlay erstellen
-    let countdownOverlay = document.getElementById('resumeCountdown');
-    if (!countdownOverlay) {
-        countdownOverlay = document.createElement('div');
-        countdownOverlay.id = 'resumeCountdown';
-        countdownOverlay.style.cssText = `
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: #00ff88;
-            font-size: 48px;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: bold;
-            padding: 20px 40px;
-            border-radius: 10px;
-            border: 2px solid #00ff88;
-            z-index: 1000;
-            text-align: center;
-            pointer-events: none;
-        `;
-        document.getElementById('gameContainer').appendChild(countdownOverlay);
-    }
-    
-    let countdown = 3;
-    countdownOverlay.style.display = 'block';
-    countdownOverlay.textContent = countdown;
-    
-    const countdownInterval = setInterval(() => {
-        countdown--;
-        if (countdown > 0) {
-            countdownOverlay.textContent = countdown;
-        } else {
-            countdownOverlay.textContent = 'GO!';
-            setTimeout(() => {
-                countdownOverlay.style.display = 'none';
-                resumeTransition.active = false;
-            }, 500);
-            clearInterval(countdownInterval);
-        }
-    }, 667); // Etwa 2/3 Sekunde pro Zahl
+    showUniversalCountdown('resume', () => {
+        gameState.gameRunning = true;
+        soundManager.resumeBackgroundMusic();
+    });
 }
 
 // ===== VOLUME CONTROL FUNCTIONS =====
@@ -544,7 +620,6 @@ window.updateEnhancedDisplays = updateEnhancedDisplays;
 window.toggleVolumeOverlay = toggleVolumeOverlay;
 window.updateVolume = updateVolume;
 window.toggleMasterMute = toggleMasterMute;
-window.startSmoothResume = startSmoothResume;
 window.toggleMute = toggleMute;
 
 window.toggleInfoOverlay = function() {
