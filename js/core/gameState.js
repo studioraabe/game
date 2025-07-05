@@ -7,6 +7,13 @@ import { resetBulletBoxesFound } from '../entities.js';
 import { clearArrays, obstacleTimer, bulletBoxesFound } from '../entities.js';
 import { loadHighScore, checkAchievements, activeDropBuffs, loadAchievements, loadGlobalHighscores, updateDropBuffs } from '../systems.js';
 
+// Resume Transition für Sound Overlay
+export let resumeTransition = {
+    active: false,
+    progress: 0,
+    duration: 120 // 2 Sekunden bei 60 FPS
+};
+
 // Game state object
 export const gameState = {
     // Core state
@@ -16,7 +23,7 @@ export const gameState = {
     needsRedraw: true,
     shieldCharges: 0,  // Anzahl der Shield-Ladungen (0-5)
     
-        isCorrupted: false,
+    isCorrupted: false,
     corruptionTimer: 0,
     
     // FPS Control - KORRIGIERT
@@ -76,10 +83,8 @@ export const gameState = {
 };
 
 export function resetGame() {
-	
-	
-	gameState.shieldCharges = 0;
-	gameState.hasShield = false;
+    gameState.shieldCharges = 0;
+    gameState.hasShield = false;
     resetBulletBoxesFound();
     gameState.score = 0;
     gameState.lives = 4;
@@ -133,10 +138,37 @@ export function resetGame() {
     gameState.needsRedraw = true;
 }
 
-
-
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
+    
+    // SMOOTH RESUME TRANSITION
+    if (resumeTransition.active) {
+        resumeTransition.progress += gameState.deltaTime;
+        const transitionFactor = Math.min(resumeTransition.progress / resumeTransition.duration, 1);
+        
+        // Smooth interpolation von 0 zu 1
+        const smoothFactor = 0.5 * (1 + Math.sin((transitionFactor * Math.PI) - Math.PI/2));
+        
+        // Verlangsame alle Game-Updates während Transition
+        const oldDeltaTime = gameState.deltaTime;
+        gameState.deltaTime *= smoothFactor;
+        
+        // Visuelle Transition-Effekte
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) {
+            const opacity = 0.3 + (smoothFactor * 0.7); // 30% bis 100% Opacity
+            canvas.style.opacity = opacity;
+            
+            if (transitionFactor >= 1) {
+                canvas.style.opacity = 1;
+                resumeTransition.active = false;
+                console.log("🎮 Smooth resume completed!");
+            }
+        }
+        
+        // Restore deltaTime für nächsten Frame
+        gameState.deltaTime = oldDeltaTime;
+    }
     
     // Update corruption timer
     if (gameState.corruptionTimer > 0) {
@@ -156,7 +188,7 @@ export function update() {
     window.updateEnvironmentElements();
     window.updateDrops();
     window.updateEffects();
-    window.updateBatProjectiles(); // KORRIGIERT: Hinzugefügt
+    window.updateBatProjectiles();
     updateDropBuffs();
     
     const gameOver = window.checkCollisions();
@@ -174,8 +206,6 @@ export function update() {
     window.updateUI();
     gameState.needsRedraw = true;
 }
-
-
 
 export function checkLevelComplete() {
     if (gameState.levelProgress >= GAME_CONSTANTS.MAX_LEVEL_PROGRESS) {
@@ -202,8 +232,8 @@ export function checkLevelComplete() {
             window.bulletBoxesFound = 0;
             gameState.damageThisLevel = 0;
             gameState.gameSpeed *= 1.1; // 10 % schneller
-            if (gameState.gameSpeed > 6) gameState.gameSpeed = 6; // Obergrenze // Zurück auf                                                               ursprünglichen Wert
-            gameState.bullets += 10 * gameState.level
+            if (gameState.gameSpeed > 6) gameState.gameSpeed = 6; // Obergrenze
+            gameState.bullets += 10 * gameState.level;
         }
     }
 }
@@ -225,6 +255,7 @@ export function startGameLoop() {
         gameState.gameLoop = setInterval(gameLoop, 1000 / 60);
     }
 }
+
 export function stopGameLoop() {
     if (gameState.gameLoop) {
         clearInterval(gameState.gameLoop);

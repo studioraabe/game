@@ -42,20 +42,21 @@ body {
     font-weight: 500;
 }
 
-
-
+/* LOGO POSITIONING FIX - AUF OBERER KANTE DES SPIELBILDSCHIRMS */
 .logo {
-    position: absolute;
-    top: 87px;
-    z-index: 1110;
-    left: 50%;
-    transform: translateX(-50%);
+    position: absolute !important; /* Absolut positioniert relativ zum gameContainer */
+    top: -60px !important; /* Logo ragt 50px über den gameContainer hinaus */
+    left: 50% !important; /* Horizontal zentriert */
+    transform: translateX(-50%) !important; /* Perfekte horizontale Zentrierung */
+    z-index: 9999 !important; /* Höchster z-index Wert */
     color: transparent;
     font-size: 10px;
     width: 140px;
     height: 100px;
     background: url(../img/retro.svg);
-	background-size: cover; }
+    background-size: cover;
+    pointer-events: none; /* Logo ist nicht klickbar/interaktiv */
+}
 
 /* Enhanced buffs positioning fix */
 .enhanced-buffs-container {
@@ -104,7 +105,7 @@ body::before {
 #gameContainer {
     position: relative;
     border-radius: var(--border-radius-lg);
-    overflow:hidden;
+    overflow: visible; /* WICHTIG: overflow auf visible für Logo */
     box-shadow: var(--shadow-xl);
     border: 1px solid var(--glass-border);
     background: var(--glass);
@@ -123,6 +124,7 @@ body::before {
     background: rgba(0, 0, 0, 0.25);
     border-radius: var(--border-radius-lg);
     z-index: 1;
+    overflow: hidden; /* Canvas behält overflow: hidden für Spiel-Content */
 }
 
 .ui-panel {
@@ -247,11 +249,12 @@ position: absolute;
 
 .bulletcountValue {
     color: var(--text-accent);
-    font-weight: 600;
+    font-weight: 800;
     font-family: 'Rajdhani', monospace;
-    font-size: 32px;
-    line-height: 24px;
+    font-size: 40px;
+    line-height: 30px;
     text-align: right;
+    padding-top: 4px;
 }
 
 /* SCORE PANEL STYLES */
@@ -263,7 +266,7 @@ position: absolute;
     display: flex
 ;
     gap: 40px;
-    padding: 10px 24px;
+    padding: 10px 0px;
     align-items: center;
     height: 48px;
 }
@@ -274,17 +277,18 @@ position: absolute;
     align-items: center;
     gap: 0px;
     color: var(--text-secondary);
-    min-width: 50px;
+    min-width: 110px;
+	padding-right:4px;
 }
 
 
 .ui-label {
     color: var(--text-secondary);
-    font-size: 11x;
+    font-size: 14px;
     font-weight: 500
     text-transform: uppercase;
     letter-spacing: 0.1px;
-    margin-bottom: 0px;
+    margin-bottom: -6px;
 }
 
 .ui-value {
@@ -935,8 +939,15 @@ ul li {
     50% { opacity: 0.3; }
 }
 
-/* Responsive Design */
+/* Mobile Responsive Logo */
 @media (max-width: 768px) {
+    .logo {
+        top: -35px !important; /* Weniger Überhang auf Mobile */
+        width: 100px !important;
+        height: 71px !important; /* Verhältnis beibehalten */
+        transform: translateX(-50%) scale(0.8) !important;
+    }
+    
     #gameCanvas {
         max-width: 100%;
         height: auto;
@@ -953,5 +964,15 @@ ul li {
     
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Tablet Responsive */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .logo {
+        top: -40px !important; /* Mittlerer Überhang auf Tablet */
+        width: 120px !important;
+        height: 86px !important;
+        transform: translateX(-50%) scale(0.9) !important;
     }
 }

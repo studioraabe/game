@@ -1,15 +1,26 @@
 // ui.js - All UI Functions (Screen Management, HUD Updates, Menu Handling)
 
 import { GameState, DUNGEON_THEME } from './core/constants.js';
-import { gameState, resetGame, startGameLoop, stopGameLoop } from './core/gameState.js';
+import { gameState, resetGame, startGameLoop, stopGameLoop, resumeTransition } from './core/gameState.js';
 import { soundManager, checkAchievements, saveHighScore, checkForTop10Score, displayHighscores } from './systems.js';
 import { activeDropBuffs } from './systems.js';
 import { 
     updateEnhancedComboDisplay, 
     updateEnhancedBuffDisplay,
-    initEnhancedContainers  // Add this import
+    initEnhancedContainers
 } from './ui-enhancements.js';
 
+// Volume Control Variables
+let volumeOverlayVisible = false;
+let masterMuted = false;
+let volumes = {
+    music: 70,
+    sfx: 85
+};
+let savedVolumes = { ...volumes };
+
+// Sound Overlay Pause System
+let gameWasPausedByVolumeOverlay = false;
 
 // Screen Management
 export function hideAllScreens() {
@@ -92,8 +103,6 @@ export function updateEnhancedDisplays() {
     updateEnhancedComboDisplay();
 }
 
-// Remove old updateHeartsDisplay function as it's replaced by updateHealthBar
-
 export function updateActiveBuffsDisplay() {
     // This function is now handled by updateEnhancedBuffDisplay
     // Keeping empty function for compatibility
@@ -150,7 +159,7 @@ export function startGame() {
     if (soundManager.audioContext) {
         soundManager.audioContext.resume();
     }
-    soundManager.startBackgroundMusic(); // Diese Zeile hinzufügen
+    soundManager.startBackgroundMusic();
     
     gameState.currentState = GameState.PLAYING;
     gameState.gameRunning = true;
@@ -175,7 +184,7 @@ export function restartGame() {
     resetGame();
     hideAllScreens();
     
-    soundManager.startBackgroundMusic(); // Musik neu starten
+    soundManager.startBackgroundMusic();
     
     // Reinitialize enhanced containers
     initEnhancedContainers();
@@ -187,8 +196,6 @@ export function restartGame() {
         updateEnhancedDisplays();
     }, 100);
 }
-
-// Füge diese Änderungen zu deiner ui.js hinzu:
 
 export function pauseGame() {
     if (gameState.currentState === GameState.PLAYING) {
@@ -233,16 +240,6 @@ export function gameOver() {
     checkForTop10Score(gameState.score);
     
     showScreen('gameOver');
-}
-
-// Erweiterte Mute-Funktion für bessere Pause-Kontrolle
-export function toggleMute() {
-    soundManager.toggleMute();
-    
-    // Wenn unmuted und Spiel läuft, Musik fortsetzen
-    if (!soundManager.isMuted && gameState.currentState === GameState.PLAYING) {
-        soundManager.resumeBackgroundMusic();
-    }
 }
 
 export function chooseBuff(buffType) {
@@ -314,18 +311,8 @@ export function applyTheme() {
     updateUI();
 }
 
+// ===== SOUND OVERLAY PAUSE & RESUME SYSTEM =====
 
-
-// Volume Control Variables
-let volumeOverlayVisible = false;
-let masterMuted = false;
-let volumes = {
-    music: 70,
-    sfx: 85
-};
-let savedVolumes = { ...volumes };
-
-// Volume Control Functions
 function toggleVolumeOverlay() {
     const overlay = document.getElementById('volumeOverlay');
     const muteButton = document.getElementById('muteButton');
@@ -333,13 +320,90 @@ function toggleVolumeOverlay() {
     volumeOverlayVisible = !volumeOverlayVisible;
     
     if (volumeOverlayVisible) {
+        // OVERLAY ÖFFNEN - Spiel pausieren
         overlay.classList.add('show');
         muteButton.classList.add('active');
+        
+        // Spiel pausieren wenn es läuft
+        if (gameState.currentState === GameState.PLAYING && gameState.gameRunning) {
+            gameWasPausedByVolumeOverlay = true;
+            gameState.gameRunning = false;
+            soundManager.pauseBackgroundMusic();
+            console.log("🔊 Volume overlay opened - game paused");
+        }
+        
     } else {
+        // OVERLAY SCHLIEßEN - Smooth Resume starten
         overlay.classList.remove('show');
         muteButton.classList.remove('active');
+        
+        // Smooth Resume starten wenn von uns pausiert
+        if (gameWasPausedByVolumeOverlay && gameState.currentState === GameState.PLAYING) {
+            startSmoothResume();
+            gameWasPausedByVolumeOverlay = false;
+            console.log("🔊 Volume overlay closed - starting smooth resume");
+        }
     }
 }
+
+function startSmoothResume() {
+    resumeTransition.active = true;
+    resumeTransition.progress = 0;
+    
+    // Spiel wieder aktivieren aber mit Transition
+    gameState.gameRunning = true;
+    soundManager.resumeBackgroundMusic();
+    
+    // Zeige Resume-Countdown
+    showResumeCountdown();
+}
+
+function showResumeCountdown() {
+    // Countdown-Overlay erstellen
+    let countdownOverlay = document.getElementById('resumeCountdown');
+    if (!countdownOverlay) {
+        countdownOverlay = document.createElement('div');
+        countdownOverlay.id = 'resumeCountdown';
+        countdownOverlay.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff88;
+            font-size: 48px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: bold;
+            padding: 20px 40px;
+            border-radius: 10px;
+            border: 2px solid #00ff88;
+            z-index: 1000;
+            text-align: center;
+            pointer-events: none;
+        `;
+        document.getElementById('gameContainer').appendChild(countdownOverlay);
+    }
+    
+    let countdown = 3;
+    countdownOverlay.style.display = 'block';
+    countdownOverlay.textContent = countdown;
+    
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+            countdownOverlay.textContent = countdown;
+        } else {
+            countdownOverlay.textContent = 'GO!';
+            setTimeout(() => {
+                countdownOverlay.style.display = 'none';
+                resumeTransition.active = false;
+            }, 500);
+            clearInterval(countdownInterval);
+        }
+    }, 667); // Etwa 2/3 Sekunde pro Zahl
+}
+
+// ===== VOLUME CONTROL FUNCTIONS =====
 
 function updateVolume(type, value) {
     volumes[type] = parseInt(value);
@@ -433,7 +497,18 @@ function updateMuteIcon() {
     }
 }
 
-// Event Listeners
+// Extended toggle mute function
+export function toggleMute() {
+    soundManager.toggleMute();
+    
+    // Wenn unmuted und Spiel läuft, Musik fortsetzen
+    if (!soundManager.isMuted && gameState.currentState === GameState.PLAYING) {
+        soundManager.resumeBackgroundMusic();
+    }
+}
+
+// ===== EVENT LISTENERS =====
+
 document.addEventListener('click', (e) => {
     const overlay = document.getElementById('volumeOverlay');
     const muteButton = document.getElementById('muteButton');
@@ -452,24 +527,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Global Functions
-window.toggleVolumeOverlay = toggleVolumeOverlay;
-window.updateVolume = updateVolume;
-window.toggleMasterMute = toggleMasterMute;
+// ===== GLOBAL UI FUNCTIONS (for window access) =====
 
-
-
-
-
-
-
-
-
-
-
-
-
-// Global UI Functions (for window access)
 window.startGame = startGame;
 window.pauseGame = pauseGame;
 window.resumeGame = resumeGame;
@@ -481,8 +540,12 @@ window.hideAllScreens = hideAllScreens;
 window.updateUI = updateUI;
 window.updateEnhancedDisplays = updateEnhancedDisplays;
 
-// Toggle functions
-window.toggleMute = () => soundManager.toggleMute();
+// Volume and Sound Functions
+window.toggleVolumeOverlay = toggleVolumeOverlay;
+window.updateVolume = updateVolume;
+window.toggleMasterMute = toggleMasterMute;
+window.startSmoothResume = startSmoothResume;
+window.toggleMute = toggleMute;
 
 window.toggleInfoOverlay = function() {
     const infoOverlay = document.getElementById('infoOverlay');

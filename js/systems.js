@@ -176,7 +176,7 @@ export function collectDrop(drop) {
             createScorePopup(drop.x, drop.y, 'Jump Boost!');
             break;
             
-      case DropType.SHIELD:
+case DropType.SHIELD:
     // Stack shields bis zu 5
     if (gameState.shieldCharges < 5) {
         gameState.shieldCharges++;
@@ -188,6 +188,7 @@ export function collectDrop(drop) {
         createScorePopup(drop.x, drop.y, '+500 Shield Bonus!');
     }
     break;
+
             
         case DropType.SCORE_MULTIPLIER:
             activeDropBuffs.scoreMultiplier = Math.min(

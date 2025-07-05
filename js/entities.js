@@ -96,13 +96,7 @@ export function createDoubleJumpParticles(x, y) {
     }
 }
 
-export function isPlayerInvulnerable(gameStateParam) {
-    return player.damageResistance > 0 || 
-           gameStateParam.postBuffInvulnerability > 0 || 
-           gameStateParam.postDamageInvulnerability > 0 || 
-           gameStateParam.hasShield || 
-           gameStateParam.isGhostWalking;
-}
+
 
 export function getObstacleHitbox(obstacle) {
     const reduction = 0.2;
@@ -522,194 +516,6 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
                     break;
             }
         }
-		
-		
-		// Boss jumps and FURY ATTACK
-// Boss jumps and FURY ATTACK
-if (obstacle.type === 'alphaWolf' && obstacle.jumpTimer !== undefined) {
-    // NEUE: Fury Attack Initialisierung
-    if (obstacle.furyAttackCooldown === undefined) {
-        obstacle.furyAttackCooldown = 0;
-        obstacle.isFuryCharging = false;
-        obstacle.furyChargeTime = 0;
-        obstacle.isLeaping = false;
-        obstacle.leapVelocityX = 0;
-        obstacle.leapVelocityY = 0;
-        obstacle.furyTriggered = false;
-        obstacle.targetX = 0;
-        obstacle.targetY = 0;
-        obstacle.facingDirection = 1; // 1 = rechts, -1 = links
-    }
-    
-   // FURY ATTACK TRIGGER - bei 3 oder weniger Leben (8 von 10 sind weg)
-
-	// FURY ATTACK TRIGGER - bei 3 oder weniger Leben (8 von 10 sind weg)
-if (obstacle.health <= 3 && !obstacle.furyTriggered && obstacle.furyAttackCooldown <= 0) {
-    obstacle.isFuryCharging = true;
-    obstacle.furyChargeTime = 90; // 1.5 Sekunden bei 60 FPS
-    obstacle.furyTriggered = true;
-    
-    // Stoppe normale Bewegung
-    obstacle.verticalMovement = 0;
-    obstacle.y = obstacle.originalY;
-    
-    // Ziel-Vorhersage wie bei Bat
-    const predictedX = player.x + (player.velocityX * 30);
-    const predictedY = player.y + (player.velocityY * 15);
-    obstacle.targetX = predictedX + player.width/2;
-    obstacle.targetY = Math.max(predictedY + player.height/2, CANVAS.groundY - 25);
-    
-    // SOFORT zum Spieler drehen - egal wo er ist
-    const directionToPlayer = obstacle.targetX > (obstacle.x + obstacle.width/2) ? 1 : -1;
-    obstacle.facingDirection = directionToPlayer;
-}
-
-// FURY CHARGING PHASE
-if (obstacle.isFuryCharging && obstacle.furyChargeTime > 0) {
-    obstacle.furyChargeTime -= gameState.deltaTime;
-    
-    // KONTINUIERLICH zum Spieler schauen während Charging - egal wo er ist
-    const currentDirectionToPlayer = (player.x + player.width/2) > (obstacle.x + obstacle.width/2) ? 1 : -1;
-    obstacle.facingDirection = currentDirectionToPlayer;
-    
-    // Stoppe alle normale Bewegung während Charging
-    obstacle.jumpTimer = 60; // Reset jump timer
-    
-    if (obstacle.furyChargeTime <= 0) {
-        // FURY LEAP STARTEN
-        obstacle.isFuryCharging = false;
-        obstacle.isLeaping = true;
-        
-        // Berechne Sprung-Vektor zum Ziel
-        const dx = obstacle.targetX - (obstacle.x + obstacle.width/2);
-        const dy = obstacle.targetY - (obstacle.y + obstacle.height/2);
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        const leapSpeed = 8; // Sehr schnell
-        obstacle.leapVelocityX = (dx / distance) * leapSpeed;
-        obstacle.leapVelocityY = (dy / distance) * leapSpeed;
-        
-        // Fury Attack Cooldown für nächsten Angriff
-        obstacle.furyAttackCooldown = 300; // 5 Sekunden
-    }
-}
-	
-	
-	
-	
-    // FURY LEAP BEWEGUNG
-    if (obstacle.isLeaping) {
-        obstacle.x += obstacle.leapVelocityX * gameState.deltaTime;
-        obstacle.y += obstacle.leapVelocityY * gameState.deltaTime;
-        
-        // Richtung während Sprung beibehalten
-        obstacle.facingDirection = obstacle.leapVelocityX > 0 ? 1 : -1;
-        
-        // Sprung-Distanz begrenzen
-        if (!obstacle.leapStartX) {
-            obstacle.leapStartX = obstacle.x;
-            obstacle.leapStartY = obstacle.y;
-            obstacle.maxLeapDistance = 150; // Maximale Sprungweite
-        }
-        
-        const distanceTraveled = Math.sqrt(
-            (obstacle.x - obstacle.leapStartX) * (obstacle.x - obstacle.leapStartX) +
-            (obstacle.y - obstacle.leapStartY) * (obstacle.y - obstacle.leapStartY)
-        );
-        
-        // Landung wenn: Boden erreicht ODER maximale Distanz ODER 1 Sekunde vergangen
-        if (!obstacle.leapTimer) obstacle.leapTimer = 60; // 1 Sekunde
-        obstacle.leapTimer -= gameState.deltaTime;
-        
-        if (obstacle.y >= obstacle.originalY || 
-            distanceTraveled >= obstacle.maxLeapDistance || 
-            obstacle.leapTimer <= 0) {
-            
-            obstacle.y = obstacle.originalY;
-            obstacle.isLeaping = false;
-            obstacle.leapVelocityX = 0;
-            obstacle.leapVelocityY = 0;
-            
-            // Reset für nächsten Sprung
-            delete obstacle.leapStartX;
-            delete obstacle.leapStartY;
-            delete obstacle.leapTimer;
-            delete obstacle.maxLeapDistance;
-            
-            // Landungsschaden-Check (kleiner Radius)
-            const landingRadius = 40;
-            const playerCenterX = player.x + player.width/2;
-            const playerCenterY = player.y + player.height/2;
-            const wolfCenterX = obstacle.x + obstacle.width/2;
-            const wolfCenterY = obstacle.y + obstacle.height/2;
-            
-            const distanceToPlayer = Math.sqrt(
-                (playerCenterX - wolfCenterX) * (playerCenterX - wolfCenterX) +
-                (playerCenterY - wolfCenterY) * (playerCenterY - wolfCenterY)
-            );
-            
-            if (distanceToPlayer < landingRadius && !isPlayerInvulnerable(gameStateParam)) {
-                // Landungsschaden
-                gameStateParam.lives--;
-                gameStateParam.damageThisLevel++;
-                createBloodParticles(player.x + player.width/2, player.y + player.height/2);
-                createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, 'FURY STRIKE!');
-                
-                gameStateParam.postDamageInvulnerability = 60;
-                player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
-                
-                gameStateParam.bulletsHit = 0;
-                gameStateParam.comboCount = 0;
-                gameStateParam.comboTimer = 0;
-                gameStateParam.consecutiveHits = 0;
-                soundManager.hit();
-            }
-            
-            // Landungs-Effekte
-            createBloodParticles(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height);
-            createLightningEffect(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
-            
-            // Fury kann wieder getriggert werden wenn Health weiter sinkt
-            if (obstacle.health > 1) {
-                obstacle.furyTriggered = false;
-            }
-        }
-    }
-    
-    // Normale Sprung-Logik nur wenn nicht in Fury Mode
-if (!obstacle.isFuryCharging && !obstacle.isLeaping) {
-    obstacle.jumpTimer -= enemySlowFactor * gameState.deltaTime;
-    obstacle.furyAttackCooldown -= gameState.deltaTime;
-    
-
-        
-        if (obstacle.verticalMovement !== undefined && 
-            (obstacle.verticalMovement !== 0 || obstacle.y < obstacle.originalY)) {
-            
-            obstacle.y += obstacle.verticalMovement * enemySlowFactor * gameState.deltaTime;
-            obstacle.verticalMovement += 0.5 * enemySlowFactor * gameState.deltaTime;
-            
-            if (obstacle.y >= obstacle.originalY) {
-                obstacle.y = obstacle.originalY;
-                obstacle.verticalMovement = 0;
-            }
-        }
-        
-        if (obstacle.jumpTimer <= 0 && obstacle.y >= obstacle.originalY && 
-            (obstacle.verticalMovement === 0 || obstacle.verticalMovement === undefined)) {
-            
-            obstacle.verticalMovement = -5;
-            const jumpFrequency = Math.max(60 - (level * 5), 60);
-            obstacle.jumpTimer = Math.random() * jumpFrequency * 2 + jumpFrequency;
-        }
-    }
-}
-		
-		
-		
-		
-		
-		
         
         // Frankenstein Table State Machine
         if (obstacle.type === 'frankensteinTable') {
@@ -750,6 +556,197 @@ if (!obstacle.isFuryCharging && !obstacle.isLeaping) {
                         obstacle.stateTimer = Math.random() * 120 + 60;
                     }
                     break;
+            }
+        }
+        
+        // ALPHA WOLF FURY ATTACK - KORRIGIERTER CODE
+        if (obstacle.type === 'alphaWolf' && obstacle.jumpTimer !== undefined) {
+            // NEUE: Fury Attack Initialisierung
+            if (obstacle.furyAttackCooldown === undefined) {
+                obstacle.furyAttackCooldown = 0;
+                obstacle.isFuryCharging = false;
+                obstacle.furyChargeTime = 0;
+                obstacle.isLeaping = false;
+                obstacle.leapVelocityX = 0;
+                obstacle.leapVelocityY = 0;
+                obstacle.furyTriggered = false;
+                obstacle.targetX = 0;
+                obstacle.targetY = 0;
+                obstacle.facingDirection = 1;
+                obstacle.lastHealth = obstacle.health; // NEUE: Track health changes
+            }
+            
+            // VERBESSERTER FURY TRIGGER - AB ERSTEM TREFFER!
+            const healthLost = obstacle.lastHealth - obstacle.health;
+            if (healthLost > 0 && !obstacle.furyTriggered && obstacle.furyAttackCooldown <= 0) {
+                obstacle.isFuryCharging = true;
+                obstacle.furyChargeTime = 90; // 1.5 Sekunden bei 60 FPS
+                obstacle.furyTriggered = true;
+                
+                // Update lastHealth für nächsten Fury (alle 2-3 Treffer)
+                obstacle.lastHealth = obstacle.health;
+                
+                // Stoppe normale Bewegung
+                obstacle.verticalMovement = 0;
+                obstacle.y = obstacle.originalY;
+                
+                // Ziel-Vorhersage
+                const predictedX = player.x + (player.velocityX * 30);
+                const predictedY = player.y + (player.velocityY * 15);
+                obstacle.targetX = predictedX + player.width/2;
+                obstacle.targetY = Math.max(predictedY + player.height/2, CANVAS.groundY - 25);
+                
+                // SOFORT zum Spieler drehen
+                const directionToPlayer = obstacle.targetX > (obstacle.x + obstacle.width/2) ? 1 : -1;
+                obstacle.facingDirection = directionToPlayer;
+                
+                console.log(`🐺 Alpha Wolf FURY triggered! Health: ${obstacle.health}/${obstacle.maxHealth}`);
+            }
+            
+            // FURY CHARGING PHASE
+            if (obstacle.isFuryCharging && obstacle.furyChargeTime > 0) {
+                obstacle.furyChargeTime -= gameState.deltaTime;
+                
+                // KONTINUIERLICH zum Spieler schauen während Charging
+                const currentDirectionToPlayer = (player.x + player.width/2) > (obstacle.x + obstacle.width/2) ? 1 : -1;
+                obstacle.facingDirection = currentDirectionToPlayer;
+                
+                // Stoppe alle normale Bewegung während Charging
+                obstacle.jumpTimer = 60; // Reset jump timer
+                
+                if (obstacle.furyChargeTime <= 0) {
+                    // FURY LEAP STARTEN
+                    obstacle.isFuryCharging = false;
+                    obstacle.isLeaping = true;
+                    
+                    // Berechne Sprung-Vektor zum Ziel
+                    const dx = obstacle.targetX - (obstacle.x + obstacle.width/2);
+                    const dy = obstacle.targetY - (obstacle.y + obstacle.height/2);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    const leapSpeed = 8; // Sehr schnell
+                    obstacle.leapVelocityX = (dx / distance) * leapSpeed;
+                    obstacle.leapVelocityY = (dy / distance) * leapSpeed;
+                    
+                    // KÜRZERER Fury Cooldown für häufigere Angriffe
+                    obstacle.furyAttackCooldown = 180; // 3 Sekunden statt 5
+                    
+                    console.log(`🐺 Alpha Wolf LEAPING! Target: ${obstacle.targetX}, ${obstacle.targetY}`);
+                }
+            }
+            
+            // FURY LEAP BEWEGUNG
+            if (obstacle.isLeaping) {
+                obstacle.x += obstacle.leapVelocityX * gameState.deltaTime;
+                obstacle.y += obstacle.leapVelocityY * gameState.deltaTime;
+                
+                // Richtung während Sprung beibehalten
+                obstacle.facingDirection = obstacle.leapVelocityX > 0 ? 1 : -1;
+                
+                // Sprung-Distanz begrenzen
+                if (!obstacle.leapStartX) {
+                    obstacle.leapStartX = obstacle.x;
+                    obstacle.leapStartY = obstacle.y;
+                    obstacle.maxLeapDistance = 150;
+                }
+                
+                const distanceTraveled = Math.sqrt(
+                    (obstacle.x - obstacle.leapStartX) * (obstacle.x - obstacle.leapStartX) +
+                    (obstacle.y - obstacle.leapStartY) * (obstacle.y - obstacle.leapStartY)
+                );
+                
+                if (!obstacle.leapTimer) obstacle.leapTimer = 60;
+                obstacle.leapTimer -= gameState.deltaTime;
+                
+                if (obstacle.y >= obstacle.originalY || 
+                    distanceTraveled >= obstacle.maxLeapDistance || 
+                    obstacle.leapTimer <= 0) {
+                    
+                    obstacle.y = obstacle.originalY;
+                    obstacle.isLeaping = false;
+                    obstacle.leapVelocityX = 0;
+                    obstacle.leapVelocityY = 0;
+                    
+                    // Reset für nächsten Sprung
+                    delete obstacle.leapStartX;
+                    delete obstacle.leapStartY;
+                    delete obstacle.leapTimer;
+                    delete obstacle.maxLeapDistance;
+                    
+                    // Landungsschaden-Check mit Shield-Support
+                    const landingRadius = 40;
+                    const playerCenterX = player.x + player.width/2;
+                    const playerCenterY = player.y + player.height/2;
+                    const wolfCenterX = obstacle.x + obstacle.width/2;
+                    const wolfCenterY = obstacle.y + obstacle.height/2;
+                    
+                    const distanceToPlayer = Math.sqrt(
+                        (playerCenterX - wolfCenterX) * (playerCenterX - wolfCenterX) +
+                        (playerCenterY - wolfCenterY) * (playerCenterY - wolfCenterY)
+                    );
+                    
+                    if (distanceToPlayer < landingRadius && !isPlayerInvulnerable(gameStateParam)) {
+                        // SHIELD CHECK ZUERST
+                        if (gameStateParam.shieldCharges > 0) {
+                            gameStateParam.shieldCharges--;
+                            if (gameStateParam.shieldCharges <= 0) {
+                                gameStateParam.hasShield = false;
+                                gameStateParam.shieldCharges = 0;
+                            }
+                            createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, 
+                                gameStateParam.shieldCharges > 0 ? `Shield: ${gameStateParam.shieldCharges} left` : 'Shield Broken by Fury!');
+                            gameStateParam.postDamageInvulnerability = 60; // 1 Sekunde
+                        } else {
+                            // Normaler Landungsschaden
+                            gameStateParam.lives--;
+                            gameStateParam.damageThisLevel++;
+                            createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, 'FURY STRIKE!');
+                            gameStateParam.postDamageInvulnerability = 120; // 2 Sekunden
+                        }
+                        
+                        player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+                        gameStateParam.bulletsHit = 0;
+                        gameStateParam.comboCount = 0;
+                        gameStateParam.comboTimer = 0;
+                        gameStateParam.consecutiveHits = 0;
+                        soundManager.hit();
+                    }
+                    
+                    // Landungs-Effekte
+                    createBloodParticles(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height);
+                    createLightningEffect(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
+                    
+                    // NEUE: Reset furyTriggered für nächsten Fury
+                    obstacle.furyTriggered = false;
+                    
+                    console.log(`🐺 Alpha Wolf landed! Ready for next fury in ${obstacle.furyAttackCooldown} frames`);
+                }
+            }
+            
+            // Normale Sprung-Logik nur wenn nicht in Fury Mode
+            if (!obstacle.isFuryCharging && !obstacle.isLeaping) {
+                obstacle.jumpTimer -= enemySlowFactor * gameState.deltaTime;
+                obstacle.furyAttackCooldown -= gameState.deltaTime;
+                
+                if (obstacle.verticalMovement !== undefined && 
+                    (obstacle.verticalMovement !== 0 || obstacle.y < obstacle.originalY)) {
+                    
+                    obstacle.y += obstacle.verticalMovement * enemySlowFactor * gameState.deltaTime;
+                    obstacle.verticalMovement += 0.5 * enemySlowFactor * gameState.deltaTime;
+                    
+                    if (obstacle.y >= obstacle.originalY) {
+                        obstacle.y = obstacle.originalY;
+                        obstacle.verticalMovement = 0;
+                    }
+                }
+                
+                if (obstacle.jumpTimer <= 0 && obstacle.y >= obstacle.originalY && 
+                    (obstacle.verticalMovement === 0 || obstacle.verticalMovement === undefined)) {
+                    
+                    obstacle.verticalMovement = -5;
+                    const jumpFrequency = Math.max(60 - (level * 5), 60);
+                    obstacle.jumpTimer = Math.random() * jumpFrequency * 2 + jumpFrequency;
+                }
             }
         }
         
@@ -855,31 +852,6 @@ if (!obstacle.isFuryCharging && !obstacle.isLeaping) {
             obstacle.y += Math.sin(Date.now() * 0.004 * enemySlowFactor + i) * 0.4 * gameState.deltaTime;
         }
         
-        // Boss jumps
-        if (obstacle.type === 'alphaWolf' && obstacle.jumpTimer !== undefined) {
-            obstacle.jumpTimer -= enemySlowFactor * gameState.deltaTime;
-            
-            if (obstacle.verticalMovement !== undefined && 
-                (obstacle.verticalMovement !== 0 || obstacle.y < obstacle.originalY)) {
-                
-				obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.4 * gameState.deltaTime;
-				obstacle.verticalMovement += 0.5 * enemySlowFactor * gameState.deltaTime;
-                
-                if (obstacle.y >= obstacle.originalY) {
-                    obstacle.y = obstacle.originalY;
-                    obstacle.verticalMovement = 0;
-                }
-            }
-            
-            if (obstacle.jumpTimer <= 0 && obstacle.y >= obstacle.originalY && 
-                (obstacle.verticalMovement === 0 || obstacle.verticalMovement === undefined)) {
-                
-                obstacle.verticalMovement = -5;
-                const jumpFrequency = Math.max(60 - (level * 5), 60);
-                obstacle.jumpTimer = Math.random() * jumpFrequency * 2 + jumpFrequency;
-            }
-        }
-        
         obstacle.animationTime = Date.now();
         
         // Magnet effect for bolt boxes
@@ -923,6 +895,7 @@ if (!obstacle.isFuryCharging && !obstacle.isLeaping) {
         }
     }
 }
+
 
 export function shoot(gameStateParam) {
     if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
@@ -1192,85 +1165,21 @@ export function updateAllEntities(gameStateParam) {
 
 // ENTITIES.JS - COLLISION SYSTEM KORREKTUR
 
+// ENTITIES.JS - KORRIGIERTE COLLISION SYSTEM
+
 export function checkCollisions(gameStateParam) {
     // WICHTIG: Invulnerability check ZUERST für ALLE Collision-Types
     if (isPlayerInvulnerable(gameStateParam)) {
-        // Shield collision handling - NUR wenn Shield aktiv aber nicht Ghost Walking
-        if (gameStateParam.shieldCharges > 0 && !gameStateParam.isGhostWalking) {
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                const obstacle = obstacles[i];
-                const hitbox = getObstacleHitbox(obstacle);
-                
-                if (player.x < hitbox.x + hitbox.width &&
-                    player.x + player.width > hitbox.x &&
-                    player.y < hitbox.y + hitbox.height &&
-                    player.y + player.height > hitbox.y) {
-                    
-                    if (obstacle.type === 'boltBox') {
-                        gameStateParam.bullets += 10;
-                        createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, '+10 Bolts');
-                        obstacles.splice(i, 1);
-                        continue;
-                    }
-                    
-                    if (obstacle.type === 'rock' || obstacle.type === 'sarcophagus') {
-                        continue;
-                    }
-                    
-                    // Tesla und Frankenstein - NUR Shield Damage wenn ZAP AKTIV
-                    if (obstacle.type === 'teslaCoil') {
-                        if (obstacle.state === 'zapping' && obstacle.zapActive) {
-                            gameStateParam.shieldCharges--;
-                            if (gameStateParam.shieldCharges <= 0) {
-                                gameStateParam.hasShield = false;
-                                gameStateParam.shieldCharges = 0;
-                            }
-                            createScorePopup(player.x + player.width/2, player.y, 
-                                gameStateParam.shieldCharges > 0 ? `Shield: ${gameStateParam.shieldCharges} left` : 'Shield Broken by Tesla!');
-                            soundManager.hit();
-                            break;
-                        }
-                        continue; // Kein Schaden wenn nicht zapping
-                    }
-                    
-                    if (obstacle.type === 'frankensteinTable') {
-                        if (obstacle.state === 'zapping' && obstacle.zapActive) {
-                            gameStateParam.shieldCharges--;
-                            if (gameStateParam.shieldCharges <= 0) {
-                                gameStateParam.hasShield = false;
-                                gameStateParam.shieldCharges = 0;
-                            }
-                            createScorePopup(player.x + player.width/2, player.y, 
-                                gameStateParam.shieldCharges > 0 ? `Shield: ${gameStateParam.shieldCharges} left` : 'Shield Broken by Frankenstein!');
-                            soundManager.hit();
-                            break;
-                        }
-                        continue; // Kein Schaden wenn nicht zapping
-                    }
-                    
-                    // Normal enemy collision - consume one shield charge
-                    gameStateParam.shieldCharges--;
-                    if (gameStateParam.shieldCharges <= 0) {
-                        gameStateParam.hasShield = false;
-                        gameStateParam.shieldCharges = 0;
-                    }
-                    
-                    createScorePopup(player.x + player.width/2, player.y, 
-                        gameStateParam.shieldCharges > 0 ? `Shield: ${gameStateParam.shieldCharges} left` : 'Shield Broken!');
-                    obstacles.splice(i, 1);
-                    soundManager.hit();
-                    break;
-                }
-            }
-        }
+        // ❌ PROBLEM WAR HIER: Shield handling während Invulnerability
+        // Das alte System hat sowohl Shield UND Leben abgezogen
         return false; // WICHTIG: Kein Schaden während Invulnerability
     }
 
-    // NORMALE COLLISION LOGIC - nur wenn NICHT invulnerable
+    // ✅ KORREKTE SHIELD LOGIC - nur wenn NICHT invulnerable
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
         
-        // Tesla Coil - KORRIGIERT: Nur Schaden bei ZAP + Position Check
+        // Tesla Coil - nur Schaden bei ZAP + Position Check
         if (obstacle.type === 'teslaCoil') {
             if (obstacle.state === 'zapping' && obstacle.zapActive) {
                 const zapX = obstacle.x + obstacle.width/2 - 8;
@@ -1283,33 +1192,13 @@ export function checkCollisions(gameStateParam) {
                     player.y < zapY + zapHeight &&
                     player.y + player.height > zapY) {
                     
-                    // NORMALER SCHADEN - nicht instant kill
-                    gameStateParam.lives--;
-                    gameStateParam.damageThisLevel++;
-                    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
-                    createLightningEffect(player.x + player.width/2, player.y + player.height/2);
-                    
-                    // WICHTIG: Invulnerability nach Schaden setzen
-                    gameStateParam.postDamageInvulnerability = 120; // 2 Sekunden bei 60 FPS
-                    player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
-                    
-                    gameStateParam.bulletsHit = 0;
-                    gameStateParam.comboCount = 0;
-                    gameStateParam.comboTimer = 0;
-                    gameStateParam.consecutiveHits = 0;
-                    
-                    soundManager.hit();
-                    
-                    if (gameStateParam.lives <= 0) {
-                        return true; // Game Over
-                    }
-                    return false; // Schaden genommen, aber nicht tot
+                    return handleDamage(gameStateParam, 'Tesla Coil');
                 }
             }
-            continue; // Tesla ohne ZAP macht keinen Schaden
+            continue;
         }
         
-        // Frankenstein Table - KORRIGIERT: Nur Schaden bei ZAP + Position Check
+        // Frankenstein Table - nur Schaden bei ZAP + Position Check
         if (obstacle.type === 'frankensteinTable') {
             if (obstacle.state === 'zapping' && obstacle.zapActive) {
                 const zapX = obstacle.x + obstacle.width/2 - 12;
@@ -1322,30 +1211,10 @@ export function checkCollisions(gameStateParam) {
                     player.y < zapY + zapHeight &&
                     player.y + player.height > zapY) {
                     
-                    // NORMALER SCHADEN - nicht instant kill
-                    gameStateParam.lives--;
-                    gameStateParam.damageThisLevel++;
-                    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
-                    createLightningEffect(player.x + player.width/2, player.y + player.height/2);
-                    
-                    // WICHTIG: Invulnerability nach Schaden setzen
-                    gameStateParam.postDamageInvulnerability = 120; // 2 Sekunden bei 60 FPS
-                    player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
-                    
-                    gameStateParam.bulletsHit = 0;
-                    gameStateParam.comboCount = 0;
-                    gameStateParam.comboTimer = 0;
-                    gameStateParam.consecutiveHits = 0;
-                    
-                    soundManager.hit();
-                    
-                    if (gameStateParam.lives <= 0) {
-                        return true; // Game Over
-                    }
-                    return false; // Schaden genommen, aber nicht tot
+                    return handleDamage(gameStateParam, 'Frankenstein Table');
                 }
             }
-            continue; // Frankenstein ohne ZAP macht keinen Schaden
+            continue;
         }
         
         // NORMALE GEGNER COLLISION
@@ -1367,54 +1236,90 @@ export function checkCollisions(gameStateParam) {
                 continue; // Kein Schaden
             }
             
-            // NORMALER ENEMY SCHADEN
-            gameStateParam.lives--;
-            gameStateParam.damageThisLevel++;
-            createBloodParticles(player.x + player.width/2, player.y + player.height/2);
-            
-            // WICHTIG: Invulnerability nach Schaden setzen
-            gameStateParam.postDamageInvulnerability = 120; // 2 Sekunden bei 60 FPS
-            player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
-            
-            gameStateParam.bulletsHit = 0;
-            gameStateParam.comboCount = 0;
-            gameStateParam.comboTimer = 0;
-            gameStateParam.consecutiveHits = 0;
-            obstacles.splice(i, 1);
-            soundManager.hit();
-            
-            if (gameStateParam.lives <= 0) {
-                return true; // Game Over
-            }
-            break; // Nur ein Gegner pro Frame
+            // ✅ KORREKTE DAMAGE LOGIC mit Shield-Priorität
+            return handleDamage(gameStateParam, obstacle.type, i);
         }
     }
     
     return false; // Kein Game Over
 }
 
-// WICHTIGE ÄNDERUNGEN ZUSAMMENGEFASST:
-/*
-🔧 TESLA & FRANKENSTEIN FIX:
-- Machen jetzt nur 1 Schaden pro Hit (nicht instant kill)
-- Schaden nur wenn ZAP aktiv UND Spieler in Zap-Zone
-- Normale 2-Sekunden Invulnerability nach Treffer
+// ✅ NEUE ZENTRALE DAMAGE-HANDLING FUNKTION
+function handleDamage(gameStateParam, damageSource, obstacleIndex = -1) {
+    // 1. SHIELD CHECK ZUERST
+    if (gameStateParam.shieldCharges > 0) {
+        // Shield absorbiert den Schaden
+        gameStateParam.shieldCharges--;
+        
+        if (gameStateParam.shieldCharges <= 0) {
+            gameStateParam.hasShield = false;
+            gameStateParam.shieldCharges = 0;
+            createScorePopup(player.x + player.width/2, player.y, 'Shield Broken!');
+        } else {
+            createScorePopup(player.x + player.width/2, player.y, 
+                `Shield: ${gameStateParam.shieldCharges} left`);
+        }
+        
+        // Obstacle entfernen (falls es ein Enemy war)
+        if (obstacleIndex >= 0) {
+            obstacles.splice(obstacleIndex, 1);
+        }
+        
+        // Kurze Invulnerability nach Shield-Hit
+        gameStateParam.postDamageInvulnerability = 60; // 1 Sekunde
+        player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+        
+        soundManager.hit();
+        
+        // ✅ WICHTIG: KEIN Leben verloren, nur Shield!
+        return false; // KEIN Game Over
+    }
+    
+    // 2. KEIN SHIELD - Leben verlieren
+    gameStateParam.lives--;
+    gameStateParam.damageThisLevel++;
+    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
+    
+    // Invulnerability nach Schaden setzen
+    gameStateParam.postDamageInvulnerability = 120; // 2 Sekunden
+    player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+    
+    // Stats reset
+    gameStateParam.bulletsHit = 0;
+    gameStateParam.comboCount = 0;
+    gameStateParam.comboTimer = 0;
+    gameStateParam.consecutiveHits = 0;
+    
+    // Obstacle entfernen (falls es ein Enemy war)
+    if (obstacleIndex >= 0) {
+        obstacles.splice(obstacleIndex, 1);
+    }
+    
+    soundManager.hit();
+    
+    // Game Over check
+    if (gameStateParam.lives <= 0) {
+        return true; // Game Over
+    }
+    
+    return false; // Schaden genommen, aber nicht tot
+}
 
-🔧 INVULNERABILITY FIX:
-- isPlayerInvulnerable() check ZUERST für alle Collision-Types
-- postDamageInvulnerability = 120 (2 Sekunden bei 60 FPS) nach JEDEM Schaden
-- Shields funktionieren nur während Invulnerability
+// ✅ KORRIGIERTE INVULNERABILITY CHECK
+export function isPlayerInvulnerable(gameStateParam) {
+    return player.damageResistance > 0 || 
+           gameStateParam.postBuffInvulnerability > 0 || 
+           gameStateParam.postDamageInvulnerability > 0 || 
+           gameStateParam.isGhostWalking;
+    // ❌ ENTFERNT: gameStateParam.hasShield - Shield ist KEIN Invulnerability!
+}
 
-🔧 LOGIK-REIHENFOLGE:
-1. Invulnerable? → Nur Shield-Logik, kein Schaden
-2. Nicht Invulnerable? → Normale Schaden-Logik + Invulnerability setzen
+// ✅ ZUSÄTZLICH: Shield Collection korrigieren in systems.js
+// In der collectDrop Funktion für DropType.SHIELD:
 
-RESULT:
-✅ Tesla/Frankenstein machen 1 Schaden, nicht instant kill
-✅ 2 Sekunden Schonzeit nach jedem Treffer
-✅ Shields funktionieren korrekt während Invulnerability
-✅ Keine doppelten Treffer von aufeinanderfolgenden Gegnern
-*/
+
+
+
 
 // Environment functions
 export function initEnvironmentElements() {
