@@ -931,9 +931,13 @@ export function shoot(gameStateParam) {
 }
 
 export function updateBullets(gameStateParam) {
+    let anyBulletHit = false;
+    
     for (let i = bulletsFired.length - 1; i >= 0; i--) {
         const bullet = bulletsFired[i];
         bullet.x += bullet.speed * gameState.deltaTime;
+        
+        let bulletHitSomething = false;
         
         for (let j = obstacles.length - 1; j >= 0; j--) {
             const obstacle = obstacles[j];
@@ -957,6 +961,8 @@ export function updateBullets(gameStateParam) {
                 createLightningEffect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
                 
                 gameStateParam.consecutiveHits++;
+                bulletHitSomething = true;
+                anyBulletHit = true;
                 
                 if (obstacle.health <= 0) {
                     handleObstacleDestroyed(obstacle, j, gameStateParam);
@@ -969,12 +975,16 @@ export function updateBullets(gameStateParam) {
             }
         }
         
+        // NEUE LOGIK: Reset consecutiveHits wenn Bullet nichts trifft
         if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100)) {
+            if (!bulletHitSomething) {
+                // Bullet ging ins Leere -> Reset consecutive hits
+                gameStateParam.consecutiveHits = 0;
+            }
             bulletsFired.splice(i, 1);
         }
     }
 }
-
 function handleObstacleDestroyed(obstacle, index, gameStateParam) {
     const config = ENEMY_CONFIG[obstacle.type];
     const basePoints = config?.points || 10;

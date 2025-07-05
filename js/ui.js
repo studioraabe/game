@@ -1,9 +1,10 @@
-// ui.js - All UI Functions with Enhanced Countdown System
+// ui.js - Enhanced UI with Controller Support and Tabbed Options Menu
 
 import { GameState, DUNGEON_THEME } from './core/constants.js';
 import { gameState, resetGame, startGameLoop, stopGameLoop, resumeTransition } from './core/gameState.js';
 import { soundManager, checkAchievements, saveHighScore, checkForTop10Score, displayHighscores } from './systems.js';
 import { activeDropBuffs } from './systems.js';
+import { getControllerInfo } from './core/input.js';
 import { 
     updateEnhancedComboDisplay, 
     updateEnhancedBuffDisplay,
@@ -18,6 +19,9 @@ let volumes = {
     sfx: 85
 };
 let savedVolumes = { ...volumes };
+
+// Options Menu State
+let currentOptionsTab = 'sound'; // 'sound' or 'controls'
 
 // Enhanced Countdown System
 let countdownActive = false;
@@ -41,14 +45,13 @@ export function showScreen(screenId) {
     if (element) element.style.display = 'block';
 }
 
-// Enhanced Countdown Function - now handles all game transitions
+// Enhanced Countdown Function
 function showUniversalCountdown(type = 'resume', callback = null) {
-    if (countdownActive) return; // Prevent multiple countdowns
+    if (countdownActive) return;
     
     countdownActive = true;
     countdownType = type;
     
-    // Create or get countdown overlay
     let countdownOverlay = document.getElementById('universalCountdown');
     if (!countdownOverlay) {
         countdownOverlay = document.createElement('div');
@@ -76,7 +79,6 @@ function showUniversalCountdown(type = 'resume', callback = null) {
         document.getElementById('gameContainer').appendChild(countdownOverlay);
     }
     
-    // Add countdown pulse animation to document if not exists
     if (!document.querySelector('#countdownStyles')) {
         const style = document.createElement('style');
         style.id = 'countdownStyles';
@@ -104,7 +106,6 @@ function showUniversalCountdown(type = 'resume', callback = null) {
     let countdown = 3;
     countdownOverlay.style.display = 'block';
     
-    // Set initial message based on type
     const messages = {
         'start': 'READY?',
         'restart': 'RESTARTING...',
@@ -118,8 +119,7 @@ function showUniversalCountdown(type = 'resume', callback = null) {
         <div style="animation: countdownNumber 0.6s ease-out;">${countdown}</div>
     `;
     
-    // Play countdown sound
-    soundManager.pickup(); // Initial sound
+    soundManager.pickup();
     
     const countdownInterval = setInterval(() => {
         countdown--;
@@ -131,36 +131,33 @@ function showUniversalCountdown(type = 'resume', callback = null) {
                 </div>
                 <div style="animation: countdownNumber 0.6s ease-out;">${countdown}</div>
             `;
-            soundManager.pickup(); // Countdown tick sound
+            soundManager.pickup();
         } else {
-            // Final "GO!" message
             countdownOverlay.innerHTML = `
                 <div style="font-size: 48px; animation: countdownGo 0.8s ease-out;">
                     GO!
                 </div>
             `;
-            soundManager.powerUp(); // Final GO sound
+            soundManager.powerUp();
             
             setTimeout(() => {
                 countdownOverlay.style.display = 'none';
                 countdownActive = false;
                 
-                // Execute the callback after countdown
                 if (callback && typeof callback === 'function') {
                     callback();
                 }
                 
-                // Clear resume transition if it was active
                 if (resumeTransition.active) {
                     resumeTransition.active = false;
                     const canvas = document.getElementById('gameCanvas');
                     if (canvas) canvas.style.opacity = 1;
                 }
-            }, 800); // Show GO! for 0.8 seconds
+            }, 800);
             
             clearInterval(countdownInterval);
         }
-    }, 800); // Each number shows for 0.8 seconds
+    }, 800);
 }
 
 // HUD Updates
@@ -177,52 +174,41 @@ export function updateUI() {
     }
 }
 
-// NEW: Update Health Bar with segments only (no text)
 export function updateHealthBar() {
     const healthContainer = document.getElementById('healthContainer');
     if (!healthContainer) return;
     
-    // Clear existing segments
     healthContainer.innerHTML = '';
     
-    // NEW: Add critical class when low health
     if (gameState.lives <= 1 && gameState.shieldCharges === 0) {
         healthContainer.classList.add('critical-health');
     } else {
         healthContainer.classList.remove('critical-health');
     }
-    // Add shield class to container if ANY shields are active
+    
     if (gameState.shieldCharges > 0) {
         healthContainer.classList.add('shield-active');
     } else {
         healthContainer.classList.remove('shield-active');
     }
     
-    // Create segments based on maxLives ONLY (no additional shield segments)
     for (let i = 0; i < gameState.maxLives; i++) {
         const segment = document.createElement('div');
         segment.className = 'health-segment';
         
-        // Determine segment type
         if (i >= gameState.lives) {
-            // Empty segment
             segment.classList.add('empty');
         } else if (gameState.lives <= 1 && gameState.shieldCharges === 0) {
-            // Critical health, no shields
             segment.classList.add('damage');
         } else if (gameState.shieldCharges > 0 && i < gameState.shieldCharges) {
-            // Shield-protected segment (from left to right, no numbers)
             segment.classList.add('shielded');
         }
-        // Regular life segments get no additional class
         
         healthContainer.appendChild(segment);
     }
 }
 
-// Separate function for enhanced displays that need continuous updates
 export function updateEnhancedDisplays() {
-    // Make sure containers exist before updating
     const buffContainer = document.getElementById('enhancedBuffs');
     const comboDisplay = document.getElementById('comboDisplay');
     
@@ -236,13 +222,11 @@ export function updateEnhancedDisplays() {
 }
 
 export function updateActiveBuffsDisplay() {
-    // This function is now handled by updateEnhancedBuffDisplay
-    // Keeping empty function for compatibility
+    // Handled by updateEnhancedBuffDisplay
 }
 
 export function updateComboDisplay() {
-    // This function is now handled by updateEnhancedComboDisplay
-    // Keeping empty function for compatibility
+    // Handled by updateEnhancedComboDisplay
 }
 
 export function updatePauseScreen() {
@@ -285,7 +269,7 @@ export function updateHighScore() {
     document.getElementById('highscoreValue').textContent = gameState.highScore;
 }
 
-// Menu Handling with Enhanced Countdown
+// Menu Handling
 export function startGame() {
     soundManager.init();
     if (soundManager.audioContext) {
@@ -374,7 +358,6 @@ export function gameOver() {
 }
 
 export function chooseBuff(buffType) {
-    // Apply the chosen buff
     switch(buffType) {
         case 'undeadResilience':
             gameState.activeBuffs.undeadResilience = 1;
@@ -387,10 +370,8 @@ export function chooseBuff(buffType) {
             break;
     }
     
-    // Remove chosen buff from available buffs
     gameState.availableBuffs = gameState.availableBuffs.filter(buff => buff.id !== buffType);
     
-    // Level up
     gameState.level++;
     gameState.levelProgress = 1;
     window.bulletBoxesFound = 0;
@@ -398,7 +379,6 @@ export function chooseBuff(buffType) {
     gameState.gameSpeed += 0.6;
     gameState.bullets += 12;
     
-    // Grant temporary invulnerability
     gameState.postBuffInvulnerability = 120;
     
     hideAllScreens();
@@ -414,7 +394,6 @@ export function applyTheme() {
     const container = document.getElementById('gameContainer');
     container.className = 'dungeon-theme';
     
-    // Update all labels
     const updates = [
         ['gameTitle', DUNGEON_THEME.title],
         ['startButton', DUNGEON_THEME.startButton],
@@ -443,7 +422,7 @@ export function applyTheme() {
     updateUI();
 }
 
-// ===== SOUND OVERLAY PAUSE & RESUME SYSTEM =====
+// ===== ENHANCED OPTIONS OVERLAY SYSTEM =====
 
 function toggleVolumeOverlay() {
     const overlay = document.getElementById('volumeOverlay');
@@ -452,30 +431,224 @@ function toggleVolumeOverlay() {
     volumeOverlayVisible = !volumeOverlayVisible;
     
     if (volumeOverlayVisible) {
-        // OVERLAY ÖFFNEN - Spiel pausieren
         overlay.classList.add('show');
         muteButton.classList.add('active');
         
-        // Spiel pausieren wenn es läuft
+        // Update options content
+        updateOptionsContent();
+        
         if (gameState.currentState === GameState.PLAYING && gameState.gameRunning) {
             gameWasPausedByVolumeOverlay = true;
             gameState.gameRunning = false;
             soundManager.pauseBackgroundMusic();
-            console.log("🔊 Volume overlay opened - game paused");
+            console.log("🔊 Options overlay opened - game paused");
         }
         
     } else {
-        // OVERLAY SCHLIEßEN - Smooth Resume starten
         overlay.classList.remove('show');
         muteButton.classList.remove('active');
         
-        // Smooth Resume starten wenn von uns pausiert
         if (gameWasPausedByVolumeOverlay && gameState.currentState === GameState.PLAYING) {
             startSmoothResume();
             gameWasPausedByVolumeOverlay = false;
-            console.log("🔊 Volume overlay closed - starting smooth resume");
+            console.log("🔊 Options overlay closed - starting smooth resume");
         }
     }
+}
+
+function updateOptionsContent() {
+    const overlay = document.getElementById('volumeOverlay');
+    if (!overlay) return;
+    
+    const controllerInfo = getControllerInfo();
+    
+    overlay.innerHTML = `
+        <div class="options-header">
+            <h3>Game Options</h3>
+            <div class="options-tabs">
+                <button class="options-tab ${currentOptionsTab === 'sound' ? 'active' : ''}" 
+                        onclick="switchOptionsTab('sound', event)">Sound</button>
+                <button class="options-tab ${currentOptionsTab === 'controls' ? 'active' : ''}" 
+                        onclick="switchOptionsTab('controls', event)">Controls</button>
+            </div>
+        </div>
+        
+        <div class="options-content">
+            ${currentOptionsTab === 'sound' ? renderSoundOptions() : renderControlsOptions(controllerInfo)}
+        </div>
+    `;
+}
+
+function renderSoundOptions() {
+    return `
+        <div class="options-section">
+            <!-- Music Volume -->
+            <div class="volume-control" id="musicControl">
+                <div class="volume-label">
+                    <div class="volume-label-text">
+                        <span class="volume-label-icon">🎵</span>
+                        <span>Music</span>
+                    </div>
+                    <span class="volume-value" id="musicValue">${volumes.music}%</span>
+                </div>
+                <div class="volume-slider-container">
+                    <div class="volume-slider-fill" id="musicFill" style="width: ${volumes.music}%"></div>
+                    <input type="range" class="volume-slider" id="musicSlider" 
+                           min="0" max="100" value="${volumes.music}" 
+                           oninput="updateVolume('music', this.value, event)">
+                </div>
+            </div>
+            
+            <!-- Sound Effects Volume -->
+            <div class="volume-control" id="sfxControl">
+                <div class="volume-label">
+                    <div class="volume-label-text">
+                        <span class="volume-label-icon">🔫</span>
+                        <span>Sound Effects</span>
+                    </div>
+                    <span class="volume-value" id="sfxValue">${volumes.sfx}%</span>
+                </div>
+                <div class="volume-slider-container">
+                    <div class="volume-slider-fill" id="sfxFill" style="width: ${volumes.sfx}%"></div>
+                    <input type="range" class="volume-slider" id="sfxSlider" 
+                           min="0" max="100" value="${volumes.sfx}" 
+                           oninput="updateVolume('sfx', this.value, event)">
+                </div>
+            </div>
+            
+            <!-- Master Controls -->
+            <div class="master-controls">
+                <button class="master-mute-btn ${masterMuted ? 'unmute' : ''}" 
+                        id="masterMuteBtn" onclick="toggleMasterMute(event)">
+                    ${masterMuted ? 'Unmute All' : 'Mute All'}
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderControlsOptions(controllerInfo) {
+    return `
+        <div class="options-section">
+            <!-- Controller Status -->
+            <div class="controller-status">
+                <div class="status-item">
+                    <span class="status-label">🎮 Controller</span>
+                    <span class="status-value ${controllerInfo.connected ? 'connected' : 'disconnected'}">
+                        ${controllerInfo.connected ? 'Connected' : 'Not Connected'}
+                    </span>
+                </div>
+                ${controllerInfo.connected ? `
+                    <div class="controller-info">
+                        <div class="controller-name">${controllerInfo.name}</div>
+                        <div class="controller-features">
+                            Vibration: ${controllerInfo.vibrationSupported ? '✅' : '❌'}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <!-- Input Mode Selection -->
+            <div class="input-mode-selection">
+                <div class="input-mode-label">Input Method</div>
+                <div class="input-mode-buttons">
+                    <button class="input-mode-btn ${controllerInfo.inputMode === 'keyboard' ? 'active' : ''}" 
+                            onclick="switchInputMode('keyboard', event)">
+                        ⌨️ Keyboard
+                    </button>
+                    <button class="input-mode-btn ${controllerInfo.inputMode === 'controller' ? 'active' : ''}" 
+                            onclick="switchInputMode('controller', event)"
+                            ${!controllerInfo.connected ? 'disabled' : ''}>
+                        🎮 Controller
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Controller Settings (only when controller is active) -->
+            ${controllerInfo.connected ? `
+                <div class="controller-settings">
+                    <!-- Deadzone Setting -->
+                    <div class="setting-control">
+                        <div class="setting-label">
+                            <span>Stick Deadzone</span>
+                            <span class="setting-value">${Math.round(controllerInfo.deadzone * 100)}%</span>
+                        </div>
+                        <div class="setting-slider-container">
+                            <input type="range" class="setting-slider" 
+                                   min="0" max="50" value="${controllerInfo.deadzone * 100}" 
+                                   oninput="updateControllerDeadzone(this.value, event)">
+                        </div>
+                    </div>
+                    
+                    <!-- Trigger Threshold -->
+                    <div class="setting-control">
+                        <div class="setting-label">
+                            <span>Trigger Sensitivity</span>
+                            <span class="setting-value">${Math.round(controllerInfo.triggerThreshold * 100)}%</span>
+                        </div>
+                        <div class="setting-slider-container">
+                            <input type="range" class="setting-slider" 
+                                   min="5" max="50" value="${controllerInfo.triggerThreshold * 100}" 
+                                   oninput="updateTriggerThreshold(this.value, event)">
+                        </div>
+                    </div>
+                    
+                    <!-- Vibration Test -->
+                    ${controllerInfo.vibrationSupported ? `
+                        <div class="setting-control">
+                            <button class="test-btn" onclick="event.stopPropagation(); testControllerVibration()">
+                                🎮 Test Vibration
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            ` : ''}
+            
+            <!-- Controls Help -->
+            <div class="controls-help">
+                <h4>${controllerInfo.inputMode === 'controller' ? 'Controller' : 'Keyboard'} Controls</h4>
+                ${controllerInfo.inputMode === 'controller' ? `
+                    <div class="control-mapping">
+                        <div class="control-item">
+                            <span>🎮 Left Stick</span>
+                            <span>Move left/right</span>
+                        </div>
+                        <div class="control-item">
+                            <span>🅰️ A Button (Xbox) / ❌ X (PlayStation)</span>
+                            <span>Jump (hold for higher)</span>
+                        </div>
+                        <div class="control-item">
+                            <span>🅱️ B Button / 🔴 Circle + Right Trigger</span>
+                            <span>Shoot</span>
+                        </div>
+                        <div class="control-item">
+                            <span>☰ Menu Button</span>
+                            <span>Pause</span>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="control-mapping">
+                        <div class="control-item">
+                            <span>↑ / W</span>
+                            <span>Jump (hold for higher)</span>
+                        </div>
+                        <div class="control-item">
+                            <span>← → / A D</span>
+                            <span>Move left/right</span>
+                        </div>
+                        <div class="control-item">
+                            <span>SPACE / S</span>
+                            <span>Shoot</span>
+                        </div>
+                        <div class="control-item">
+                            <span>ESC</span>
+                            <span>Pause</span>
+                        </div>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
 }
 
 function startSmoothResume() {
@@ -485,16 +658,68 @@ function startSmoothResume() {
     });
 }
 
+// ===== OPTIONS MANAGEMENT FUNCTIONS =====
+
+function switchOptionsTab(tab, event) {
+    // Prevent event bubbling to avoid closing the menu
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    currentOptionsTab = tab;
+    updateOptionsContent();
+}
+
+function switchInputMode(mode, event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    if (window.setInputMode && window.setInputMode(mode)) {
+        updateOptionsContent();
+    }
+}
+
+function updateControllerDeadzone(value, event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    if (window.setControllerDeadzone) {
+        window.setControllerDeadzone(value / 100);
+        updateOptionsContent();
+    }
+}
+
+function updateTriggerThreshold(value, event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    if (window.setTriggerThreshold) {
+        window.setTriggerThreshold(value / 100);
+        updateOptionsContent();
+    }
+}
+
 // ===== VOLUME CONTROL FUNCTIONS =====
 
-function updateVolume(type, value) {
+function updateVolume(type, value, event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+    }
+    
     volumes[type] = parseInt(value);
     
-    // Update display
     document.getElementById(`${type}Value`).textContent = `${value}%`;
     document.getElementById(`${type}Fill`).style.width = `${value}%`;
     
-    // Update muted state
     const control = document.getElementById(`${type}Control`);
     if (value == 0) {
         control.classList.add('muted');
@@ -504,11 +729,9 @@ function updateVolume(type, value) {
         setTimeout(() => control.classList.remove('active'), 500);
     }
     
-    // Update master mute state
     updateMasterMuteState();
     updateMuteIcon();
     
-    // Integrate with your sound manager
     if (type === 'music') {
         soundManager.setMusicVolume(value / 100);
     } else if (type === 'sfx') {
@@ -516,7 +739,13 @@ function updateVolume(type, value) {
     }
 }
 
-function toggleMasterMute() {
+function toggleMasterMute(event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
     const btn = document.getElementById('masterMuteBtn');
     const musicControl = document.getElementById('musicControl');
     const sfxControl = document.getElementById('sfxControl');
@@ -526,7 +755,6 @@ function toggleMasterMute() {
     masterMuted = !masterMuted;
     
     if (masterMuted) {
-        // Save current volumes and mute
         savedVolumes = { ...volumes };
         updateVolume('music', 0);
         updateVolume('sfx', 0);
@@ -538,7 +766,6 @@ function toggleMasterMute() {
         musicControl.classList.add('muted');
         sfxControl.classList.add('muted');
     } else {
-        // Restore saved volumes
         updateVolume('music', savedVolumes.music);
         updateVolume('sfx', savedVolumes.sfx);
         musicSlider.value = savedVolumes.music;
@@ -579,11 +806,9 @@ function updateMuteIcon() {
     }
 }
 
-// Extended toggle mute function
 export function toggleMute() {
     soundManager.toggleMute();
     
-    // Wenn unmuted und Spiel läuft, Musik fortsetzen
     if (!soundManager.isMuted && gameState.currentState === GameState.PLAYING) {
         soundManager.resumeBackgroundMusic();
     }
@@ -609,7 +834,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ===== GLOBAL UI FUNCTIONS (for window access) =====
+// ===== GLOBAL FUNCTIONS =====
 
 window.startGame = startGame;
 window.pauseGame = pauseGame;
@@ -622,11 +847,15 @@ window.hideAllScreens = hideAllScreens;
 window.updateUI = updateUI;
 window.updateEnhancedDisplays = updateEnhancedDisplays;
 
-// Volume and Sound Functions
+// Volume and Options Functions
 window.toggleVolumeOverlay = toggleVolumeOverlay;
 window.updateVolume = updateVolume;
 window.toggleMasterMute = toggleMasterMute;
 window.toggleMute = toggleMute;
+window.switchOptionsTab = switchOptionsTab;
+window.switchInputMode = switchInputMode;
+window.updateControllerDeadzone = updateControllerDeadzone;
+window.updateTriggerThreshold = updateTriggerThreshold;
 
 window.toggleInfoOverlay = function() {
     const infoOverlay = document.getElementById('infoOverlay');

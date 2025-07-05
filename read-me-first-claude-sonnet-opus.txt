@@ -1,0 +1,165 @@
+Retro Runner V.082 - System Overview
+Architektur & Hauptkomponenten
+🏗️ Core Architecture
+
+Modular ES6 System: Saubere Trennung in core/, rendering/, systems/
+Fixed 60 FPS Game Loop: gameState.js mit deltaTime-Normalisierung
+Entity-Component Pattern: Zentrale Arrays für obstacles, bullets, effects
+Real-time Rendering Pipeline: Depth-sorted rendering mit Y-ordering
+
+🎮 Core Game Systems
+GameState Management (core/gameState.js)
+
+Central game state object mit lives, score, level, buffs
+Resume transition system für smooth gameplay
+FPS-normalisierte Updates mit deltaTime
+State transitions: START → PLAYING → PAUSED → LEVEL_COMPLETE → GAME_OVER
+
+Player System (core/player.js)
+
+CORRUPTION MECHANIC: isCorrupted blockiert jumping/shooting
+Multi-jump system: ground → double (shadowLeap) → triple (jumpBoost)
+Facing direction tracking für rendering
+Hold-jump mechanics mit variable Höhe
+
+Camera System (core/camera.js)
+
+Dead zone scrolling (44% screen width)
+Forward-only movement (camera.maxX tracking)
+Screen coordinate conversion
+
+Input System (core/input.js)
+
+Key state tracking: W/↑(jump), A/D/←/→(move), S/Space(shoot), ESC(pause)
+Direct gameState integration
+
+🎯 Combat & Entity System
+Entity Management (entities.js)
+
+Arrays: obstacles, bulletsFired, drops, batProjectiles, effects
+Spawn System: Level-based enemy distribution mit spawn timers
+Collision System: Enhanced mit shield-priority damage handling
+Alpha Wolf Fury System: Health-triggered leap attacks mit target prediction
+
+Enemy Types & Behavior
+🦇 Bat: Omnidirektional spit attacks, player following
+🐺 Wolf/Alpha: Ground movement, fury leap attacks  
+🕷️ Spider: Fast ground, multi-hit
+🧟 Vampire: Slow, high health, floating
+💀 Skeleton: Basic ground enemy
+⚡ Tesla Coil: Ceiling-mounted, charge→zap→cooldown cycle
+🧪 Frankenstein: Lab table, upward lightning bolts
+🗿 Sarcophagus: Static obstacle mit glowing eyes
+📦 Bolt Box: Ammo pickup
+Drop System
+
+Boss drops (50%): extraLife, megaBullets, speedBoost, jumpBoost
+Rare drops (1% base): shield, scoreMultiplier, magnetMode, berserkerMode, ghostWalk, timeSlow
+Combo-based drop chance bonuses
+
+🎨 Rendering Pipeline (rendering/)
+Renderer (renderer.js)
+
+3-Layer Depth Sorting:
+
+Background: rocks, boltBoxes (static Y-sort)
+Dynamic: player + enemies (real-time Y-sort)
+Foreground: tesla/frankenstein (always on top)
+
+
+Bullets render above everything
+Effects render last
+
+Specialized Renderers
+
+Player (player.js): Multi-effect glow system (shield, corruption, berserker)
+Enemies (enemies.js): Type-specific animations, health bars, state machines
+Effects (effects.js): Particles, explosions, bat projectiles mit trails
+
+🎵 Audio & UI Systems
+Sound Manager (systems.js)
+
+Web Audio API für SFX
+Background music mit auto-resume
+Volume controls mit smooth transitions
+
+Enhanced UI (ui-enhancements.js)
+
+Combo Display: Bottom center, subtle styling, glow integration
+Buff Display: Bottom left, stack management, timers
+Stats Overlay: TAB-triggered performance metrics
+Achievement Popups: Animated notifications
+
+Volume Overlay System
+
+Game auto-pause bei volume settings
+Smooth resume mit countdown
+Master mute functionality
+
+⚡ Enhanced Damage System (enhanced-damage-system.js)
+Visual Feedback Components
+
+GlowManager: Container glow effects (combo, damage, shield, corruption)
+Screen Shake: Physics-based camera shake
+Critical Health Overlay: Vignette effect at 1 life
+Audio Enhancement: Layered damage sounds
+
+Integration Points
+
+Triggers von collision system
+Combo system integration
+Health state monitoring
+
+🏆 Progression & Persistence
+Achievement System
+
+firstBlood, untouchable, sharpshooter, speedDemon
+Permanent gameplay modifiers
+localStorage persistence
+
+Highscore System
+
+Local: localStorage backup
+Global: Pantry API mit validation
+Security: File-based banned words, score legitimacy checks, rate limiting
+
+Buff System
+
+Permanent (every 2 levels): chainLightning, undeadResilience, shadowLeap
+Temporary (drops): Stacking timers, multiple effects
+Visual Integration: Enhanced UI display
+
+🔧 Configuration & Constants
+Game Balance (constants.js)
+
+Enemy spawn chances by level
+Drop configurations mit duration/chances
+Physics constants (gravity, jump strength, speeds)
+Theme definitions (Dungeon theme active)
+
+Spawn Logic
+
+Level-scaled enemy distribution
+Timer-based spawn prevention
+Boss chance scaling (2% → 15%)
+Special hazard ratios (Tesla 60%, Frankenstein 40%)
+
+🎮 Game Flow Patterns
+
+Startup: Theme application → camera reset → entity initialization
+Gameplay Loop: Entity updates → collision detection → rendering → UI updates
+Level Progression: Every 2 levels → buff selection → speed increase
+Damage Flow: Collision → shield check → damage application → feedback effects
+Death: Game over → score validation → highscore submission → restart option
+
+🔍 Key Integration Points
+
+gameState as central hub für all systems
+Enhanced displays update every 500ms
+Damage effects integrate mit collision system
+Sound system coordinates mit game state changes
+Rendering depth managed durch Y-coordinate sorting
+Input handling directly modifies game state
+Persistence systems coordinate save/load operations
+
+Dieses System ist modular aufgebaut mit klaren Verantwortlichkeiten, aber starker Integration zwischen den Komponenten für smooth gameplay experience.

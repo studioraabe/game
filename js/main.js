@@ -1,10 +1,10 @@
-// main.js - KORRIGIERTE IMPORT UND INTEGRATION
+// main.js - Updated with Controller Support
 
 import { CANVAS, GameState } from './core/constants.js';
 import { gameState, resetGame, startGameLoop, stopGameLoop, update, loadGame, initRenderLoop } from './core/gameState.js';
 import { camera, resetCamera } from './core/camera.js';
 import { player, updatePlayer } from './core/player.js';
-import { keys, initInput } from './core/input.js';
+import { keys, initInput } from './core/input.js'; // Now includes controller support
 import { 
     initEnhancements, 
     initEnhancedContainers,
@@ -30,7 +30,7 @@ import {
     doubleJumpParticles,
     dropParticles,
     drops,
-    batProjectiles,  // KORRIGIERT: Importieren
+    batProjectiles,
     spawnObstacle,
     updateAllEntities,
     updateObstacles,
@@ -39,7 +39,7 @@ import {
     updateEnvironmentElements,
     updateDrops,
     updateEffects,
-    updateBatProjectiles,  // KORRIGIERT: Importieren
+    updateBatProjectiles,
     checkCollisions,
     shoot,
     bulletBoxesFound,
@@ -61,7 +61,6 @@ import {
 
 import { render } from './rendering/renderer.js';
 
-
 import { 
     triggerDamageEffects, 
     updateDamageEffects, 
@@ -71,8 +70,6 @@ import {
     clearComboGlow,
     damageEffectsDebug
 } from './enhanced-damage-system.js';
-
-
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
@@ -94,7 +91,7 @@ window.camera = camera;
 window.keys = keys;
 window.soundManager = soundManager;
 
-// Entity arrays - KORRIGIERT: batProjectiles richtig zuweisen
+// Entity arrays
 window.obstacles = obstacles;
 window.bulletsFired = bulletsFired;
 window.explosions = explosions;
@@ -105,7 +102,7 @@ window.scorePopups = scorePopups;
 window.doubleJumpParticles = doubleJumpParticles;
 window.dropParticles = dropParticles;
 window.drops = drops;
-window.batProjectiles = batProjectiles;  // KORRIGIERT: Funktioniert jetzt
+window.batProjectiles = batProjectiles;
 
 // Entity state
 window.bulletBoxesFound = bulletBoxesFound;
@@ -128,7 +125,7 @@ window.updateExplosions = updateExplosions;
 window.updateEnvironmentElements = () => updateEnvironmentElements(gameState.gameSpeed, gameState.timeSlowFactor);
 window.updateDrops = () => updateDrops(gameState.gameSpeed, gameState.magnetRange, gameState);
 window.updateEffects = () => updateEffects(gameState.timeSlowFactor, gameState);
-window.updateBatProjectiles = () => updateBatProjectiles(gameState);  // KORRIGIERT: Funktioniert jetzt
+window.updateBatProjectiles = () => updateBatProjectiles(gameState);
 window.checkCollisions = () => checkCollisions(gameState);
 window.shoot = () => shoot(gameState);
 window.render = () => render(ctx);
@@ -156,30 +153,25 @@ window.updateEnhancedDisplays = () => {
     updateEnhancedBuffDisplay();
 };
 
-// KORRIGIERTE Update Funktion
 window.update = () => {
     update();
-    // Enhanced displays werden nur bei Bedarf aktualisiert
 };
 
-
-
+// Damage system
 window.triggerDamageEffects = triggerDamageEffects;
 window.updateDamageEffects = updateDamageEffects;
 window.resetDamageEffects = resetDamageEffects;
 
 // Initialize game
 function init() {
-    console.log('Dungeon Runner V1.0 - Modular Edition');
+    console.log('🎮 Dungeon Runner V1.0 - Enhanced Edition with Controller Support');
     
     // Initialize systems
-    initInput();
+    initInput(); // Now includes controller support
     applyTheme();
     loadGame();
     initEnvironmentElements();
-	
-	
-	initDamageEffects();
+    initDamageEffects();
     
     // Initialize sound system
     soundManager.init();
@@ -187,7 +179,7 @@ function init() {
     // Initialize enhanced UI
     initEnhancements();
     
-    // Container nur einmal erstellen
+    // Container setup
     setTimeout(() => {
         initEnhancedContainers();
         enhancedDisplaysInitialized = true;
@@ -210,6 +202,11 @@ function init() {
     setInterval(() => {
         window.updateEnhancedDisplays();
     }, 500);
+    
+    console.log('🎮 Enhanced Input System: Ready for keyboard and controller input');
+    console.log('🔊 Audio System: Ready');
+    console.log('🎨 Enhanced UI: Ready');
+    console.log('✨ Game initialization complete!');
 }
 
 // Window events

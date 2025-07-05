@@ -7,22 +7,32 @@ import { showAchievementPopup } from './ui-enhancements.js';
 
 // Achievement System
 export function checkAchievements() {
-    if (!ACHIEVEMENTS.firstBlood.unlocked && gameState.bossesKilled >= 1) {
+    // First Blood: Statt 1 Boss -> 1000 Bosse
+    if (!ACHIEVEMENTS.firstBlood.unlocked && gameState.bossesKilled >= 1000) {
         unlockAchievement('firstBlood');
     }
     
-    if (!ACHIEVEMENTS.untouchable.unlocked && gameState.levelProgress >= 100 && gameState.damageThisLevel === 0) {
+    // Untouchable: Statt 1 Level ohne Schaden -> 100 Level ohne Schaden
+    if (!ACHIEVEMENTS.untouchable.unlocked && 
+        gameState.levelProgress >= 100 && 
+        gameState.damageThisLevel === 0 && 
+        gameState.levelsCompleted >= 100) {
         unlockAchievement('untouchable');
     }
     
-    if (!ACHIEVEMENTS.sharpshooter.unlocked && gameState.consecutiveHits >= 50) {
+    // Sharpshooter: Statt 50 Treffer -> 10000 Treffer in Folge
+    if (!ACHIEVEMENTS.sharpshooter.unlocked && gameState.consecutiveHits >= 10000) {
         unlockAchievement('sharpshooter');
     }
     
-    if (!ACHIEVEMENTS.speedDemon.unlocked && gameState.scoreIn30Seconds >= 1000) {
+    // Speed Demon: Statt 1000 Punkte in 30s -> 100000 Punkte in 10s
+    if (!ACHIEVEMENTS.speedDemon.unlocked && 
+        gameState.scoreIn30Seconds >= 100000 && 
+        (Date.now() - gameState.lastScoreTime) <= 10000) {
         unlockAchievement('speedDemon');
     }
 }
+
 
 export function unlockAchievement(id) {
     ACHIEVEMENTS[id].unlocked = true;
