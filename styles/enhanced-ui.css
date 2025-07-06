@@ -27,6 +27,7 @@
 }
 
 /* Enhanced Options Overlay with Tabs */
+/* Enhanced Options Overlay with Consistent Scrollbar Styling */
 #volumeOverlay {
     position: absolute;
     bottom: 80px;
@@ -44,6 +45,59 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
     overflow: hidden;
+}
+
+/* Apply the same scrollbar styling as main screens */
+#volumeOverlay::-webkit-scrollbar,
+.options-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#volumeOverlay::-webkit-scrollbar-track,
+.options-content::-webkit-scrollbar-track {
+    background: var(--glass);
+    border-radius: 3px;
+}
+
+#volumeOverlay::-webkit-scrollbar-thumb,
+.options-content::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 3px;
+}
+
+#volumeOverlay::-webkit-scrollbar-thumb:hover,
+.options-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+
+/* Options Content with proper scrolling */
+.options-content {
+    padding: 20px;
+    max-height: 300px; /* Reduced to ensure scrolling when needed */
+    overflow-y: auto;
+    /* Add smooth scrolling */
+    scroll-behavior: smooth;
+}
+
+/* Firefox scrollbar styling */
+.options-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--glass-border) var(--glass);
+}
+
+/* Enhanced scrolling experience */
+.options-content:hover::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.3);
+}
+
+/* Ensure proper spacing when scrollbar appears */
+.options-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* Add padding-right to prevent content from touching scrollbar */
+    padding-right: 8px;
 }
 
 #volumeOverlay.show {
@@ -560,7 +614,7 @@
 }
 
 /* Mute Button Active State */
-#muteButton.active {
+#settingsButton.active {
     background: var(--glass);
     border-color: var(--primary);
     box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);

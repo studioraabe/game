@@ -426,13 +426,13 @@ export function applyTheme() {
 
 function toggleVolumeOverlay() {
     const overlay = document.getElementById('volumeOverlay');
-    const muteButton = document.getElementById('muteButton');
+    const settingsButton = document.getElementById('settingsButton');
     
     volumeOverlayVisible = !volumeOverlayVisible;
     
     if (volumeOverlayVisible) {
         overlay.classList.add('show');
-        muteButton.classList.add('active');
+        settingsButton.classList.add('active');
         
         // Update options content
         updateOptionsContent();
@@ -446,7 +446,7 @@ function toggleVolumeOverlay() {
         
     } else {
         overlay.classList.remove('show');
-        muteButton.classList.remove('active');
+        settingsButton.classList.remove('active');
         
         if (gameWasPausedByVolumeOverlay && gameState.currentState === GameState.PLAYING) {
             startSmoothResume();
@@ -818,12 +818,12 @@ export function toggleMute() {
 
 document.addEventListener('click', (e) => {
     const overlay = document.getElementById('volumeOverlay');
-    const muteButton = document.getElementById('muteButton');
+    const settingsButton = document.getElementById('settingsButton');
     
     if (volumeOverlayVisible && 
-        overlay && muteButton &&
+        overlay && settingsButton &&
         !overlay.contains(e.target) && 
-        !muteButton.contains(e.target)) {
+        !settingsButton.contains(e.target)) {
         toggleVolumeOverlay();
     }
 });

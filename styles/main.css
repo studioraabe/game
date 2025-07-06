@@ -831,7 +831,7 @@ ul li {
     text-align: center;
 }
 
-#muteButton {
+#settingsButton {
     position: absolute;
     bottom: 20px;
     right: 20px;
