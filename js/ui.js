@@ -437,6 +437,11 @@ function toggleVolumeOverlay() {
         // Update options content
         updateOptionsContent();
         
+        // IMPORTANT: Refresh volume display after content is updated
+        setTimeout(() => {
+            refreshVolumeDisplay();
+        }, 50);
+        
         if (gameState.currentState === GameState.PLAYING && gameState.gameRunning) {
             gameWasPausedByVolumeOverlay = true;
             gameState.gameRunning = false;
@@ -455,7 +460,6 @@ function toggleVolumeOverlay() {
         }
     }
 }
-
 function updateOptionsContent() {
     const overlay = document.getElementById('volumeOverlay');
     if (!overlay) return;
@@ -526,7 +530,6 @@ function renderSoundOptions() {
         </div>
     `;
 }
-
 function renderControlsOptions(controllerInfo) {
     return `
         <div class="options-section">
@@ -717,21 +720,31 @@ function updateVolume(type, value, event) {
     
     volumes[type] = parseInt(value);
     
-    document.getElementById(`${type}Value`).textContent = `${value}%`;
-    document.getElementById(`${type}Fill`).style.width = `${value}%`;
+    // Update display elements
+    const valueElement = document.getElementById(`${type}Value`);
+    const fillElement = document.getElementById(`${type}Fill`);
+    const controlElement = document.getElementById(`${type}Control`);
     
-    const control = document.getElementById(`${type}Control`);
-    if (value == 0) {
-        control.classList.add('muted');
-    } else {
-        control.classList.remove('muted');
-        control.classList.add('active');
-        setTimeout(() => control.classList.remove('active'), 500);
+    if (valueElement) valueElement.textContent = `${value}%`;
+    if (fillElement) fillElement.style.width = `${value}%`;
+    
+    // Update control visual state
+    if (controlElement) {
+        if (value == 0) {
+            controlElement.classList.add('muted');
+            controlElement.classList.remove('active');
+        } else {
+            controlElement.classList.remove('muted');
+            controlElement.classList.add('active');
+            setTimeout(() => controlElement.classList.remove('active'), 500);
+        }
     }
     
+    // Update master mute state and apply audio changes
     updateMasterMuteState();
     updateMuteIcon();
     
+    // Apply volume changes to sound manager
     if (type === 'music') {
         soundManager.setMusicVolume(value / 100);
     } else if (type === 'sfx') {
@@ -751,31 +764,80 @@ function toggleMasterMute(event) {
     const sfxControl = document.getElementById('sfxControl');
     const musicSlider = document.getElementById('musicSlider');
     const sfxSlider = document.getElementById('sfxSlider');
+    const musicFill = document.getElementById('musicFill');
+    const sfxFill = document.getElementById('sfxFill');
+    const musicValue = document.getElementById('musicValue');
+    const sfxValue = document.getElementById('sfxValue');
     
     masterMuted = !masterMuted;
     
     if (masterMuted) {
+        // Save current volumes before muting
         savedVolumes = { ...volumes };
-        updateVolume('music', 0);
-        updateVolume('sfx', 0);
-        musicSlider.value = 0;
-        sfxSlider.value = 0;
         
-        btn.textContent = 'Unmute All';
-        btn.classList.add('unmute');
-        musicControl.classList.add('muted');
-        sfxControl.classList.add('muted');
+        // Mute everything
+        volumes.music = 0;
+        volumes.sfx = 0;
+        
+        // Update sliders
+        if (musicSlider) musicSlider.value = 0;
+        if (sfxSlider) sfxSlider.value = 0;
+        
+        // Update fill bars
+        if (musicFill) musicFill.style.width = '0%';
+        if (sfxFill) sfxFill.style.width = '0%';
+        
+        // Update value displays
+        if (musicValue) musicValue.textContent = '0%';
+        if (sfxValue) sfxValue.textContent = '0%';
+        
+        // Update visual states
+        if (musicControl) musicControl.classList.add('muted');
+        if (sfxControl) sfxControl.classList.add('muted');
+        
+        // Update button
+        if (btn) {
+            btn.textContent = 'Unmute All';
+            btn.classList.add('unmute');
+        }
+        
+        // Apply audio changes
+        soundManager.setMusicVolume(0);
+        soundManager.setSfxVolume(0);
+        
     } else {
-        updateVolume('music', savedVolumes.music);
-        updateVolume('sfx', savedVolumes.sfx);
-        musicSlider.value = savedVolumes.music;
-        sfxSlider.value = savedVolumes.sfx;
+        // Restore saved volumes
+        volumes.music = savedVolumes.music;
+        volumes.sfx = savedVolumes.sfx;
         
-        btn.textContent = 'Mute All';
-        btn.classList.remove('unmute');
-        musicControl.classList.remove('muted');
-        sfxControl.classList.remove('muted');
+        // Update sliders
+        if (musicSlider) musicSlider.value = savedVolumes.music;
+        if (sfxSlider) sfxSlider.value = savedVolumes.sfx;
+        
+        // Update fill bars
+        if (musicFill) musicFill.style.width = `${savedVolumes.music}%`;
+        if (sfxFill) sfxFill.style.width = `${savedVolumes.sfx}%`;
+        
+        // Update value displays
+        if (musicValue) musicValue.textContent = `${savedVolumes.music}%`;
+        if (sfxValue) sfxValue.textContent = `${savedVolumes.sfx}%`;
+        
+        // Update visual states
+        if (musicControl) musicControl.classList.remove('muted');
+        if (sfxControl) sfxControl.classList.remove('muted');
+        
+        // Update button
+        if (btn) {
+            btn.textContent = 'Mute All';
+            btn.classList.remove('unmute');
+        }
+        
+        // Apply audio changes
+        soundManager.setMusicVolume(savedVolumes.music / 100);
+        soundManager.setSfxVolume(savedVolumes.sfx / 100);
     }
+    
+    updateMuteIcon();
 }
 
 function updateMasterMuteState() {
@@ -783,37 +845,99 @@ function updateMasterMuteState() {
     const btn = document.getElementById('masterMuteBtn');
     
     if (allMuted && !masterMuted) {
+        // User manually muted both sliders
         masterMuted = true;
-        btn.textContent = 'Unmute All';
-        btn.classList.add('unmute');
+        if (btn) {
+            btn.textContent = 'Unmute All';
+            btn.classList.add('unmute');
+        }
     } else if (!allMuted && masterMuted) {
+        // User manually unmuted at least one slider
         masterMuted = false;
-        btn.textContent = 'Mute All';
-        btn.classList.remove('unmute');
+        if (btn) {
+            btn.textContent = 'Mute All';
+            btn.classList.remove('unmute');
+        }
     }
 }
 
 function updateMuteIcon() {
-    const icon = document.getElementById('muteIcon');
+    const icon = document.getElementById('settingsIcon');
     const totalVolume = volumes.music + volumes.sfx;
     
-    if (totalVolume === 0) {
-        icon.textContent = '🔇';
-    } else if (totalVolume < 100) {
-        icon.textContent = '🔉';
-    } else {
-        icon.textContent = '🔊';
+    if (icon) {
+        if (totalVolume === 0) {
+            icon.textContent = '🔇';
+        } else if (totalVolume < 100) {
+            icon.textContent = '🔉';
+        } else {
+            icon.textContent = '⚙️'; // Keep settings icon for consistency
+        }
     }
 }
 
-export function toggleMute() {
-    soundManager.toggleMute();
+// Initialize volumes properly when the page loads
+function initializeVolumeControls() {
+    // Set default volumes if not already set
+    if (!volumes.music) volumes.music = 70;
+    if (!volumes.sfx) volumes.sfx = 85;
     
-    if (!soundManager.isMuted && gameState.currentState === GameState.PLAYING) {
-        soundManager.resumeBackgroundMusic();
-    }
+    // Update all UI elements to match current volumes
+    updateVolume('music', volumes.music);
+    updateVolume('sfx', volumes.sfx);
+    
+    // Ensure master mute state is correct
+    updateMasterMuteState();
 }
 
+// Call this when the options overlay is opened
+function refreshVolumeDisplay() {
+    const musicSlider = document.getElementById('musicSlider');
+    const sfxSlider = document.getElementById('sfxSlider');
+    const musicFill = document.getElementById('musicFill');
+    const sfxFill = document.getElementById('sfxFill');
+    const musicValue = document.getElementById('musicValue');
+    const sfxValue = document.getElementById('sfxValue');
+    const btn = document.getElementById('masterMuteBtn');
+    
+    // Update all elements to current state
+    if (musicSlider) musicSlider.value = volumes.music;
+    if (sfxSlider) sfxSlider.value = volumes.sfx;
+    if (musicFill) musicFill.style.width = `${volumes.music}%`;
+    if (sfxFill) sfxFill.style.width = `${volumes.sfx}%`;
+    if (musicValue) musicValue.textContent = `${volumes.music}%`;
+    if (sfxValue) sfxValue.textContent = `${volumes.sfx}%`;
+    
+    // Update button state
+    if (btn) {
+        btn.textContent = masterMuted ? 'Unmute All' : 'Mute All';
+        if (masterMuted) {
+            btn.classList.add('unmute');
+        } else {
+            btn.classList.remove('unmute');
+        }
+    }
+    
+    // Update control states
+    const musicControl = document.getElementById('musicControl');
+    const sfxControl = document.getElementById('sfxControl');
+    
+    if (musicControl) {
+        if (volumes.music === 0) {
+            musicControl.classList.add('muted');
+        } else {
+            musicControl.classList.remove('muted');
+        }
+    }
+    
+    if (sfxControl) {
+        if (volumes.sfx === 0) {
+            sfxControl.classList.add('muted');
+        } else {
+            sfxControl.classList.remove('muted');
+        }
+    }
+}
 // ===== EVENT LISTENERS =====
 
 document.addEventListener('click', (e) => {
@@ -847,15 +971,16 @@ window.hideAllScreens = hideAllScreens;
 window.updateUI = updateUI;
 window.updateEnhancedDisplays = updateEnhancedDisplays;
 
-// Volume and Options Functions
+
 window.toggleVolumeOverlay = toggleVolumeOverlay;
-window.updateVolume = updateVolume;
-window.toggleMasterMute = toggleMasterMute;
-window.toggleMute = toggleMute;
+window.updateVolume = updateVolume;                    // Keep this one
+window.toggleMasterMute = toggleMasterMute;            // Keep this one
 window.switchOptionsTab = switchOptionsTab;
 window.switchInputMode = switchInputMode;
 window.updateControllerDeadzone = updateControllerDeadzone;
 window.updateTriggerThreshold = updateTriggerThreshold;
+window.refreshVolumeDisplay = refreshVolumeDisplay;
+window.initializeVolumeControls = initializeVolumeControls;
 
 window.toggleInfoOverlay = function() {
     const infoOverlay = document.getElementById('infoOverlay');

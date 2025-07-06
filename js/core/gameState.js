@@ -148,45 +148,21 @@ export function resetGame() {
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
     
-    // SMOOTH RESUME TRANSITION
-    if (resumeTransition.active) {
-        resumeTransition.progress += gameState.deltaTime;
-        const transitionFactor = Math.min(resumeTransition.progress / resumeTransition.duration, 1);
-        
-        // Smooth interpolation von 0 zu 1
-        const smoothFactor = 0.5 * (1 + Math.sin((transitionFactor * Math.PI) - Math.PI/2));
-        
-        // Verlangsame alle Game-Updates während Transition
-        const oldDeltaTime = gameState.deltaTime;
-        gameState.deltaTime *= smoothFactor;
-        
-        // Visuelle Transition-Effekte
-        const canvas = document.getElementById('gameCanvas');
-        if (canvas) {
-            const opacity = 0.3 + (smoothFactor * 0.7); // 30% bis 100% Opacity
-            canvas.style.opacity = opacity;
-            
-            if (transitionFactor >= 1) {
-                canvas.style.opacity = 1;
-                resumeTransition.active = false;
-                console.log("🎮 Smooth resume completed!");
-            }
-        }
-        
-        // Restore deltaTime für nächsten Frame
-        gameState.deltaTime = oldDeltaTime;
-    }
+    // NEUE: Stabilere FPS-Normalisierung
+    const now = performance.now();
+    if (!gameState.lastFrameTime) gameState.lastFrameTime = now;
     
-    // Update corruption timer
-    if (gameState.corruptionTimer > 0) {
-        gameState.corruptionTimer -= gameState.deltaTime;
-        if (gameState.corruptionTimer <= 0) {
-            gameState.isCorrupted = false;
-            gameState.corruptionTimer = 0;
-        }
-    }
+    const frameTime = now - gameState.lastFrameTime;
+    gameState.lastFrameTime = now;
     
-    // Update all game systems
+    // Clamp delta time um extreme Sprünge zu vermeiden
+    const clampedFrameTime = Math.min(frameTime, 33.33); // Max 30 FPS minimum
+    gameState.deltaTime = clampedFrameTime / 16.67; // Normalisiert auf 60 FPS
+    
+    // Stabilere Animation Time für Sprites
+    gameState.animationTime = now * 0.001; // Konsistente Zeit basierend auf performance.now()
+    
+    // Rest der update() Funktion...
     window.updatePlayer();
     window.spawnObstacle();
     window.updateObstacles();

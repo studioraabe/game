@@ -1,4 +1,4 @@
-// rendering/renderer.js - Main Render Loop
+// rendering/renderer.js - Main Render Loop - FIXED for Sprite System
 
 import { gameState } from '../core/gameState.js';
 import { getScreenX } from '../core/camera.js';
@@ -89,13 +89,13 @@ export function render(ctx) {
     // Rendere in der korrekten Reihenfolge:
     // 1. Background Obstacles (Rocks, BoltBoxes) - IMMER HINTEN
     for (const item of backgroundObjects) {
-        drawEnemy(item.object, ctx);
+        drawEnemy(item.object, ctx, gameState); // ✅ FIXED: gameState parameter added!
     }
 
     // 2. Dynamic Objects (Player + alle Enemies inkl. Skelette) - Y-SORTING
     for (const item of dynamicObjects) {
         if (item.type === 'obstacle') {
-            drawEnemy(item.object, ctx);
+            drawEnemy(item.object, ctx, gameState); // ✅ FIXED: gameState parameter added!
         } else if (item.type === 'player') {
             drawPlayer(ctx, item.screenX, item.object.y, item.object, gameState);
         }
@@ -103,7 +103,7 @@ export function render(ctx) {
 
     // 3. Foreground Obstacles (Tesla, Frankenstein) - IMMER VORNE
     for (const item of foregroundObjects) {
-        drawEnemy(item.object, ctx);
+        drawEnemy(item.object, ctx, gameState); // ✅ FIXED: gameState parameter added!
     }
     
     // 4. Draw bullets (appear in front of everything)

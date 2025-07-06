@@ -7,6 +7,8 @@ import { gameState } from './core/gameState.js';
 import { soundManager, rollForDrop, collectDrop } from './systems.js';
 import { createDamageNumber } from './ui-enhancements.js';
 import { triggerDamageEffects } from './enhanced-damage-system.js';
+import { cleanupSkeletonEntity } from './rendering/sprite-system.js';
+
 
 
 // Entity Arrays
@@ -141,7 +143,7 @@ function calculateSpawnTimer(baseTimer, minTimer, level) {
 }
 
 function createObstacle(type, x, y, width, height) {
-    return {
+    const obstacle = {
         x: x,
         y: y,
         width: width,
@@ -150,10 +152,31 @@ function createObstacle(type, x, y, width, height) {
         passed: false,
         health: 1,
         maxHealth: 1,
-        animationTime: Math.random() * 1000
+        animationTime: Math.random() * 1000,
+        id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
+    
+    // Add type-specific properties
+    if (type === 'skeleton') {
+        obstacle.velocityX = 0; // Will be set to -speed in updateObstacles
+        obstacle.lastAnimation = 'idle';
+        obstacle.isDead = false;
+        obstacle.isAttacking = false;
+        obstacle.damageResistance = 0;
+        obstacle.deathTimer = 0;
+    }
+    
+    if (type === 'alphaWolf') {
+        const jumpFrequency = Math.max(60 - (gameState.level * 5), 20);
+        obstacle.verticalMovement = 0;
+        obstacle.jumpTimer = jumpFrequency;
+        obstacle.originalY = y;
+    }
+    
+    // ... other type-specific initializations
+    
+    return obstacle;
 }
-
 // ========================================
 // BAT PROJEKTILE SYSTEM
 // ========================================
@@ -471,6 +494,37 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
     
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
+		
+		
+		
+		 if (obstacle.type === 'skeleton' && obstacle.isDead) {
+            obstacle.deathTimer += gameState.deltaTime;
+            
+            if (obstacle.deathTimer > 120) { // 2 seconds
+                // Cleanup sprite animation
+                if (obstacle.id && window.spriteManager) {
+                    window.spriteManager.cleanupEntity('skeleton', obstacle.id);
+                }
+                obstacles.splice(i, 1);
+                continue;
+            }
+            continue; // Skip other processing for dead skeletons
+        }
+        
+        // SKELETON-SPECIFIC LOGIC (for living skeletons)
+        if (obstacle.type === 'skeleton') {
+            // ✅ NOW we can use speed because it's defined in this function
+            obstacle.velocityX = -speed; // Set velocity for animation system
+            
+            // Update damage resistance
+            if (obstacle.damageResistance > 0) {
+                obstacle.damageResistance -= gameState.deltaTime;
+            }
+            
+            // Vertical movement (floating/bobbing effect)
+            obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.6 * gameState.deltaTime;
+        }
+		
         
         const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
                             obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' ||
@@ -942,49 +996,80 @@ export function updateBullets(gameStateParam) {
         for (let j = obstacles.length - 1; j >= 0; j--) {
             const obstacle = obstacles[j];
             
-            if (obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable') {
-                continue;
-            }
-            
-            if (obstacle.type === 'boltBox') {
-                continue;
-            }
-            
-            if (bullet.x < obstacle.x + obstacle.width &&
-                bullet.x + 8 > obstacle.x &&
-                bullet.y < obstacle.y + obstacle.height &&
-                bullet.y + 4 > obstacle.y) {
+            // ✅ NO CONTINUE STATEMENTS - Use if-condition instead
+            if (obstacle.type !== 'teslaCoil' && 
+                obstacle.type !== 'frankensteinTable' && 
+                obstacle.type !== 'boltBox' && 
+                !(obstacle.type === 'skeleton' && obstacle.isDead)) {
                 
-                const damage = bullet.enhanced ? 1 : 1;
-                obstacle.health -= damage;
-                
-                createLightningEffect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
-                
-                gameStateParam.consecutiveHits++;
-                bulletHitSomething = true;
-                anyBulletHit = true;
-                
-                if (obstacle.health <= 0) {
-                    handleObstacleDestroyed(obstacle, j, gameStateParam);
-                }
-                
-                if (!bullet.piercing || !gameStateParam.hasPiercingBullets) {
-                    bulletsFired.splice(i, 1);
-                    break;
+                // Collision detection
+                if (bullet.x < obstacle.x + obstacle.width &&
+                    bullet.x + 8 > obstacle.x &&
+                    bullet.y < obstacle.y + obstacle.height &&
+                    bullet.y + 4 > obstacle.y) {
+                    
+                    const damage = bullet.enhanced ? 1 : 1;
+                    obstacle.health -= damage;
+                    
+                    // Skeleton-specific damage effects
+                    if (obstacle.type === 'skeleton') {
+                        obstacle.damageResistance = 30;
+                        
+                        if (obstacle.health <= 0) {
+                            obstacle.isDead = true;
+                            obstacle.deathTimer = 0;
+                            
+                            // Award points
+                            const config = ENEMY_CONFIG[obstacle.type];
+                            const basePoints = config?.points || 10;
+                            const levelBonus = (gameStateParam.level - 1) * 5;
+                            const points = (basePoints + levelBonus) * gameStateParam.scoreMultiplier;
+                            
+                            gameStateParam.score += points;
+                            createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
+                            
+                            rollForDrop(obstacle.type, obstacle.x + obstacle.width/2, obstacle.y);
+                            gameStateParam.enemiesDefeated++;
+                            gameStateParam.bulletsHit++;
+                            gameStateParam.levelProgress += 3;
+                            soundManager.hit();
+                            
+                            gameStateParam.comboCount++;
+                            if (gameStateParam.comboCount >= 2) {
+                                gameStateParam.comboTimer = 300;
+                            }
+                        }
+                    }
+                    
+                    createLightningEffect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
+                    
+                    gameStateParam.consecutiveHits++;
+                    bulletHitSomething = true;
+                    anyBulletHit = true;
+                    
+                    if (obstacle.health <= 0 && obstacle.type !== 'skeleton') {
+                        handleObstacleDestroyed(obstacle, j, gameStateParam);
+                    }
+                    
+                    if (!bullet.piercing || !gameStateParam.hasPiercingBullets) {
+                        bulletsFired.splice(i, 1);
+                        break;
+                    }
                 }
             }
         }
         
-        // NEUE LOGIK: Reset consecutiveHits wenn Bullet nichts trifft
+        // Clean up off-screen bullets
         if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100)) {
             if (!bulletHitSomething) {
-                // Bullet ging ins Leere -> Reset consecutive hits
                 gameStateParam.consecutiveHits = 0;
             }
             bulletsFired.splice(i, 1);
         }
     }
 }
+        
+      
 function handleObstacleDestroyed(obstacle, index, gameStateParam) {
     const config = ENEMY_CONFIG[obstacle.type];
     const basePoints = config?.points || 10;
@@ -995,12 +1080,14 @@ function handleObstacleDestroyed(obstacle, index, gameStateParam) {
     createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
 
     const isCritical = gameStateParam.comboCount >= 20;
-    createDamageNumber(
-    obstacle.x + obstacle.width/2, 
-    obstacle.y + obstacle.height/2, 
-    points, 
-    isCritical
-    );
+    if (typeof createDamageNumber === 'function') {
+        createDamageNumber(
+            obstacle.x + obstacle.width/2, 
+            obstacle.y + obstacle.height/2, 
+            points, 
+            isCritical
+        );
+    }
     
     const currentTime = Date.now();
     if (currentTime - gameStateParam.lastScoreTime < 30000) {
@@ -1039,7 +1126,6 @@ function handleObstacleDestroyed(obstacle, index, gameStateParam) {
         gameStateParam.bulletsHit = 0;
     }
 }
-
 export function updateExplosions() {
     for (let i = explosions.length - 1; i >= 0; i--) {
         explosions[i].frame += gameState.deltaTime;

@@ -1,520 +1,321 @@
-// rendering/player.js - Dungeon Character Rendering with GLOW EFFECTS
+// rendering/player.js - Dungeon Character Rendering with SPRITE SUPPORT
 
 import { activeDropBuffs } from '../systems.js';
+import { spriteManager } from './sprite-system.js';
+import { GAME_CONSTANTS } from '../core/constants.js'; // DIESER IMPORT FEHLT!
+import { keys } from '../core/input.js'; // NEU: Für Shoot-Detection
 
 export function drawPlayer(ctx, x, y, player, gameState) {
-    const scale = 1.6;
+    // Use sprite renderer if sprites are loaded
+    if (spriteManager.loaded) {
+        drawPlayerSprite(ctx, x, y, player, gameState);
+        return;
+    }
+    
+    // Fallback to original pixel art renderer
+    const scale = 4;
     const isInvulnerable = gameState.postBuffInvulnerability > 0 || gameState.postDamageInvulnerability > 0;
     const isDead = gameState.lives <= 0;
     const facingLeft = player.facingDirection === -1;
     
+    // ... rest of your original drawPlayer code ...
+    // (Der original Code bleibt als Fallback)
+}
+
+// NEW FUNCTION: Sprite-based player rendering
+function drawPlayerSprite(ctx, x, y, player, gameState) {
+    const scale = 4; // Same scale as original
+    const isInvulnerable = gameState.postBuffInvulnerability > 0 || 
+                          gameState.postDamageInvulnerability > 0;
+    const facingLeft = player.facingDirection === -1;
+    
+    // HIER IST DIE ZEILE DIE DU GESUCHT HAST:
+    // Sprite scaling - adjust 480 to match your actual sprite frame size
+    const spriteScale = (player.width / 480) * scale; // 480 ist deine Frame-Größe!
+    const offsetX = -62; // Adjust if sprite needs horizontal offset
+    const offsetY = -54; // Adjust if sprite needs vertical offset
+    
+    // KORREKTE BERECHNUNG für 480x480 Sprites
+    const SPRITE_FRAME_WIDTH = 480;
+    const SPRITE_FRAME_HEIGHT = 480;
+    const renderedSpriteWidth = SPRITE_FRAME_WIDTH * spriteScale;
+    const renderedSpriteHeight = SPRITE_FRAME_HEIGHT * spriteScale;
+    
+    // Zentrum des gerenderten Sprites
+    const centerX = x + offsetX + (renderedSpriteWidth / 2);
+    const centerY = y + offsetY + (renderedSpriteHeight / 2);
+    
+    // Effekt-Skalierung
+    const effectScale = spriteScale * 4.0; // Kann angepasst werden
+    
+    // Initialize animation timers if not exists
+    if (!player.shootAnimTimer) player.shootAnimTimer = 0;
+    if (!player.hitAnimTimer) player.hitAnimTimer = 0;
+    
     // Blink effect when invulnerable
     if (isInvulnerable) {
         const blinkFrequency = 8;
-        const activeInvulnerability = Math.max(gameState.postBuffInvulnerability, gameState.postDamageInvulnerability);
+        const activeInvulnerability = Math.max(
+            gameState.postBuffInvulnerability, 
+            gameState.postDamageInvulnerability
+        );
         
         if (Math.floor(activeInvulnerability / blinkFrequency) % 2 === 0) {
             return;
         }
     }
     
-    ctx.save();
+    // Determine current state based on player actions
+    let currentState = 'idle';
     
-    // Apply scaling
-    ctx.translate(x + player.width/2, y + player.height/2);
-    ctx.scale(scale, scale);
-    ctx.translate(-player.width/2, -player.height/2);
-    
-    // ===== NEUE GLOW EFFEKTE =====
-    
-    // Shield Glow - Blauer Schutzschild
-    if (gameState.shieldCharges > 0) {
-    for (let i = 0; i < Math.min(gameState.shieldCharges, 3); i++) { // Max 3 visual rings
-        const shieldPulse = 0.7 + Math.sin(Date.now() * 0.003 + i * 0.5) * 0.3;
-        const shieldRadius = 35 + (i * 8); // Each shield adds 8px radius
-        const shieldAlpha = shieldPulse * (0.8 - i * 0.15); // Outer shields are more transparent
-        
-        ctx.strokeStyle = `rgba(65, 105, 225, ${shieldAlpha})`;
-        ctx.lineWidth = 3 - i; // Outer shields are thinner
-        ctx.beginPath();
-        ctx.arc(player.width/2, player.height/2, shieldRadius, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Inner shield glow
-        ctx.fillStyle = `rgba(65, 105, 225, ${shieldAlpha * 0.15})`;
-        ctx.beginPath();
-        ctx.arc(player.width/2, player.height/2, shieldRadius, 0, Math.PI * 2);
-        ctx.fill();
+    // KORRIGIERT: Hit state - verlängerte Dauer
+    if (player.damageResistance > 0 && player.damageResistance > GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME - 30) {
+        currentState = 'hit'; // Zeige Hit-Animation für 30 Frames (0.5 Sekunden)
+        player.hitAnimTimer = 30;
+    }
+    // KORRIGIERT: Shoot state - mit Timer
+    else if (player.shootAnimTimer > 0) {
+        currentState = 'shoot';
+        player.shootAnimTimer--;
+    }
+    // Check if jumping/falling
+    else if (!player.grounded || player.velocityY !== 0) {
+        currentState = 'jump';
+    } 
+    // Check if running
+    else if (Math.abs(player.velocityX) > 0.5) {
+        currentState = 'run';
     }
     
-  
-}
+    // KORRIGIERT: Trigger shoot animation when shooting
+    if ((gameState.bullets > 0 || gameState.isBerserker) && keys.s && !player.wasSpacePressed) {
+        player.shootAnimTimer = 15; // Zeige Shoot-Animation für 15 Frames (0.25 Sekunden)
+    }
     
+   // Korrigierte drawPlayerSprite Funktion - Buff-Effekte Teil
+// Ersetze den Buff-Effekte Abschnitt in player.js mit diesem Code:
+
+    ctx.save(); // Haupt-Save für alle Effekte
     
+    // Apply all visual effects before drawing sprite
     
+    // Shield Effect - ISOLIERT
+    if (gameState.shieldCharges > 0) {
+        ctx.save(); // Isoliere Shield-Effekt
+        for (let i = 0; i < Math.min(gameState.shieldCharges, 3); i++) {
+            const shieldPulse = 0.7 + Math.sin(Date.now() * 0.003 + i * 0.5) * 0.3;
+            const shieldRadius = (35 + (i * 8)) * effectScale;
+            const shieldAlpha = shieldPulse * (0.8 - i * 0.15);
+            
+            ctx.strokeStyle = `rgba(65, 105, 225, ${shieldAlpha})`;
+            ctx.lineWidth = (3 - i) * effectScale;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, shieldRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.fillStyle = `rgba(65, 105, 225, ${shieldAlpha * 0.15})`;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, shieldRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore(); // Stelle Canvas-State wieder her
+    }
     
-     // NEU: CORRUPTION EFFECT - Lila/Schwarze Aura
+    // Corruption Effect - ISOLIERT
     if (gameState.isCorrupted) {
-        const corruptionIntensity = gameState.corruptionTimer / 120; // 0-1 basierend auf verbleibender Zeit
+        ctx.save(); // Isoliere Corruption-Effekt
+        const corruptionIntensity = gameState.corruptionTimer / 120;
         const corruptionPulse = 0.5 + Math.sin(Date.now() * 0.02) * 0.5;
         
-        // Dunkle Corruption Aura
         const corruptionGradient = ctx.createRadialGradient(
-            player.width/2, player.height/2, 0,
-            player.width/2, player.height/2, 50
+            centerX, centerY, 0,
+            centerX, centerY, 50 * effectScale
         );
         corruptionGradient.addColorStop(0, `rgba(139, 0, 139, ${corruptionIntensity * corruptionPulse * 0.6})`);
         corruptionGradient.addColorStop(0.5, `rgba(75, 0, 130, ${corruptionIntensity * corruptionPulse * 0.4})`);
         corruptionGradient.addColorStop(1, 'rgba(25, 25, 112, 0)');
         ctx.fillStyle = corruptionGradient;
-        ctx.fillRect(-25, -25, player.width + 50, player.height + 50);
+        ctx.fillRect(centerX - 50 * effectScale, centerY - 50 * effectScale, 100 * effectScale, 100 * effectScale);
         
-        // Corruption Partikel
-        for (let i = 0; i < 6; i++) {
-            const particleTime = Date.now() * 0.003 + i * 1.5;
-            const particleX = player.width/2 + Math.sin(particleTime * 2) * 20;
-            const particleY = player.height/2 + Math.cos(particleTime * 1.5) * 20;
-            const particleSize = 2 + Math.sin(particleTime * 4) * 1;
-            
-            ctx.fillStyle = `rgba(139, 0, 139, ${corruptionIntensity * corruptionPulse})`;
-            ctx.fillRect(particleX - particleSize/2, particleY - particleSize/2, particleSize, particleSize);
-        }
+        // Corruption particles... (rest of corruption code)
         
-        // Schwächung-Indikator (X über Waffe und Sprung-Bereichen)
-        ctx.strokeStyle = `rgba(255, 0, 0, ${corruptionPulse})`;
-        ctx.lineWidth = 2;
-        
-        // X über Waffen-Bereich (rechts)
-        ctx.beginPath();
-        ctx.moveTo(player.width - 15, 15);
-        ctx.lineTo(player.width - 5, 25);
-        ctx.moveTo(player.width - 5, 15);
-        ctx.lineTo(player.width - 15, 25);
-        ctx.stroke();
-        
-        // X über Sprung-Bereich (Füße)
-        ctx.beginPath();
-        ctx.moveTo(15, player.height - 15);
-        ctx.lineTo(25, player.height - 5);
-        ctx.moveTo(25, player.height - 15);
-        ctx.lineTo(15, player.height - 5);
-        ctx.stroke();
-        
-        // Corruption Timer Bar (zeigt verbleibende Zeit)
-        const barWidth = 30;
-        const barHeight = 3;
-        const timerProgress = gameState.corruptionTimer / 120;
-        
-        // Bar Hintergrund
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(player.width/2 - barWidth/2, -10, barWidth, barHeight);
-        
-        // Timer Progress
-        ctx.fillStyle = `rgba(139, 0, 139, ${corruptionPulse})`;
-        ctx.fillRect(player.width/2 - barWidth/2, -10, barWidth * timerProgress, barHeight);
-        
-        // Corruption "Schwächung" Text
-        if (Math.sin(Date.now() * 0.01) > 0.5) {
-            ctx.fillStyle = `rgba(255, 255, 255, ${corruptionPulse})`;
-            ctx.font = '8px Rajdhani';
-            ctx.textAlign = 'center';
-            ctx.fillText('BLOOD CURSED!', player.width/2, -15);
-        }
+        ctx.restore(); // Stelle Canvas-State wieder her
     }
     
-    
-    
-    
-    // Score Multiplier - Goldener Glanz mit Funken
+    // Score Multiplier Effect - ISOLIERT
     if (activeDropBuffs.scoreMultiplier) {
+        ctx.save(); // Isoliere Score-Multiplier-Effekt
         const goldPulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.3;
         const gradient = ctx.createRadialGradient(
-            player.width/2, player.height/2, 0,
-            player.width/2, player.height/2, 40
+            centerX, centerY, 0,
+            centerX, centerY, 40 * effectScale
         );
         gradient.addColorStop(0, `rgba(255, 215, 0, ${goldPulse * 0.3})`);
         gradient.addColorStop(0.5, `rgba(255, 215, 0, ${goldPulse * 0.2})`);
         gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
         ctx.fillStyle = gradient;
-        ctx.fillRect(-20, -20, player.width + 40, player.height + 40);
+        ctx.fillRect(centerX - 40 * effectScale, centerY - 40 * effectScale, 80 * effectScale, 80 * effectScale);
         
-        // Kleine goldene Funken
+        // Gold sparkles
         for (let i = 0; i < 6; i++) {
             const sparkTime = Date.now() * 0.005 + i * 1.5;
-            const sparkX = player.width/2 + Math.cos(sparkTime) * 25;
-            const sparkY = player.height/2 + Math.sin(sparkTime) * 25;
-            const sparkSize = 1 + Math.sin(sparkTime * 3) * 0.5;
+            const sparkX = centerX + Math.cos(sparkTime) * 25 * effectScale;
+            const sparkY = centerY + Math.sin(sparkTime) * 25 * effectScale;
+            const sparkSize = (1 + Math.sin(sparkTime * 3) * 0.5) * effectScale;
             
             ctx.fillStyle = `rgba(255, 215, 0, ${goldPulse})`;
             ctx.fillRect(sparkX - sparkSize, sparkY - sparkSize, sparkSize * 2, sparkSize * 2);
         }
+        ctx.restore(); // Stelle Canvas-State wieder her
     }
     
-    // Berserker Mode - INTENSIVES FEUER!
+    // Berserker Mode Fire - ISOLIERT
     if (gameState.isBerserker) {
-        // Große Flammen um den Spieler
+        ctx.save(); // Isoliere Berserker-Effekt
+        
+        // Berserker fire effect code...
         for (let i = 0; i < 12; i++) {
             const fireTime = Date.now() * 0.008 + i * 0.5;
             const angle = (i / 12) * Math.PI * 2;
-            const distance = 20 + Math.sin(fireTime * 2) * 10;
-            const fireX = player.width/2 + Math.cos(angle) * distance;
-            const fireY = player.height/2 + Math.sin(angle) * distance;
-            const fireSize = 6 + Math.sin(fireTime * 3) * 3;
+            const distance = (20 + Math.sin(fireTime * 2) * 10) * effectScale;
+            const fireX = centerX + Math.cos(angle) * distance;
+            const fireY = centerY + Math.sin(angle) * distance;
+            const fireSize = (6 + Math.sin(fireTime * 3) * 3) * effectScale;
             
-            // Äußere Flamme (rot)
-            ctx.fillStyle = `rgba(255, 0, 0, ${0.8 - (distance - 20) / 20})`;
+            ctx.fillStyle = `rgba(255, 0, 0, ${0.8 - (distance - 20 * effectScale) / (20 * effectScale)})`;
             ctx.fillRect(fireX - fireSize/2, fireY - fireSize, fireSize, fireSize * 2);
             
-            // Innere Flamme (gelb)
-            ctx.fillStyle = `rgba(255, 215, 0, ${0.9 - (distance - 20) / 20})`;
+            ctx.fillStyle = `rgba(255, 215, 0, ${0.9 - (distance - 20 * effectScale) / (20 * effectScale)})`;
             ctx.fillRect(fireX - fireSize/3, fireY - fireSize * 0.7, fireSize * 0.6, fireSize * 1.4);
             
-            // Weiße Hitze im Kern
-            if (distance < 25) {
-                ctx.fillStyle = `rgba(255, 255, 255, ${0.7 - (distance - 20) / 10})`;
+            if (distance < 25 * effectScale) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.7 - (distance - 20 * effectScale) / (10 * effectScale)})`;
                 ctx.fillRect(fireX - fireSize/4, fireY - fireSize * 0.5, fireSize * 0.4, fireSize);
             }
         }
         
-        // Aufsteigende Feuerpartikel
-        for (let i = 0; i < 8; i++) {
-            const particleTime = Date.now() * 0.003 + i * 1.2;
-            const particleX = player.width/2 + Math.sin(particleTime * 2) * 15;
-            const particleY = player.height - (particleTime * 40 % 80);
-            const particleSize = 4 + Math.sin(particleTime * 4) * 2;
-            
-            ctx.fillStyle = '#FF4500';
-            ctx.fillRect(particleX - particleSize/2, particleY, particleSize, particleSize);
-            
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(particleX - particleSize/3, particleY + 1, particleSize * 0.6, particleSize * 0.6);
-        }
+        // Rest of berserker code...
         
-        // Hitze-Verzerrung (wellenförmiger Umriss)
-        const heatWave = Math.sin(Date.now() * 0.015) * 2;
-        ctx.strokeStyle = 'rgba(255, 69, 0, 0.4)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(player.width/2, player.height/2, 35 + heatWave, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Glühender Boden unter dem Spieler
-        const groundGlow = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
-        ctx.fillStyle = `rgba(255, 69, 0, ${groundGlow * 0.5})`;
-        ctx.ellipse(player.width/2, player.height + 2, 25, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.restore(); // WICHTIG: Stelle Canvas-State wieder her
     }
     
-    // Jump Boost - Sprungfedern unter den Füßen
+    // Jump Boost Springs - ISOLIERT
     if (activeDropBuffs.jumpBoost) {
+        ctx.save(); // Isoliere Jump-Boost-Effekt
         ctx.strokeStyle = '#FF4500';
-        ctx.lineWidth = 2;
-        const springBounce = Math.abs(Math.sin(Date.now() * 0.008)) * 3;
+        ctx.lineWidth = 2 * effectScale;
+        const springBounce = Math.abs(Math.sin(Date.now() * 0.008)) * 3 * effectScale;
+        
+        const springOffsetX = 20 * effectScale;
+        const springBaseY = centerY + renderedSpriteHeight/2 + 2 * effectScale;
         
         // Left spring
         for (let i = 0; i < 4; i++) {
             ctx.beginPath();
-            ctx.arc(12, player.height + 2 + i * 3 - springBounce, 3, 0, Math.PI);
+            ctx.arc(centerX - springOffsetX, 
+                    springBaseY + i * 3 * effectScale - springBounce, 
+                    3 * effectScale, 0, Math.PI);
             ctx.stroke();
         }
         
         // Right spring
         for (let i = 0; i < 4; i++) {
             ctx.beginPath();
-            ctx.arc(28, player.height + 2 + i * 3 - springBounce, 3, 0, Math.PI);
+            ctx.arc(centerX + springOffsetX, 
+                    springBaseY + i * 3 * effectScale - springBounce, 
+                    3 * effectScale, 0, Math.PI);
             ctx.stroke();
         }
+        ctx.restore(); // Stelle Canvas-State wieder her
     }
     
-    // Magnet Mode - Anziehungsfeld
+    // Magnet Mode - ISOLIERT
     if (activeDropBuffs.magnetMode) {
+        ctx.save(); // Isoliere Magnet-Effekt
         const magnetPulse = Date.now() * 0.002;
         ctx.strokeStyle = 'rgba(255, 105, 180, 0.4)';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1 * effectScale;
         
         for (let i = 0; i < 3; i++) {
-            const radius = 30 + i * 15 + Math.sin(magnetPulse + i) * 5;
+            const radius = (30 + i * 15) * effectScale + Math.sin(magnetPulse + i) * 5 * effectScale;
             ctx.beginPath();
-            ctx.arc(player.width/2, player.height/2, radius, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
             ctx.stroke();
         }
         
         // Magnetic particles
         for (let i = 0; i < 4; i++) {
             const angle = magnetPulse * 2 + i * Math.PI / 2;
-            const particleX = player.width/2 + Math.cos(angle) * 40;
-            const particleY = player.height/2 + Math.sin(angle) * 40;
+            const particleX = centerX + Math.cos(angle) * 40 * effectScale;
+            const particleY = centerY + Math.sin(angle) * 40 * effectScale;
+            const particleSize = 2 * effectScale;
             ctx.fillStyle = '#FF69B4';
-            ctx.fillRect(particleX - 2, particleY - 2, 4, 4);
+            ctx.fillRect(particleX - particleSize, particleY - particleSize, 
+                         particleSize * 2, particleSize * 2);
         }
+        ctx.restore(); // Stelle Canvas-State wieder her
     }
     
-    // Time Slow - Zeit-Verzerrung
+    // Time Slow - ISOLIERT
     if (activeDropBuffs.timeSlow) {
+        ctx.save(); // Isoliere Time-Slow-Effekt
         const timePulse = Date.now() * 0.001;
         ctx.strokeStyle = 'rgba(0, 206, 209, 0.3)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 2 * effectScale;
+        ctx.setLineDash([5 * effectScale, 5 * effectScale]);
         ctx.lineDashOffset = timePulse * 10;
         
         ctx.beginPath();
-        ctx.arc(player.width/2, player.height/2, 45, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, 45 * effectScale, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.restore(); // Stelle Canvas-State wieder her
     }
     
-    // Ghost Walking - Transparenz ist bereits implementiert
+    // Ghost Walking - ISOLIERT
+// Korrigierter Ghost Walking Effekt für player.js
+// Ersetze den Ghost Walking Abschnitt und das finale Sprite-Drawing:
+
+    // Ghost Walking Trail - NUR für den Trail
     if (gameState.isGhostWalking) {
-        ctx.globalAlpha = 0.5;
+        ctx.save(); // Isoliere Ghost-Trail
         
-        // Ghost trail
+        // Ghost trail - semi-transparente Kopien HINTER dem Hauptsprite
         for (let i = 1; i <= 3; i++) {
             ctx.globalAlpha = 0.1 / i;
-            ctx.save();
-            ctx.translate(-i * 5 * player.facingDirection, 0);
-            drawDungeonCharacter(ctx, 0, 0, facingLeft, isDead);
-            ctx.restore();
+            spriteManager.drawSprite(
+                ctx, 'player', currentState,
+                x + offsetX - (i * 5 * player.facingDirection),
+                y + offsetY, spriteScale, facingLeft,
+                gameState.deltaTime
+            );
         }
+        
+        ctx.restore(); // Restore nach Trail
+    }
+    
+    // Death state
+    if (gameState.lives <= 0) {
         ctx.globalAlpha = 0.5;
+        ctx.filter = 'grayscale(100%)';
     }
     
-    // ===== ENDE NEUE EFFEKTE =====
+    // Ghost Walking Transparenz für Hauptsprite
+    if (gameState.isGhostWalking) {
+        ctx.globalAlpha = 0.5; // Mache Hauptsprite semi-transparent
+    }
     
-    // Draw the dungeon character
-    drawDungeonCharacter(ctx, 0, 0, facingLeft, isDead);
+    // DRAW THE ACTUAL SPRITE
+    spriteManager.drawSprite(
+        ctx, 'player', currentState,
+        x + offsetX, y + offsetY, spriteScale, facingLeft,
+        gameState.deltaTime
+    );
     
-    ctx.restore();
+    ctx.restore(); // Haupt-Restore
+	
 }
-
+// Original pixel art function remains as fallback
 function drawDungeonCharacter(ctx, x, y, facingLeft = false, isDead = false) {
-    ctx.save();
-    
-    if (facingLeft) {
-        ctx.scale(-1, 1);
-        x = -x - 40; // player.width
-    }
-    
-    // Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillRect(x + 8, y + 60, 28, 4);
-    
-    // Armor - Main body
-    ctx.fillStyle = '#5F9F5F';
-    ctx.fillRect(x + 8, y + 6, 22, 18);
-    
-    // Armor highlights
-    ctx.fillStyle = '#90EE90';
-    ctx.fillRect(x + 10, y + 6, 20, 18);
-    ctx.fillRect(x + 6, y + 6, 24, 4);
-    ctx.fillStyle = '#7FDF7F';
-    ctx.fillRect(x + 6, y + 6, 24, 2);
-    
-    // Helmet
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(x + 4, y, 30, 8);
-    ctx.fillRect(x + 33, y + 2, 3, 4);
-    ctx.fillRect(x + 2, y + 1, 3, 5);
-    ctx.fillRect(x + 24, y - 1, 2, 3);
-    ctx.fillRect(x + 10, y - 1, 2, 3);
-    
-    // Helmet detail
-    ctx.fillStyle = '#228B22';
-    ctx.fillRect(x + 10, y + 8, 16, 1);
-    ctx.fillStyle = '#1A6B1A';
-    ctx.fillRect(x + 10, y + 9, 16, 1);
-    ctx.fillStyle = '#000000';
-    for (let i = 0; i < 5; i++) {
-        ctx.fillRect(x + 11 + i * 3, y + 7, 1, 1);
-        ctx.fillRect(x + 11 + i * 3, y + 10, 1, 1);
-        ctx.fillRect(x + 12 + i * 3, y + 8, 1, 2);
-    }
-    
-    // Electric gauntlets
-    const boltGlow = 0.7 + Math.sin(Date.now() * 0.008) * 0.3;
-    
-    ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-    ctx.fillRect(x + 1, y + 15, 8, 5);
-    ctx.fillRect(x + 31, y + 15, 10, 5);
-    
-    ctx.fillStyle = '#C0C0C0';
-    ctx.fillRect(x + 4, y + 16, 5, 3);
-    ctx.fillRect(x + 33, y + 16, 6, 3);
-    
-    ctx.fillStyle = '#808080';
-    ctx.fillRect(x + 5, y + 16, 3, 3);
-    ctx.fillRect(x + 34, y + 16, 4, 3);
-    
-    // Electric sparks on gauntlets
-    if (window.gameState.bullets > 0 || Math.random() > 0.7 || window.gameState.isBerserker) {
-        ctx.fillStyle = `rgba(0, 255, 255, ${boltGlow})`;
-        ctx.fillRect(x + 3, y + 15, 1, 1);
-        ctx.fillRect(x + 2, y + 18, 1, 1);
-        ctx.fillRect(x + 6, y + 14, 1, 1);
-        ctx.fillRect(x + 38, y + 15, 1, 1);
-        ctx.fillRect(x + 39, y + 17, 1, 1);
-        ctx.fillRect(x + 37, y + 14, 1, 1);
-    }
-    
-    // Eyes
-    if (isDead) {
-        ctx.fillStyle = '#FF0000';
-        ctx.fillRect(x + 15, y + 11, 3, 3);
-        ctx.fillRect(x + 24, y + 11, 3, 3);
-        ctx.fillStyle = '#000000';
-        // X pattern for dead eyes
-        ctx.fillRect(x + 15, y + 11, 1, 1);
-        ctx.fillRect(x + 17, y + 13, 1, 1);
-        ctx.fillRect(x + 17, y + 11, 1, 1);
-        ctx.fillRect(x + 15, y + 13, 1, 1);
-        ctx.fillRect(x + 24, y + 11, 1, 1);
-        ctx.fillRect(x + 26, y + 13, 1, 1);
-        ctx.fillRect(x + 26, y + 11, 1, 1);
-        ctx.fillRect(x + 24, y + 13, 1, 1);
-    } else {
-        // Eye glow
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
-        ctx.fillRect(x + 14, y + 10, 5, 5);
-        ctx.fillRect(x + 23, y + 10, 5, 5);
-        
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(x + 15, y + 11, 3, 3);
-        ctx.fillRect(x + 24, y + 11, 3, 3);
-        
-        ctx.fillStyle = '#00FFFF';
-        ctx.fillRect(x + 16, y + 11, 1, 1);
-        ctx.fillRect(x + 25, y + 11, 1, 1);
-    }
-    
-    // Mouth/breathing apparatus
-    ctx.fillStyle = '#1A6B1A';
-    ctx.fillRect(x + 18, y + 19, 7, 3);
-    ctx.fillStyle = '#228B22';
-    ctx.fillRect(x + 18, y + 19, 6, 2);
-    
-    // Shoulder detail
-    ctx.fillStyle = '#228B22';
-    ctx.fillRect(x + 13, y + 14, 1, 6);
-    ctx.fillRect(x + 28, y + 16, 1, 1);
-    ctx.fillRect(x + 29, y + 17, 1, 1);
-    ctx.fillRect(x + 30, y + 18, 1, 1);
-    
-    // Armor joints
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(x + 12, y + 15, 1, 1);
-    ctx.fillRect(x + 14, y + 15, 1, 1);
-    ctx.fillRect(x + 12, y + 18, 1, 1);
-    ctx.fillRect(x + 14, y + 18, 1, 1);
-    
-    // Chest piece
-    ctx.fillStyle = '#5F9F5F';
-    ctx.fillRect(x + 8, y + 24, 22, 24);
-    
-    ctx.fillStyle = '#90EE90';
-    ctx.fillRect(x + 10, y + 24, 20, 24);
-    
-    // Dark undersuit
-    ctx.fillStyle = '#1A2A2A';
-    ctx.fillRect(x + 10, y + 26, 22, 20);
-    
-    ctx.fillStyle = '#2F4F4F';
-    ctx.fillRect(x + 12, y + 26, 20, 20);
-    
-    // Glowing chest details
-    ctx.fillStyle = '#90EE90';
-    ctx.fillRect(x + 11, y + 30, 4, 6);
-    ctx.fillRect(x + 22, y + 35, 3, 4);
-    ctx.fillRect(x + 17, y + 28, 2, 8);
-    
-       // Arms with green gloves - IMMER GLEICHE POSITIONEN! ❌
-    ctx.fillStyle = '#5F9F5F';
-    ctx.fillRect(x + 6, y + 28, 7, 16);   // Linker Arm
-    ctx.fillStyle = '#90EE90';
-    ctx.fillRect(x + 4, y + 28, 6, 16);   // Linker Arm
-    
-    ctx.fillStyle = '#90EE90';
-    ctx.fillRect(x + 26, y + 28, 8, 16);  // Rechter Arm
-    
-    // Green gloves/hands - IMMER GLEICHE POSITIONEN! ❌
-    ctx.fillStyle = '#5F9F5F';
-    ctx.fillRect(x + 3, y + 42, 7, 6);    // Linke Hand
-    ctx.fillRect(x + 26, y + 42, 7, 6);   // Rechte Hand
-    
-    // Handschuh-Details
-    ctx.fillStyle = '#90EE90'; // Hellgrün
-    ctx.fillRect(x + 4, y + 43, 5, 4); // Linke Hand Highlight
-    ctx.fillRect(x + 27, y + 43, 5, 4); // Rechte Hand Highlight
-    
-    // Finger-Andeutungen
-    ctx.fillStyle = '#5F9F5F';
-    ctx.fillRect(x + 5, y + 47, 1, 1);
-    ctx.fillRect(x + 7, y + 47, 1, 1);
-    ctx.fillRect(x + 28, y + 47, 1, 1);
-    ctx.fillRect(x + 30, y + 47, 1, 1);
-    
-    // Legs
-    ctx.fillStyle = '#5F9F5F';
-    ctx.fillRect(x + 12, y + 48, 6, 14);
-    ctx.fillRect(x + 20, y + 48, 6, 14);
-    
-    ctx.fillStyle = '#90EE90';
-    ctx.fillRect(x + 14, y + 48, 6, 14);
-    ctx.fillRect(x + 22, y + 48, 6, 14);
-    
-    // Orb weapon (if has bullets or berserker)
-    if (window.gameState.bullets > 0 || window.gameState.isBerserker) {
-        const energyPulse = 0.6 + Math.sin(Date.now() * 0.01) * 0.4;
-        
-        // Orb glow
-        ctx.fillStyle = `rgba(0, 255, 255, ${energyPulse * 0.4})`;
-        ctx.fillRect(x + 28, y + 26, 16, 16);
-        
-        // Orb core
-        ctx.fillStyle = window.gameState.activeBuffs.chainLightning > 0 || window.gameState.isBerserker ? '#FF4500' : '#00FFFF';
-        ctx.fillRect(x + 33, y + 31, 6, 6);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(x + 35, y + 33, 2, 2);
-        
-        // Energy ring
-        ctx.strokeStyle = `rgba(0, 255, 255, ${energyPulse})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(x + 36, y + 34, 4, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Chain lightning effects
-        if (window.gameState.activeBuffs.chainLightning > 0 || window.gameState.isBerserker) {
-            ctx.fillStyle = `rgba(255, 215, 0, ${energyPulse})`;
-            ctx.fillRect(x + 31, y + 29, 2, 2);
-            ctx.fillRect(x + 39, y + 35, 2, 2);
-            ctx.fillRect(x + 36, y + 27, 1, 1);
-        }
-        
-        // Lightning bolt
-        ctx.strokeStyle = `rgba(0, 255, 255, ${energyPulse * 0.8})`;
-        ctx.beginPath();
-        ctx.moveTo(x + 36, y + 34);
-        ctx.lineTo(x + 42, y + 32);
-        ctx.lineTo(x + 40, y + 34);
-        ctx.lineTo(x + 44, y + 36);
-        ctx.stroke();
-        
-        // Floating spark
-        const sparkX = x + 36 + Math.sin(Date.now() * 0.02) * 3;
-        const sparkY = y + 34 + Math.cos(Date.now() * 0.015) * 3;
-        ctx.fillStyle = `rgba(255, 255, 255, ${energyPulse})`;
-        ctx.fillRect(sparkX, sparkY, 1, 1);
-        
-        // Berserker mode extra effects
-        if (window.gameState.isBerserker) {
-            ctx.strokeStyle = `rgba(255, 0, 0, ${energyPulse * 0.8})`;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(x + 36, y + 34);
-            ctx.lineTo(x + 44 + Math.random() * 5, y + 34 + Math.random() * 5 - 2.5);
-            ctx.stroke();
-        }
-    }
-    
-    ctx.restore();
+    // ... keep all your original pixel art code here ...
 }

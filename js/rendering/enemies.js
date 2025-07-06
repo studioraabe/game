@@ -3,6 +3,8 @@
 import { getScreenX } from '../core/camera.js';
 import { gameState } from '../core/gameState.js';
 import { CANVAS } from '../core/constants.js';
+import { spriteManager, drawSkeletonSprite } from './sprite-system.js';
+
 
 
 
@@ -708,52 +710,68 @@ function drawFrankensteinTable(ctx, x, y, width, height, obstacle) {
 }
 
 
-export function drawEnemy(obstacle, ctx) {
+export function drawEnemy(obstacle, ctx, gameState) {
     const scale = 5;
     const screenX = getScreenX(obstacle.x);
     const animTime = obstacle.animationTime || 0;
     
-    switch(obstacle.type) {
-        case 'skeleton': 
-            drawSkeleton(ctx, screenX, obstacle.y, animTime); 
-            break;
-        case 'bat': 
-            drawBat(ctx, screenX, obstacle.y, obstacle); 
-            break;
-        case 'vampire': 
-            drawVampire(ctx, screenX, obstacle.y, animTime); 
-            break;
-        case 'spider': 
-            drawSpider(ctx, screenX, obstacle.y, false, animTime); 
-            break;
-        case 'wolf': 
-            drawWolf(ctx, screenX, obstacle.y, false, animTime, obstacle); // OBSTACLE ÜBERGEBEN
-            break;
-        case 'alphaWolf': 
-            drawWolf(ctx, screenX, obstacle.y, true, animTime, obstacle); // OBSTACLE ÜBERGEBEN
-            break;
-        case 'rock': 
-            drawRock(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, animTime); 
-            break;
-        case 'sarcophagus': 
-            drawSarcophagus(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, animTime); 
-            break;
-        case 'boltBox': 
-            drawBoltBox(ctx, screenX, obstacle.y, animTime); 
-            break;
-        case 'teslaCoil': 
-            drawTeslaCoil(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, obstacle); 
-            break;
-        case 'frankensteinTable': 
-            drawFrankensteinTable(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, obstacle); 
-            break;
+    // TRY SPRITE RENDERING FIRST FOR SKELETON
+    if (obstacle.type === 'skeleton') {
+        if (spriteManager.loaded) {
+            const success = drawSkeletonSprite(ctx, obstacle, gameState, screenX);
+            if (success) {
+                // Successfully rendered with sprites, draw health bar if needed
+                if (obstacle.health > 1) {
+                    drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, obstacle.health, obstacle.maxHealth, obstacle.type);
+                }
+                return; // Skip canvas rendering
+            }
+        }
+        // Fallback to canvas rendering
+        drawSkeleton(ctx, screenX, obstacle.y, animTime);
+    }
+    else {
+        // Handle other enemy types as before
+        switch(obstacle.type) {
+            case 'bat': 
+                drawBat(ctx, screenX, obstacle.y, obstacle); 
+                break;
+            case 'vampire': 
+                drawVampire(ctx, screenX, obstacle.y, animTime); 
+                break;
+            case 'spider': 
+                drawSpider(ctx, screenX, obstacle.y, false, animTime); 
+                break;
+            case 'wolf': 
+                drawWolf(ctx, screenX, obstacle.y, false, animTime, obstacle);
+                break;
+            case 'alphaWolf': 
+                drawWolf(ctx, screenX, obstacle.y, true, animTime, obstacle);
+                break;
+            case 'rock': 
+                drawRock(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, animTime); 
+                break;
+            case 'sarcophagus': 
+                drawSarcophagus(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, animTime); 
+                break;
+            case 'boltBox': 
+                drawBoltBox(ctx, screenX, obstacle.y, animTime); 
+                break;
+            case 'teslaCoil': 
+                drawTeslaCoil(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, obstacle); 
+                break;
+            case 'frankensteinTable': 
+                drawFrankensteinTable(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, obstacle); 
+                break;
+        }
     }
     
-    // Health Bar NUR für spezifische Enemies - KEINE Bat!
-    if (obstacle.type === 'vampire' || 
-        obstacle.type === 'spider' || 
-        obstacle.type === 'wolf' || 
-        obstacle.type === 'alphaWolf') {
+    // Health Bar for multi-health enemies (except skeleton which is handled above)
+    if (obstacle.type !== 'skeleton' && 
+        (obstacle.type === 'vampire' || 
+         obstacle.type === 'spider' || 
+         obstacle.type === 'wolf' || 
+         obstacle.type === 'alphaWolf')) {
         drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, obstacle.health, obstacle.maxHealth, obstacle.type);
     }
 }

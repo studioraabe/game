@@ -44,16 +44,13 @@ body {
 
 /* LOGO POSITIONING FIX - AUF OBERER KANTE DES SPIELBILDSCHIRMS */
 .logo {
-    position: absolute !important; /* Absolut positioniert relativ zum gameContainer */
-    top: -60px !important; /* Logo ragt 50px über den gameContainer hinaus */
-    left: 50% !important; /* Horizontal zentriert */
-    transform: translateX(-50%) !important; /* Perfekte horizontale Zentrierung */
+    position: relative; /* Perfekte horizontale Zentrierung */
     z-index: 9999 !important; /* Höchster z-index Wert */
     color: transparent;
     font-size: 10px;
-    width: 140px;
-    height: 100px;
-    background: url(../img/retro.svg);
+    width: 214px;
+    height: 160px;
+    background: url(../img/logo.svg);
     background-size: cover;
     pointer-events: none; /* Logo ist nicht klickbar/interaktiv */
 }
@@ -649,7 +646,6 @@ position: absolute;
 }
 
 h1 {
-    margin-bottom: 24px;
     font-size: 28px;
     font-weight: 700;
     color: var(--text-primary);

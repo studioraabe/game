@@ -1,4 +1,4 @@
-// main.js - Updated with Controller Support
+// main.js - Updated with Controller Support and Sprite System Integration
 
 import { CANVAS, GameState } from './core/constants.js';
 import { gameState, resetGame, startGameLoop, stopGameLoop, update, loadGame, initRenderLoop } from './core/gameState.js';
@@ -11,6 +11,7 @@ import {
     updateEnhancedComboDisplay,
     updateEnhancedBuffDisplay
 } from './ui-enhancements.js';
+import { spriteManager } from './rendering/sprite-system.js';
 
 import { 
     soundManager, 
@@ -91,6 +92,9 @@ window.camera = camera;
 window.keys = keys;
 window.soundManager = soundManager;
 
+// Make sprite manager globally accessible
+window.spriteManager = spriteManager;
+
 // Entity arrays
 window.obstacles = obstacles;
 window.bulletsFired = bulletsFired;
@@ -163,7 +167,7 @@ window.updateDamageEffects = updateDamageEffects;
 window.resetDamageEffects = resetDamageEffects;
 
 // Initialize game
-function init() {
+async function init() {
     console.log('🎮 Dungeon Runner V1.0 - Enhanced Edition with Controller Support');
     
     // Initialize systems
@@ -178,6 +182,16 @@ function init() {
     
     // Initialize enhanced UI
     initEnhancements();
+    
+    // Load sprite system
+    console.log('🎨 Loading sprite system...');
+    try {
+        await spriteManager.loadSprites();
+        console.log('✅ Sprite system loaded successfully!');
+    } catch (error) {
+        console.warn('⚠️ Sprite system failed to load, using pixel art fallback:', error.message);
+        // Game continues with pixel art rendering - no disruption
+    }
     
     // Container setup
     setTimeout(() => {
@@ -206,6 +220,7 @@ function init() {
     console.log('🎮 Enhanced Input System: Ready for keyboard and controller input');
     console.log('🔊 Audio System: Ready');
     console.log('🎨 Enhanced UI: Ready');
+    console.log('🖼️ Sprite System: Active');
     console.log('✨ Game initialization complete!');
 }
 
