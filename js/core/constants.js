@@ -183,7 +183,7 @@ export const SPAWN_CHANCES = {
 // Enemy configurations
 export const ENEMY_CONFIG = {
     skeleton: {
-        width: 50,
+        width: 70,
         height: 140,
         health: 3,
         points: 20,

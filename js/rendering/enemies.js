@@ -721,7 +721,7 @@ export function drawEnemy(obstacle, ctx, gameState) {
             const success = drawSkeletonSprite(ctx, obstacle, gameState, screenX);
             if (success) {
                 // Successfully rendered with sprites, draw health bar if needed
-                if (obstacle.health > 1) {
+                if (obstacle.maxHealth > 1) {
                     drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, obstacle.health, obstacle.maxHealth, obstacle.type);
                 }
                 return; // Skip canvas rendering
@@ -767,7 +767,7 @@ export function drawEnemy(obstacle, ctx, gameState) {
     }
     
     // Health Bar for multi-health enemies (except skeleton which is handled above)
-    if (obstacle.type !== 'skeleton' && 
+    if (obstacle.type === 'skeleton' ||  
         (obstacle.type === 'vampire' || 
          obstacle.type === 'spider' || 
          obstacle.type === 'wolf' || 
@@ -781,6 +781,9 @@ function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
     // Zusätzliche Sicherheitsprüfung
     if (maxHealth <= 1 || type === 'boltBox' || type === 'bat') {
         return; // Zeichne nichts für diese Typen
+    }
+	 if (type === 'skeleton') {
+        console.log(`Skeleton health: ${health}/${maxHealth}`);
     }
     
     const barHeight = 8; // Größere Gesamthöhe für bessere Sichtbarkeit
@@ -1486,7 +1489,7 @@ function drawSpider(ctx, x, y, isBoss = false, animTime = 0) {
 
 
 function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
-    const scale = isAlpha ? 2.2 : 1.4; // Alpha deutlich größer
+    const scale = isAlpha ? 2.4 : 1.8; // Alpha deutlich größer
     const timeScale = animTime * 0.001;
     const prowl = Math.sin(timeScale * 3) * 1.5; // Raubtierbewegung
     const breathe = Math.sin(timeScale * 4) * 1; // Schweres Atmen

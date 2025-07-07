@@ -369,7 +369,7 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight + 20;
+            obstacleY = CANVAS.groundY - obstacleHeight + 60;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < teslaChance) {
             obstacleTypeStr = 'teslaCoil';
@@ -500,7 +500,7 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
 		 if (obstacle.type === 'skeleton' && obstacle.isDead) {
             obstacle.deathTimer += gameState.deltaTime;
             
-            if (obstacle.deathTimer > 120) { // 2 seconds
+            if (obstacle.deathTimer > 30) { // 2 seconds
                 // Cleanup sprite animation
                 if (obstacle.id && window.spriteManager) {
                     window.spriteManager.cleanupEntity('skeleton', obstacle.id);
@@ -522,7 +522,7 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             }
             
             // Vertical movement (floating/bobbing effect)
-            obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.6 * gameState.deltaTime;
+obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * gameState.deltaTime;
         }
 		
         

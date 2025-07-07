@@ -407,13 +407,9 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
     // FIXED: Respect the spawn positioning from entities.js exactly
     // In entities.js: obstacleY = CANVAS.groundY - obstacleHeight + 20
     // So skeleton.y is already positioned correctly relative to the ground
-    let adjustedY = skeleton.y;
     
-    // Only tiny floating for alive skeletons
-    if (!skeleton.isDead && skeleton.health > 0) {
-        const floatOffset = Math.sin(Date.now() * 0.002 + skeleton.x * 0.01) * 0.1; // Very minimal
-        adjustedY += floatOffset;
-    }
+ let adjustedY = skeleton.y; // Use the Y that entities.js already calculated
+
     
     // Corruption effect
     if (skeleton.isCorrupted && !skeleton.isDead) {
