@@ -1,4 +1,4 @@
-// FIXED: sprite-system.js - Complete corrected version with proper async handling
+// FIXED: sprite-system.js - Complete corrected version with proper positioning and no flickers
 
 import { getScreenX } from '../core/camera.js';
 
@@ -45,7 +45,7 @@ export class SpriteManager {
                 }
             });
             
-            // FIXED: Skeleton sprite with improved animation settings
+            // FIXED: Skeleton sprite with NO smooth blending to prevent flickers
             await this.loadSprite('skeleton', {
                 imagePath: 'assets/sprites/skeleton.png',
                 frameWidth: 480,
@@ -54,37 +54,37 @@ export class SpriteManager {
                     idle: { 
                         row: 0, 
                         frames: 16,
-                        frameRate: 8,        // FIXED: Slower for smoother idle
+                        frameRate: 6,        // Slower for stability
                         loop: true,
-                        smooth: true         // FIXED: Enable smooth blending
+                        smooth: false        // FIXED: Disable smooth blending
                     },
                     walk: { 
                         row: 0, 
                         frames: 16,
-                        frameRate: 10,       // FIXED: Slightly slower walk cycle
+                        frameRate: 8,        // Stable walk cycle
                         loop: true,
-                        smooth: true
+                        smooth: false        // FIXED: Disable smooth blending
                     },
                     attack: { 
                         row: 0, 
                         frames: 8,
-                        frameRate: 15,       // FIXED: Faster attack
+                        frameRate: 12,       // Stable attack speed
                         loop: false,
                         smooth: false        // Sharp attack frames
                     },
                     hit: {
                         row: 0,
                         frames: 3,
-                        frameRate: 20,       // FIXED: Very fast hit reaction
+                        frameRate: 15,       // Stable hit reaction
                         loop: false,
                         smooth: false
                     },
                     death: {
                         row: 0,
                         frames: 8,
-                        frameRate: 6,        // FIXED: Slower death animation
+                        frameRate: 4,        // Slower, stable death animation
                         loop: false,
-                        smooth: true
+                        smooth: false        // FIXED: Disable smooth blending
                     }
                 }
             });
@@ -225,21 +225,20 @@ export class SpriteManager {
             x = -x - (config.frameWidth * scale);
         }
         
-        // FIXED: Enhanced smooth frame blending
-        if (smoothing && !animState.finished) {
+        // FIXED: Simplified animation rendering - NO smooth blending for stable frames
+        if (smoothing && !animState.finished && animation.frames > 3) {
+            // Only use blending for very long animations and only at specific progress points
             const frameProgress = animState.elapsedTime / frameDuration;
             
-            // Only blend if we have reasonable frame progress
-            if (frameProgress > 0.1 && frameProgress < 0.9 && animState.currentFrame > 0) {
-                // Draw previous frame
+            if (frameProgress > 0.8 && frameProgress < 0.95 && animState.currentFrame > 0) {
+                // Very minimal blending only at the very end of frame transition
                 const prevFrame = (animState.currentFrame - 1 + animation.frames) % animation.frames;
                 const prevSourceX = prevFrame * config.frameWidth;
                 const prevSourceY = animation.row * config.frameHeight;
                 
-                const easedProgress = this.easeInOutSine(frameProgress);
-                const prevAlpha = Math.max(0.1, 1 - easedProgress);
+                const blendAmount = (frameProgress - 0.8) / 0.15; // Quick transition
                 
-                ctx.globalAlpha = prevAlpha;
+                ctx.globalAlpha = Math.max(0.3, 1 - blendAmount);
                 ctx.drawImage(
                     image,
                     prevSourceX, prevSourceY, config.frameWidth, config.frameHeight,
@@ -251,9 +250,9 @@ export class SpriteManager {
             const sourceX = animState.currentFrame * config.frameWidth;
             const sourceY = animation.row * config.frameHeight;
             
-            if (frameProgress > 0.1 && frameProgress < 0.9 && animState.currentFrame > 0) {
-                const easedProgress = this.easeInOutSine(frameProgress);
-                ctx.globalAlpha = Math.max(0.1, easedProgress);
+            if (frameProgress > 0.8 && frameProgress < 0.95 && animState.currentFrame > 0) {
+                const blendAmount = (frameProgress - 0.8) / 0.15;
+                ctx.globalAlpha = Math.max(0.3, blendAmount);
             } else {
                 ctx.globalAlpha = 1;
             }
@@ -264,7 +263,7 @@ export class SpriteManager {
                 x, y, config.frameWidth * scale, config.frameHeight * scale
             );
         } else {
-            // Non-smooth rendering
+            // CLEAN frame-by-frame rendering - most stable approach
             const sourceX = animState.currentFrame * config.frameWidth;
             const sourceY = animation.row * config.frameHeight;
             
@@ -367,7 +366,7 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
     // FIXED: Use the persistent ID created during skeleton creation
     const entityId = skeleton.id; // This is now consistent across frames
     
-    const scale = 0.30;
+    const scale = 0.30; // FIXED: Balanced scale to match skeleton enemy size
     const facingLeft = false;
     
     // Improved animation state determination
@@ -381,8 +380,8 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
         skeleton.canDamagePlayer = true;
     } else if (skeleton.isAttacking) {
         currentAnimation = 'attack';
-        skeleton.canDamagePlayer = true;
-    } else if (Math.abs(skeleton.velocityX || 0) > 0.3) {
+        skeleton.canDamagePlayer = false;
+    } else if (Math.abs(skeleton.velocityX || 0) > 0.02) {
         currentAnimation = 'walk';
         skeleton.canDamagePlayer = true;
     } else {
@@ -405,10 +404,14 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
         ctx.filter = 'grayscale(100%) brightness(0.5)';
     }
     
-    // Minimal Y-axis floating
+    // FIXED: Respect the spawn positioning from entities.js exactly
+    // In entities.js: obstacleY = CANVAS.groundY - obstacleHeight + 20
+    // So skeleton.y is already positioned correctly relative to the ground
     let adjustedY = skeleton.y;
+    
+    // Only tiny floating for alive skeletons
     if (!skeleton.isDead && skeleton.health > 0) {
-        const floatOffset = Math.sin(Date.now() * 0.001 + skeleton.x * 0.01) * 2;
+        const floatOffset = Math.sin(Date.now() * 0.002 + skeleton.x * 0.01) * 0.1; // Very minimal
         adjustedY += floatOffset;
     }
     
@@ -425,11 +428,15 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
         ctx.fillRect(screenX - 15, adjustedY - 15, skeleton.width + 30, skeleton.height + 30);
     }
     
-    // Better sprite positioning
-    const spriteWidth = 480 * scale;
-    const spriteHeight = 480 * scale;
+    // FIXED: Align sprite bottom to match skeleton ground position exactly
+    const spriteWidth = 480 * scale;   // ~86px
+    const spriteHeight = 480 * scale;  // ~86px
+    
+    // Center horizontally on the small hitbox (32px wide)
     const spriteX = screenX - (spriteWidth - skeleton.width) / 2;
-    const spriteY = adjustedY - (spriteHeight - skeleton.height) / 2 - 10;
+    
+    // Align sprite bottom to skeleton bottom (respecting the +20 offset from entities.js)
+    const spriteY = adjustedY + skeleton.height - spriteHeight + 5; // Small visual adjustment
     
     // Draw the skeleton sprite
     const success = spriteManager.drawSprite(
@@ -441,6 +448,7 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
     ctx.restore();
     return success;
 }
+
 // Cleanup function
 export function cleanupSkeletonEntity(skeletonId) {
     if (spriteManager && spriteManager.cleanupEntity) {

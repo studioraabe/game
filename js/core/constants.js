@@ -183,9 +183,9 @@ export const SPAWN_CHANCES = {
 // Enemy configurations
 export const ENEMY_CONFIG = {
     skeleton: {
-        width: 32,
-        height: 58,
-        health: 1,
+        width: 50,
+        height: 140,
+        health: 3,
         points: 20,
         timerBase: 80,
         timerMin: 20
