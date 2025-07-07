@@ -250,43 +250,61 @@ export function resetGame() {
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
     
-    // Enhanced FPS normalization
-    const now = performance.now();
-    if (!gameState.lastFrameTime) gameState.lastFrameTime = now;
+    // Simple delta time calculation
+    const now = Date.now();
+    if (!gameState.lastUpdateTime) gameState.lastUpdateTime = now;
+    const deltaMs = now - gameState.lastUpdateTime;
+    gameState.lastUpdateTime = now;
     
-    const frameTime = now - gameState.lastFrameTime;
-    gameState.lastFrameTime = now;
-    
-    // Clamp delta time to prevent extreme jumps
-    const clampedFrameTime = Math.min(frameTime, 33.33); // Max 30 FPS minimum
-    gameState.deltaTime = clampedFrameTime / 16.67; // Normalized to 60 FPS
-    
-    // Consistent animation time for sprites
-    gameState.animationTime = now * 0.001;
-    
-    // Update all game systems
-    window.updatePlayer();
-    window.spawnObstacle();
-    window.updateObstacles();
-    window.updateBullets();
-    window.updateExplosions();
-    window.updateEnvironmentElements();
-    window.updateDrops();
-    window.updateEffects();
-    window.updateBatProjectiles();
-    updateDropBuffs();
-    updateDamageEffects();
-    
-    // Check for collisions and potential game over
-    const gameOver = window.checkCollisions();
-    if (gameOver) {
-        window.gameOver();
+    // Skip frame if too much time has passed (lag spike protection)
+    if (deltaMs > 50) {
+        console.log('Skipping frame due to lag spike:', deltaMs + 'ms');
         return;
     }
     
-    checkLevelComplete();
+    // Normalize delta time (1 = normal 60fps speed)
+    gameState.deltaTime = Math.min(deltaMs / 16.67, 2); // Cap at 2x speed
     
-    // Render if needed
+    // Initialize frame counter
+    if (!gameState.frameCount) gameState.frameCount = 0;
+    gameState.frameCount++;
+    
+    // === EVERY FRAME (CRITICAL SYSTEMS) ===
+    window.updatePlayer();
+    window.updateBullets();
+    
+    // === EVERY OTHER FRAME (IMPORTANT BUT LESS CRITICAL) ===
+    if (gameState.frameCount % 2 === 0) {
+        window.spawnObstacle();
+        window.updateObstacles();
+        const gameOver = window.checkCollisions();
+        if (gameOver) {
+            window.gameOver();
+            return;
+        }
+    }
+    
+    // === EVERY 3RD FRAME (LESS CRITICAL) ===
+    if (gameState.frameCount % 3 === 0) {
+        window.updateExplosions();
+        window.updateDrops();
+        window.updateBatProjectiles();
+        updateDropBuffs();
+    }
+    
+    // === EVERY 4TH FRAME (LEAST CRITICAL) ===
+    if (gameState.frameCount % 4 === 0) {
+        window.updateEnvironmentElements();
+        window.updateEffects();
+        updateDamageEffects();
+    }
+    
+    // === EVERY 10TH FRAME (VERY OCCASIONAL) ===
+    if (gameState.frameCount % 10 === 0) {
+        checkLevelComplete();
+    }
+    
+    // Render and UI
     if (window.render) {
         window.render();
     }
@@ -342,13 +360,18 @@ export function levelUp() {
 }
 
 // Fixed 60 FPS game loop
+let animationFrameId = null;
+let lastFrameTime = 0;
+const targetFrameTime = 1000 / 60; // 60 FPS
+
 function gameLoop() {
     if (gameState.gameRunning) {
         update();
     } else {
-        // Menu rendering
-        if (window.render) {
+        // Only render menus occasionally when not playing
+        if (window.render && Date.now() - (gameState.lastMenuRender || 0) > 100) {
             window.render();
+            gameState.lastMenuRender = Date.now();
         }
     }
 }
