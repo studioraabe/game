@@ -188,23 +188,139 @@ export function drawBatProjectiles(ctx) {
     }
 }
 // Bullets
-export function drawBullet(ctx, x, y, enhanced = false, hasPiercingBullets = false) {
-    // Lightning bolt bullet
-    ctx.fillStyle = enhanced ? '#FF4500' : '#00FFFF';
-    ctx.fillRect(x, y, 8, 2);
-    ctx.fillRect(x + 2, y - 1, 4, 4);
+export function drawBullet(ctx, x, y, enhanced = false, hasPiercingBullets = false, bullet = null) {
+    // If no bullet object, use simple rendering
+    if (!bullet) {
+        drawSimpleBullet(ctx, x, y, enhanced, hasPiercingBullets);
+        return;
+    }
     
-    // Glow effect
-    const glowAlpha = 0.4 + Math.sin(Date.now() * 0.02 + x * 0.1) * 0.2;
-    ctx.fillStyle = enhanced ? `rgba(255, 69, 0, ${glowAlpha})` : `rgba(0, 255, 255, ${glowAlpha})`;
-    ctx.fillRect(x - 1, y - 1, 10, 4);
+    // Calculate actual length based on direction
+    const direction = bullet.speed > 0 ? 1 : -1;
+    const length = Math.abs(bullet.x - bullet.tailX);
     
-    // Piercing effect
-    if (hasPiercingBullets) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.fillRect(x - 3, y, 3, 2);
+    if (length <= 0) return;
+    
+    // Always blue color scheme
+    const primaryColor = '#00FFFF';
+    const coreColor = '#FFFFFF';
+    const glowColor = 'rgba(0, 255, 255,';
+    
+    // Time-based effects
+    const time = Date.now() * 0.001;
+    const pulse = 0.9 + Math.sin(time * 20) * 0.1;
+    
+    // Screen position adjustments - KORRIGIERT für beide Richtungen
+    const screenX = x;
+    let screenTailX, startX, endX;
+    
+    if (direction > 0) {
+        // Shooting right
+        screenTailX = x - length;
+        startX = screenTailX;
+        endX = screenX;
+    } else {
+        // Shooting left - INVERTIERT
+        screenTailX = x + length;
+        startX = screenX;
+        endX = screenTailX;
+    }
+    
+    // 1. Subtle outer glow (5px height total)
+    ctx.fillStyle = glowColor + (0.2 * pulse) + ')';
+    ctx.fillRect(Math.min(startX, endX) - 2, y - 2.5, length + 4, 5);
+    
+    // 2. Main laser body (3px height) - Gradient muss Richtung berücksichtigen
+    const bodyGradient = ctx.createLinearGradient(
+        startX, y,
+        endX, y
+    );
+    
+    if (direction > 0) {
+        bodyGradient.addColorStop(0, glowColor + '0.4)');
+        bodyGradient.addColorStop(0.1, primaryColor);
+        bodyGradient.addColorStop(0.9, primaryColor);
+        bodyGradient.addColorStop(1, coreColor);
+    } else {
+        // Invertierte Gradient für Links-Schuss
+        bodyGradient.addColorStop(0, coreColor);
+        bodyGradient.addColorStop(0.1, primaryColor);
+        bodyGradient.addColorStop(0.9, primaryColor);
+        bodyGradient.addColorStop(1, glowColor + '0.4)');
+    }
+    
+    ctx.fillStyle = bodyGradient;
+    ctx.fillRect(Math.min(startX, endX), y - 1.5, length, 3);
+    
+    // 3. Bright core (1px height)
+    ctx.fillStyle = coreColor;
+    const coreStart = direction > 0 ? startX + 4 : endX - length + 4;
+    const coreLength = Math.max(0, length - 8);
+    ctx.fillRect(coreStart, y - 0.5, coreLength, 1);
+    
+    // 4. Leading edge (an der Spitze des Lasers)
+    const tipX = direction > 0 ? endX : startX;
+    
+    if (!bullet.hit) {
+        // Bright tip flash
+        ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+        ctx.fillRect(tipX - 2, y - 1.5, 4, 3);
+        
+        // Small energy burst
+        ctx.fillStyle = glowColor + (0.6 * pulse) + ')';
+        ctx.fillRect(tipX - 4, y - 3, 8, 6);
+    } else {
+        // Impact effect
+        const impactAlpha = 1 - (bullet.hitTime / 6);
+        if (impactAlpha > 0) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${impactAlpha})`;
+            const impactSize = (6 - bullet.hitTime) * 2;
+            ctx.fillRect(tipX - impactSize/2, y - impactSize/2, impactSize, impactSize);
+            
+            // Impact particles
+            ctx.fillStyle = glowColor + (impactAlpha * 0.8) + ')';
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * Math.PI * 2;
+                const dist = bullet.hitTime * 2;
+                const px = tipX + Math.cos(angle) * dist;
+                const py = y + Math.sin(angle) * dist;
+                ctx.fillRect(px - 1, py - 1, 2, 2);
+            }
+        }
+    }
+    
+    // 5. Enhanced mode
+    if (enhanced && !bullet.hit) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        const enhancedCoreStart = direction > 0 ? startX + 8 : endX - length + 8;
+        ctx.fillRect(enhancedCoreStart, y - 0.5, Math.max(0, length - 16), 1);
+        
+        ctx.fillStyle = glowColor + '0.1)';
+        ctx.fillRect(Math.min(startX, endX) - 4, y - 3.5, length + 8, 7);
+    }
+    
+    // 6. Piercing mode
+    if (hasPiercingBullets && length > 10) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        const dotStart = Math.min(startX, endX);
+        for (let i = 0; i < length; i += 8) {
+            ctx.fillRect(dotStart + i, y - 0.5, 1, 1);
+        }
+    }
+    
+    // 7. Motion trail (in Schussrichtung)
+    if (bullet.age < 20) {
+        const trailStart = direction > 0 ? startX : endX;
+        ctx.fillStyle = glowColor + '0.1)';
+        for (let i = 1; i <= 3; i++) {
+            const trailAlpha = 0.1 / i;
+            ctx.fillStyle = glowColor + trailAlpha + ')';
+            const trailX = trailStart - (i * 6 * direction);
+            ctx.fillRect(trailX, y - 1, 3, 2);
+        }
     }
 }
+
 
 // Drop items
 export function drawDrop(ctx, drop) {

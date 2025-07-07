@@ -965,16 +965,28 @@ export function shoot(gameStateParam) {
     
     for (let i = 0; i < bulletCount; i++) {
         const offsetY = bulletCount > 1 ? (i - 1) * 8 : 0;
-        const startX = player.facingDirection === 1 ? player.x + player.width : player.x;
-        const bulletSpeed = GAME_CONSTANTS.BULLET_SPEED * player.facingDirection * GAME_CONSTANTS.BULLET_SPEED_MULTIPLIER;
+          const baseX = player.facingDirection === 1 ? player.x + player.width : player.x;
+        const startX = baseX + (24 * player.facingDirection); // +20px rechts, -20px links
         
-        bulletsFired.push({
-            x: startX,
+        const bulletSpeed = GAME_CONSTANTS.BULLET_SPEED * player.facingDirection * GAME_CONSTANTS.BULLET_SPEED_MULTIPLIER;
+		
+		
+  
+			bulletsFired.push({
+	        x: startX,
             y: player.y + player.height / 1.00 + offsetY,
             speed: bulletSpeed,
             enhanced: enhanced,
             direction: player.facingDirection,
-            piercing: gameStateParam.hasPiercingBullets
+            piercing: gameStateParam.hasPiercingBullets,
+            // NEW: Stretch effect properties
+            age: 0,
+            tailX: startX, // Tail position for stretch effect
+            baseLength: 30,
+            currentLength: 4, // Starts small
+            maxStretch: 60, // Maximum stretch
+            hit: false,
+            hitTime: 0
         });
     }
     
@@ -989,7 +1001,43 @@ export function updateBullets(gameStateParam) {
     
     for (let i = bulletsFired.length - 1; i >= 0; i--) {
         const bullet = bulletsFired[i];
-        bullet.x += bullet.speed * gameState.deltaTime;
+        
+		
+		  bullet.age++;
+        
+        if (!bullet.hit) {
+            // Move bullet
+            bullet.x += bullet.speed * gameState.deltaTime;
+            
+            // Update stretch effect
+            if (bullet.age < 10) {
+                // Initial stretch phase (first 10 frames)
+                bullet.currentLength = bullet.baseLength + (bullet.maxStretch * (bullet.age / 10));
+            } else {
+                // Maintain stretched length
+                bullet.currentLength = bullet.baseLength + bullet.maxStretch;
+            }
+            
+            // Update tail position with delay for stretch effect
+            const tailDelay = bullet.currentLength / Math.abs(bullet.speed);
+            if (bullet.age > tailDelay) {
+                bullet.tailX += bullet.speed * gameState.deltaTime;
+            }
+        } else {
+            // Contract on hit
+            bullet.hitTime++;
+            
+            if (bullet.hitTime < 8) {
+                // Rapid tail catch-up
+                bullet.tailX += bullet.speed * 3 * gameState.deltaTime;
+                bullet.currentLength = Math.max(4, bullet.currentLength - 10);
+            } else {
+                // Remove bullet after contraction
+                bulletsFired.splice(i, 1);
+                continue;
+            }
+        }
+		
         
         let bulletHitSomething = false;
         
@@ -1007,6 +1055,14 @@ export function updateBullets(gameStateParam) {
                     bullet.x + 8 > obstacle.x &&
                     bullet.y < obstacle.y + obstacle.height &&
                     bullet.y + 4 > obstacle.y) {
+					
+
+					
+					
+                    
+                    // Mark bullet as hit
+                    bullet.hit = true;
+                    bullet.hitTime = 0;
                     
                     const damage = bullet.enhanced ? 1 : 1;
                     obstacle.health -= damage;

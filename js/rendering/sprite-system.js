@@ -53,21 +53,21 @@ export class SpriteManager {
                 animations: {
                     idle: { 
                         row: 0, 
-                        frames: 16,
+                        frames: 20,
                         frameRate: 6,        // Slower for stability
                         loop: true,
                         smooth: false        // FIXED: Disable smooth blending
                     },
                     walk: { 
                         row: 0, 
-                        frames: 16,
+                        frames: 20,
                         frameRate: 8,        // Stable walk cycle
                         loop: true,
                         smooth: false        // FIXED: Disable smooth blending
                     },
                     attack: { 
                         row: 0, 
-                        frames: 8,
+                        frames: 20,
                         frameRate: 12,       // Stable attack speed
                         loop: false,
                         smooth: false        // Sharp attack frames

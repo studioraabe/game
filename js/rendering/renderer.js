@@ -110,7 +110,8 @@ export function render(ctx) {
     for (const bullet of bulletsFired) {
         const screenX = getScreenX(bullet.x);
         if (screenX > -20 && screenX < CANVAS.width + 20) {
-            drawBullet(ctx, screenX, bullet.y, bullet.enhanced, gameState.hasPiercingBullets);
+            // Zeile ~95 in renderer.js
+			drawBullet(ctx, screenX, bullet.y, bullet.enhanced, gameState.hasPiercingBullets, bullet);
         }
     }
     
