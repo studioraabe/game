@@ -171,15 +171,13 @@ window.updateRoguelikeSystems = () => {
     const now = Date.now();
     
     // Update regeneration less frequently
-    if (now - lastRegenUpdateTime >= 500) { // Changed from 100ms to 500ms
+    if (now - lastRegenUpdateTime >= 500) {
         updateRegeneration();
         lastRegenUpdateTime = now;
     }
     
-    // Update drop buffs only every 3rd frame
-    if (gameState.frameCount % 3 === 0) {
-        updateDropBuffs();
-    }
+    // GEÄNDERT: Update drop buffs EVERY frame für präzise Timer
+    updateDropBuffs();
     
     // Check achievements only every 30 frames
     if (gameState.gameRunning && gameState.frameCount % 30 === 0) {

@@ -1,14 +1,10 @@
-// ui-enhancements.js - Enhanced UI for Roguelike System
+// ui-enhancements.js - Enhanced UI for Roguelike System with Timer Fix and 5-Buff Limit
 
 import { gameState } from './core/gameState.js';
 import { activeDropBuffs, activeWeaponDrops } from './systems.js';
 import { DROP_INFO, DROP_CONFIG, CANVAS, WEAPON_DROPS } from './core/constants.js';
 import { camera } from './core/camera.js';
 import { setComboGlow, clearComboGlow } from './enhanced-damage-system.js';
-
-
-
-
 
 // Initialize enhanced UI containers
 export function initEnhancedContainers() {
@@ -167,7 +163,12 @@ export function updateEnhancedComboDisplay() {
     }
 }
 
-// Enhanced Buff Display with Weapons
+// Helper function to get active buff count
+function getActiveBuffCount() {
+    return Object.keys(activeDropBuffs || {}).length + Object.keys(activeWeaponDrops || {}).length;
+}
+
+// Enhanced Buff Display with Weapons and 5-Buff Limit
 let previousBuffs = new Set();
 let previousWeapons = new Set();
 
@@ -196,66 +197,9 @@ export function updateEnhancedBuffDisplay() {
     const activeBuffsHTML = [];
     const currentBuffs = new Set();
     
-    // SHIELD FIRST - Always on top
-    if (gameState.shieldCharges > 0) {
-        const isNew = !previousBuffs.has('shield');
-        const chargeText = gameState.shieldCharges === 1 ? '1x Charge' : `${gameState.shieldCharges}x Charges`;
-        
-        activeBuffsHTML.push(`
-            <div class="buff-item buff-shield ${isNew ? 'buff-new' : ''}">
-                <div class="buff-icon">🛡️</div>
-                <div class="buff-info">
-                    <div class="buff-name">Shield</div>
-                    <div class="buff-status">${chargeText}</div>
-                </div>
-            </div>
-        `);
-        currentBuffs.add('shield');
-    }
+    // NUR TEMPORARY BUFFS - Shield, Health und Stats sind separat integriert
     
-    // HEALTH DISPLAY - Show current/max HP
-    const healthPercent = (gameState.currentHealth / gameState.maxHealth) * 100;
-    const healthColor = healthPercent > 75 ? '#00ff88' : healthPercent > 25 ? '#FFD700' : '#FF4444';
-    
-    activeBuffsHTML.push(`
-        <div class="buff-item buff-health">
-            <div class="buff-icon">❤️</div>
-            <div class="buff-info">
-                <div class="buff-name">Health</div>
-                <div class="buff-status" style="color: ${healthColor};">
-                    ${gameState.currentHealth}/${gameState.maxHealth}
-                </div>
-                <div class="buff-progress">
-                    <div class="buff-progress-fill" style="width: ${healthPercent}%; background-color: ${healthColor};"></div>
-                </div>
-            </div>
-        </div>
-    `);
-    
-    // STAT BUFFS - Show active permanent buffs
-    const stats = gameState.stats;
-    if (stats.damageBonus > 0 || stats.critChance > 0 || stats.lifeSteal > 0 || stats.healthRegen > 0) {
-        const statTexts = [];
-        if (stats.damageBonus > 0) statTexts.push(`+${Math.round(stats.damageBonus * 100)}% DMG`);
-        if (stats.critChance > 0) statTexts.push(`${Math.round(stats.critChance * 100)}% CRIT`);
-        if (stats.lifeSteal > 0) statTexts.push(`${Math.round(stats.lifeSteal * 100)}% STEAL`);
-        if (stats.healthRegen > 0) statTexts.push(`${stats.healthRegen.toFixed(1)} HP/s`);
-        
-        activeBuffsHTML.push(`
-            <div class="buff-item buff-stats">
-                <div class="buff-icon">⚔️</div>
-                <div class="buff-info">
-                    <div class="buff-name">Stats</div>
-                    <div class="buff-status" style="font-size: 10px;">
-                        ${statTexts.slice(0, 2).join('<br>')}
-                    </div>
-                </div>
-            </div>
-        `);
-        currentBuffs.add('stats');
-    }
-    
-    // TEMPORARY BUFFS with timers
+    // TEMPORARY BUFFS mit präziser Zeitanzeige
     if (activeDropBuffs && typeof activeDropBuffs === 'object') {
         Object.keys(activeDropBuffs).forEach(buffKey => {
             const remaining = activeDropBuffs[buffKey];
@@ -265,16 +209,19 @@ export function updateEnhancedBuffDisplay() {
             if (!dropInfo) return;
             
             const originalDuration = getOriginalDuration(buffKey);
-            const percentage = (remaining / originalDuration) * 100;
-            const isLow = remaining < 180; // Less than 3 seconds
+            const percentage = Math.max(0, (remaining / originalDuration) * 100);
+            const isLow = remaining < 180; // Less than 3 seconds (180 frames)
             const isNew = !previousBuffs.has(buffKey);
+            
+            // PRÄZISE Sekundenberechnung
+            const secondsLeft = Math.max(0, Math.ceil(remaining / 60));
             
             activeBuffsHTML.push(`
                 <div class="buff-item ${isLow ? 'buff-expiring' : ''} buff-${buffKey} ${isNew ? 'buff-new' : ''}">
                     <div class="buff-icon">${dropInfo.icon}</div>
                     <div class="buff-info">
                         <div class="buff-name">${dropInfo.name}</div>
-                        <div class="buff-timer">${Math.ceil(remaining / 60)}s</div>
+                        <div class="buff-timer">${secondsLeft}s</div>
                         <div class="buff-progress">
                             <div class="buff-progress-fill" style="width: ${percentage}%"></div>
                         </div>
@@ -283,6 +230,17 @@ export function updateEnhancedBuffDisplay() {
             `);
             currentBuffs.add(buffKey);
         });
+    }
+    
+    // Zeige Buff-Counter in der UI
+    if (activeBuffsHTML.length > 0) {
+        const buffCount = getActiveBuffCount();
+        activeBuffsHTML.unshift(`
+            <div class="buff-counter">
+                <span class="buff-count ${buffCount >= 5 ? 'buff-limit-reached' : ''}">${buffCount}/5</span>
+                <span class="buff-label">BUFFS</span>
+            </div>
+        `);
     }
     
     // Update container
@@ -333,9 +291,12 @@ export function updateWeaponsDisplay() {
             if (!weaponInfo) return;
             
             const originalDuration = weaponInfo.duration;
-            const percentage = (remaining / originalDuration) * 100;
+            const percentage = Math.max(0, (remaining / originalDuration) * 100);
             const isLow = remaining < 180; // Less than 3 seconds
             const isNew = !previousWeapons.has(weaponKey);
+            
+            // PRÄZISE Sekundenberechnung für Waffen
+            const secondsLeft = Math.max(0, Math.ceil(remaining / 60));
             
             // Determine rarity styling
             const rarityClass = weaponInfo.rarity <= 1 ? 'legendary' : 
@@ -347,7 +308,7 @@ export function updateWeaponsDisplay() {
                     <div class="weapon-icon">${weaponInfo.icon}</div>
                     <div class="weapon-info">
                         <div class="weapon-name">${weaponInfo.name}</div>
-                        <div class="weapon-timer">${Math.ceil(remaining / 60)}s</div>
+                        <div class="weapon-timer">${secondsLeft}s</div>
                         <div class="weapon-progress">
                             <div class="weapon-progress-fill" style="width: ${percentage}%"></div>
                         </div>
@@ -497,7 +458,7 @@ export function updateStatsOverlay() {
             
             <div class="stats-section">
                 <h4>Active Weapons</h4>
-                ${Object.keys(activeWeaponDrops).length === 0 ? 
+                ${Object.keys(activeWeaponDrops || {}).length === 0 ? 
                     '<div class="stat-row"><span>No active weapons</span></div>' :
                     Object.keys(activeWeaponDrops).map(weapon => {
                         const weaponInfo = WEAPON_DROPS[weapon];
@@ -666,10 +627,10 @@ export function initEnhancements() {
     // Initialize containers
     initEnhancedContainers();
     
-    // Add CSS animations for damage numbers if not already added
-    if (!document.querySelector('#damageNumberStyles')) {
+    // Add CSS animations for damage numbers and buff counter if not already added
+    if (!document.querySelector('#enhancedUIStyles')) {
         const style = document.createElement('style');
-        style.id = 'damageNumberStyles';
+        style.id = 'enhancedUIStyles';
         style.textContent = `
             @keyframes damageNumber {
                 0% { 
@@ -723,6 +684,34 @@ export function initEnhancements() {
                 font-size: 20px;
                 font-weight: 900;
                 text-shadow: 0 0 10px currentColor;
+            }
+            
+            .buff-counter {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: rgba(0, 0, 0, 0.8);
+                border: 1px solid #00ff88;
+                border-radius: 6px;
+                padding: 4px 8px;
+                margin-bottom: 6px;
+                font-family: 'Rajdhani', sans-serif;
+            }
+            
+            .buff-count {
+                font-size: 12px;
+                font-weight: bold;
+                color: #00ff88;
+            }
+            
+            .buff-count.buff-limit-reached {
+                color: #ff4444;
+            }
+            
+            .buff-label {
+                font-size: 10px;
+                color: #cccccc;
+                margin-left: 4px;
             }
             
             .weapon-item {

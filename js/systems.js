@@ -208,6 +208,14 @@ function selectWeaponDrop() {
 export function collectDrop(drop) {
     soundManager.pickup();
     
+    // Check buff limit für temporary buffs und weapons
+    if ((drop.isWeapon || isTemporaryBuff(drop.type)) && !canPickupBuff()) {
+        // Zeige "Inventory Full" Nachricht
+        createScorePopup(drop.x, drop.y, 'BUFF LIMIT (5/5)!');
+        soundManager.hit(); // Fehler-Sound
+        return; // Buff nicht aufnehmen
+    }
+    
     // Handle weapon drops
     if (drop.isWeapon) {
         const weaponInfo = WEAPON_DROPS[drop.type];
@@ -232,16 +240,31 @@ export function collectDrop(drop) {
     
     switch(drop.type) {
         case DropType.EXTRA_LIFE:
-            const healAmount = Math.floor(gameState.maxHealth * 0.5); // Heal 50% max health
+            // Health ist immer erlaubt (kein Buff-Limit)
+            const healAmount = Math.floor(gameState.maxHealth * 0.5);
             gameState.currentHealth = Math.min(gameState.currentHealth + healAmount, gameState.maxHealth);
             createScorePopup(drop.x, drop.y, `+${healAmount} HP`);
             break;
             
         case DropType.MEGA_BULLETS:
+            // Bullets sind immer erlaubt (kein Buff-Limit)
             gameState.bullets += 50;
             createScorePopup(drop.x, drop.y, '+50 Bolts');
             break;
             
+        case DropType.SHIELD:
+            // Shield ist immer erlaubt (kein Buff-Limit)
+            if (gameState.shieldCharges < 5) {
+                gameState.shieldCharges++;
+                gameState.hasShield = true;
+                createScorePopup(drop.x, drop.y, `Shield +1 (${gameState.shieldCharges}x)`);
+            } else {
+                gameState.score += 500 * gameState.scoreMultiplier;
+                createScorePopup(drop.x, drop.y, '+500 Shield Bonus!');
+            }
+            break;
+            
+        // TEMPORARY BUFFS - unterliegen dem 5-Buff Limit
         case DropType.SPEED_BOOST:
             activeDropBuffs.speedBoost = dropConfig.duration;
             gameState.stats.moveSpeed += 0.5;
@@ -251,17 +274,6 @@ export function collectDrop(drop) {
         case DropType.JUMP_BOOST:
             activeDropBuffs.jumpBoost = Math.min((activeDropBuffs.jumpBoost || 0) + dropConfig.duration, 3600);
             createScorePopup(drop.x, drop.y, 'Jump Boost!');
-            break;
-            
-        case DropType.SHIELD:
-            if (gameState.shieldCharges < 5) {
-                gameState.shieldCharges++;
-                gameState.hasShield = true;
-                createScorePopup(drop.x, drop.y, `Shield +1 (${gameState.shieldCharges}x)`);
-            } else {
-                gameState.score += 500 * gameState.scoreMultiplier;
-                createScorePopup(drop.x, drop.y, '+500 Shield Bonus!');
-            }
             break;
             
         case DropType.SCORE_MULTIPLIER:
@@ -282,8 +294,8 @@ export function collectDrop(drop) {
         case DropType.BERSERKER_MODE:
             activeDropBuffs.berserkerMode = Math.min((activeDropBuffs.berserkerMode || 0) + dropConfig.duration, 1800);
             gameState.isBerserker = true;
-            gameState.stats.attackSpeed += 1.0; // Double attack speed
-            gameState.stats.damageBonus += 0.5; // +50% damage
+            gameState.stats.attackSpeed += 1.0;
+            gameState.stats.damageBonus += 0.5;
             createScorePopup(drop.x, drop.y, 'Berserker!');
             break;
             
@@ -303,14 +315,57 @@ export function collectDrop(drop) {
     soundManager.powerUp();
 }
 
+function isTemporaryBuff(dropType) {
+    const temporaryBuffs = [
+        DropType.SPEED_BOOST,
+        DropType.JUMP_BOOST,
+        DropType.SCORE_MULTIPLIER,
+        DropType.MAGNET_MODE,
+        DropType.BERSERKER_MODE,
+        DropType.GHOST_WALK,
+        DropType.TIME_SLOW
+    ];
+    return temporaryBuffs.includes(dropType);
+}
+
+
+export function getActiveBuffCount() {
+    return Object.keys(activeDropBuffs).length + Object.keys(activeWeaponDrops).length;
+}
+
+export function canPickupBuff() {
+    return getActiveBuffCount() < 5;
+}
+
+
+
+
 export function updateDropBuffs() {
+    const now = Date.now();
+    
+    // Initialisiere Timestamps falls nicht vorhanden
+    if (!window.buffUpdateTimestamps) {
+        window.buffUpdateTimestamps = {};
+    }
+    
     // Update regular drop buffs
-    Object.keys(activeDropBuffs).forEach(buff => {
-        activeDropBuffs[buff] -= gameState.deltaTime;
-        if (activeDropBuffs[buff] <= 0) {
-            delete activeDropBuffs[buff];
+    Object.keys(activeDropBuffs).forEach(buffKey => {
+        if (!window.buffUpdateTimestamps[buffKey]) {
+            window.buffUpdateTimestamps[buffKey] = now;
+        }
+        
+        const deltaMs = now - window.buffUpdateTimestamps[buffKey];
+        const deltaFrames = deltaMs / 16.67; // Konvertiere zu 60fps frames
+        
+        activeDropBuffs[buffKey] -= deltaFrames;
+        window.buffUpdateTimestamps[buffKey] = now;
+        
+        if (activeDropBuffs[buffKey] <= 0) {
+            delete activeDropBuffs[buffKey];
+            delete window.buffUpdateTimestamps[buffKey];
             
-            switch(buff) {
+            // Buff-Effekte entfernen
+            switch(buffKey) {
                 case 'speedBoost':
                     gameState.stats.moveSpeed -= 0.5;
                     break;
@@ -336,13 +391,26 @@ export function updateDropBuffs() {
     });
     
     // Update weapon drops
-    Object.keys(activeWeaponDrops).forEach(weapon => {
-        activeWeaponDrops[weapon] -= gameState.deltaTime;
-        if (activeWeaponDrops[weapon] <= 0) {
-            delete activeWeaponDrops[weapon];
+    Object.keys(activeWeaponDrops).forEach(weaponKey => {
+        const timestampKey = `weapon_${weaponKey}`;
+        
+        if (!window.buffUpdateTimestamps[timestampKey]) {
+            window.buffUpdateTimestamps[timestampKey] = now;
+        }
+        
+        const deltaMs = now - window.buffUpdateTimestamps[timestampKey];
+        const deltaFrames = deltaMs / 16.67;
+        
+        activeWeaponDrops[weaponKey] -= deltaFrames;
+        window.buffUpdateTimestamps[timestampKey] = now;
+        
+        if (activeWeaponDrops[weaponKey] <= 0) {
+            delete activeWeaponDrops[weaponKey];
+            delete window.buffUpdateTimestamps[timestampKey];
         }
     });
 }
+
 
 // Regeneration System
 let lastHealthRegen = 0;
