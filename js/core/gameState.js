@@ -247,6 +247,8 @@ export function resetGame() {
     }
 }
 
+
+
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
     
@@ -284,19 +286,22 @@ export function update() {
         }
     }
     
-    // === EVERY 3RD FRAME (LESS CRITICAL) ===
+    // === EVERY FRAME FOR SMOOTH ANIMATIONS ===
+    // FIXED: Update drops and effects every frame for smooth animations
+    window.updateDrops();
+    window.updateBatProjectiles();
+    window.updateEffects();
+    updateDamageEffects();
+    
+    // === EVERY 3RD FRAME (LEAST CRITICAL) ===
     if (gameState.frameCount % 3 === 0) {
         window.updateExplosions();
-        window.updateDrops();
-        window.updateBatProjectiles();
         updateDropBuffs();
     }
     
     // === EVERY 4TH FRAME (LEAST CRITICAL) ===
     if (gameState.frameCount % 4 === 0) {
         window.updateEnvironmentElements();
-        window.updateEffects();
-        updateDamageEffects();
     }
     
     // === EVERY 10TH FRAME (VERY OCCASIONAL) ===
@@ -311,6 +316,8 @@ export function update() {
     window.updateUI();
     gameState.needsRedraw = true;
 }
+
+
 
 export function checkLevelComplete() {
     if (gameState.levelProgress >= GAME_CONSTANTS.MAX_LEVEL_PROGRESS) {

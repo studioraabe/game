@@ -1501,6 +1501,7 @@ function drawSpider(ctx, x, y, isBoss = false, animTime = 0) {
 }
 
 
+
 function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
     // PERFORMANCE: Skip rendering every other frame for regular wolves
     if (!isAlpha && obstacle && obstacle._skipFrame === true) {
@@ -1517,6 +1518,7 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
     const breathe = Math.sin(timeScale * 4) * 1; // Schweres Atmen
     const snarl = Math.sin(timeScale * 8) > 0.5; // Zähne fletschen
     
+    // FIXED: Initialize shouldFlip first, then derive facingLeft
     let shouldFlip = false;
 
     if (obstacle && obstacle.type === 'alphaWolf') {
@@ -1533,7 +1535,18 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
         }
     }
 
+    // FIXED: facingLeft is now properly initialized after shouldFlip
     const facingLeft = shouldFlip;
+    
+    // FIXED: Ensure full opacity and proper canvas state
+    ctx.globalAlpha = 1.0;
+    
+    // FIXED: Only save/flip if needed
+    if (facingLeft) {
+        ctx.save();
+        ctx.scale(-1, 1);
+        x = -x - (52 * scale); // Adjust for wolf width
+    }
     
     // Bedrohlicher Schatten
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -1751,12 +1764,12 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
         ctx.fillRect(x + 2 * scale, y + 18 * scale + prowl + breathe, 8 * scale, 1 * scale);
         ctx.fillRect(x + 3 * scale, y + 19 * scale + prowl + breathe, 6 * scale, 1 * scale);
         
-        // FURY CHARGING EFFEKTE
+        // FURY CHARGING EFFEKTE - FIXED: Circular glow
         if (obstacle && obstacle.isFuryCharging && obstacle.furyChargeTime > 0) {
             const chargeProgress = (90 - obstacle.furyChargeTime) / 90;
             const intensity = Math.sin(timeScale * 25) * 0.5 + 0.5;
             
-            // INTENSIVE Lade-Aura
+            // FIXED: Circular fury charging aura
             const centerX = x + 20 * scale;
             const centerY = y + 15 * scale + prowl;
             const maxRadius = (25 + chargeProgress * 40) * scale;
@@ -1777,13 +1790,15 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
             ctx.arc(centerX, centerY, maxRadius, 0, Math.PI * 2);
             ctx.fill();
             
-            // Energie-Funken
+            // Energie-Funken around the circle
             if (Math.random() > 0.4) {
                 ctx.fillStyle = `rgba(255, 255, 0, ${intensity})`;
                 for (let s = 0; s < 8; s++) {
-                    const sparkX = centerX + (Math.random() - 0.5) * maxRadius * 1.5;
-                    const sparkY = centerY + (Math.random() - 0.5) * maxRadius * 1.5;
-                    ctx.fillRect(sparkX, sparkY, 3 * scale, 3 * scale);
+                    const angle = (s / 8) * Math.PI * 2;
+                    const sparkRadius = maxRadius * (0.8 + Math.random() * 0.4);
+                    const sparkX = centerX + Math.cos(angle) * sparkRadius;
+                    const sparkY = centerY + Math.sin(angle) * sparkRadius;
+                    ctx.fillRect(sparkX - 1.5, sparkY - 1.5, 3 * scale, 3 * scale);
                 }
             }
             
@@ -1848,13 +1863,14 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
         ctx.fillRect(bloodX, bloodY, 2 * scale, 2 * scale);
     }
     
-    // Horizontal flip zurücksetzen
+    // FIXED: Always restore if we flipped, and reset alpha
     if (facingLeft) {
         ctx.restore();
     }
+    
+    // FIXED: Ensure alpha is reset
+    ctx.globalAlpha = 1.0;
 }
-
-
 
 
 

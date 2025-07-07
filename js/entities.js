@@ -176,11 +176,20 @@ function createObstacle(type, x, y, width, height) {
         obstacle.deathTimer = 0;
     }
     
-    if (type === 'alphaWolf') {
+  if (type === 'alphaWolf') {
         const jumpFrequency = Math.max(60 - (gameState.level * 5), 20);
         obstacle.verticalMovement = 0;
         obstacle.jumpTimer = jumpFrequency;
         obstacle.originalY = y;
+        
+        // FIXED: Add Fury Rage properties
+        obstacle.furyChargeTime = 0;
+        obstacle.isFuryCharging = false;
+        obstacle.isLeaping = false;
+        obstacle.furyTriggerHealth = Math.floor(obstacle.maxHealth * 0.3); // Trigger at 30% health
+        obstacle.lastFuryTime = 0;
+        obstacle.facingDirection = -1; // Default facing left
+        console.log(`Alpha Wolf created with fury trigger at ${obstacle.furyTriggerHealth} HP`);
     }
     
     return obstacle;
@@ -216,17 +225,22 @@ function createBatProjectile(startX, startY, targetX, targetY) {
     });
 }
 
+
+
 export function updateBatProjectiles(gameStateParam) {
     for (let i = batProjectiles.length - 1; i >= 0; i--) {
         const projectile = batProjectiles[i];
         
-        projectile.x += projectile.velocityX * gameState.deltaTime;
-        projectile.y += projectile.velocityY * gameState.deltaTime;
+        // FIXED: Use deltaTime for smooth movement
+        const deltaTime = gameState.deltaTime || 1;
         
-        projectile.velocityY += 0.05 * gameState.deltaTime;
-        projectile.life -= gameState.deltaTime;
+        projectile.x += projectile.velocityX * deltaTime;
+        projectile.y += projectile.velocityY * deltaTime;
         
-        // Trail effect
+        projectile.velocityY += 0.05 * deltaTime;
+        projectile.life -= deltaTime;
+        
+        // Trail effect - smooth updates
         if (projectile.trailParticles.length < 5) {
             projectile.trailParticles.push({
                 x: projectile.x,
@@ -236,10 +250,10 @@ export function updateBatProjectiles(gameStateParam) {
             });
         }
         
-        // Update trail particles
+        // Update trail particles with deltaTime
         for (let t = projectile.trailParticles.length - 1; t >= 0; t--) {
-            projectile.trailParticles[t].life--;
-            projectile.trailParticles[t].alpha *= 0.9;
+            projectile.trailParticles[t].life -= deltaTime;
+            projectile.trailParticles[t].alpha *= Math.pow(0.9, deltaTime);
             if (projectile.trailParticles[t].life <= 0) {
                 projectile.trailParticles.splice(t, 1);
             }
@@ -306,6 +320,8 @@ export function updateBatProjectiles(gameStateParam) {
         }
     }
 }
+
+
 
 // Enhanced Obstacle Spawning
 export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
@@ -573,6 +589,8 @@ export function shoot(gameStateParam) {
     soundManager.shoot();
 }
 
+
+
 function initializeObstacleProperties(obstacle) {
     if (obstacle.type === 'teslaCoil') {
         if (!obstacle.state) {
@@ -603,7 +621,6 @@ function initializeObstacleProperties(obstacle) {
         }
     }
 }
-
 
 // Enhanced Bullet Update System
 export function updateBullets(gameStateParam) {
@@ -1100,8 +1117,11 @@ export function isPlayerInvulnerable(gameStateParam) {
 }
 
 // Keep all existing update functions but enhance them for the new system
+
+
 export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, gameStateParam) {
     const speed = gameSpeed * enemySlowFactor * 0.7;
+    const deltaTime = gameState.deltaTime || 1;
     
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
@@ -1109,14 +1129,14 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
         // Initialize properties if needed
         initializeObstacleProperties(obstacle);
         
-        // Update damage flash timer
+        // Update damage flash timer with deltaTime
         if (obstacle.damageFlashTimer > 0) {
-            obstacle.damageFlashTimer -= gameState.deltaTime;
+            obstacle.damageFlashTimer -= deltaTime;
         }
         
-        // TESLA COIL LOGIC - FIXED
+        // TESLA COIL LOGIC - FIXED with deltaTime
         if (obstacle.type === 'teslaCoil') {
-            obstacle.stateTimer -= gameState.deltaTime;
+            obstacle.stateTimer -= deltaTime;
             
             switch (obstacle.state) {
                 case 'charging':
@@ -1148,9 +1168,9 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             continue; // Tesla coils don't move
         }
         
-        // FRANKENSTEIN TABLE LOGIC - FIXED
+        // FRANKENSTEIN TABLE LOGIC - FIXED with deltaTime
         if (obstacle.type === 'frankensteinTable') {
-            obstacle.stateTimer -= gameState.deltaTime;
+            obstacle.stateTimer -= deltaTime;
             
             switch (obstacle.state) {
                 case 'charging':
@@ -1182,9 +1202,9 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             continue; // Frankenstein tables don't move
         }
         
-        // BAT AI LOGIC - FIXED
+        // BAT AI LOGIC - FIXED with deltaTime
         if (obstacle.type === 'bat') {
-            obstacle.spitTimer -= gameState.deltaTime;
+            obstacle.spitTimer -= deltaTime;
             
             // Determine facing direction
             const playerCenterX = player.x + player.width/2;
@@ -1199,9 +1219,9 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
                 console.log('🦇 Bat charging spit attack!');
             }
             
-            // Handle spitting charge
+            // Handle spitting charge with deltaTime
             if (obstacle.isSpitting && obstacle.spitChargeTime > 0) {
-                obstacle.spitChargeTime -= gameState.deltaTime;
+                obstacle.spitChargeTime -= deltaTime;
                 
                 // Fire projectile when charge completes
                 if (obstacle.spitChargeTime <= 0) {
@@ -1223,28 +1243,79 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
                 }
             }
             
-            // Bat movement (hover around player)
+            // Bat movement (hover around player) with deltaTime
             const dx = (player.x + player.width/2) - (obstacle.x + obstacle.width/2);
             const dy = (player.y + player.height/2) - (obstacle.y + obstacle.height/2);
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance > 150) {
                 // Move closer to player
-                obstacle.x += Math.sign(dx) * speed * 0.5 * gameState.deltaTime;
-                obstacle.y += Math.sign(dy) * speed * 0.3 * gameState.deltaTime;
+                obstacle.x += Math.sign(dx) * speed * 0.5 * deltaTime;
+                obstacle.y += Math.sign(dy) * speed * 0.3 * deltaTime;
             } else if (distance < 80) {
                 // Move away from player
-                obstacle.x -= Math.sign(dx) * speed * 0.3 * gameState.deltaTime;
-                obstacle.y -= Math.sign(dy) * speed * 0.2 * gameState.deltaTime;
+                obstacle.x -= Math.sign(dx) * speed * 0.3 * deltaTime;
+                obstacle.y -= Math.sign(dy) * speed * 0.2 * deltaTime;
             }
             
             // Constrain bat to screen bounds
             obstacle.y = Math.max(50, Math.min(obstacle.y, CANVAS.groundY - obstacle.height - 50));
         }
+		
+		
+		      if (obstacle.type === 'alphaWolf') {
+            const now = Date.now();
+            
+            // Check if health is low enough to trigger fury
+            const healthPercent = obstacle.health / obstacle.maxHealth;
+            const shouldTriggerFury = healthPercent <= 0.3 && !obstacle.isFuryCharging && 
+                                    (now - obstacle.lastFuryTime) > 5000; // 5 second cooldown
+            
+            if (shouldTriggerFury) {
+                obstacle.isFuryCharging = true;
+                obstacle.furyChargeTime = 90; // 1.5 seconds charge time
+                obstacle.lastFuryTime = now;
+                console.log('🔥 Alpha Wolf FURY RAGE triggered!');
+            }
+            
+            // Handle fury charging
+            if (obstacle.isFuryCharging && obstacle.furyChargeTime > 0) {
+                obstacle.furyChargeTime -= deltaTime;
+                
+                // Update facing direction to player during fury
+                const playerCenterX = player.x + player.width/2;
+                const wolfCenterX = obstacle.x + obstacle.width/2;
+                obstacle.facingDirection = playerCenterX < wolfCenterX ? -1 : 1;
+                
+                // When charge completes, start leap
+                if (obstacle.furyChargeTime <= 0) {
+                    obstacle.isFuryCharging = false;
+                    obstacle.isLeaping = true;
+                    obstacle.leapDuration = 60; // 1 second leap
+                    console.log('🚀 Alpha Wolf FURY LEAP!');
+                }
+            }
+            
+            // Handle fury leap
+            if (obstacle.isLeaping && obstacle.leapDuration > 0) {
+                obstacle.leapDuration -= deltaTime;
+                
+                // Fast movement towards player during leap
+                const dx = (player.x + player.width/2) - (obstacle.x + obstacle.width/2);
+                const leapSpeed = speed * 3; // 3x normal speed
+                obstacle.x += Math.sign(dx) * leapSpeed * deltaTime;
+                
+                // End leap
+                if (obstacle.leapDuration <= 0) {
+                    obstacle.isLeaping = false;
+                    console.log('🎯 Alpha Wolf fury leap complete');
+                }
+            }
+        }
         
-        // Skeleton-specific logic for dead skeletons
+        // Skeleton-specific logic for dead skeletons with deltaTime
         if (obstacle.type === 'skeleton' && obstacle.isDead) {
-            obstacle.deathTimer += gameState.deltaTime;
+            obstacle.deathTimer += deltaTime;
             
             if (obstacle.deathTimer > 30) {
                 if (obstacle.id && window.spriteManager) {
@@ -1256,29 +1327,30 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             continue;
         }
         
-        // Living skeleton logic
+        // Living skeleton logic with deltaTime
         if (obstacle.type === 'skeleton') {
-            obstacle.velocityX = -speed;
+            obstacle.x -= speed * deltaTime;
             
             if (obstacle.damageResistance > 0) {
-                obstacle.damageResistance -= gameState.deltaTime;
+                obstacle.damageResistance -= deltaTime;
             }
             
-            obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * gameState.deltaTime;
+            // Use deltaTime for smooth floating motion
+           // obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * deltaTime;
         }
         
-        // Movement for non-stationary obstacles
+        // Movement for non-stationary obstacles with deltaTime
         const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
                             obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' ||
                             obstacle.type === 'sarcophagus';
         
         if (!isStationary) {
-            obstacle.x -= speed * gameState.deltaTime;
+            obstacle.x -= speed * deltaTime;
         }
         
         obstacle.animationTime = Date.now();
         
-        // Magnet effect for bolt boxes
+        // Magnet effect for bolt boxes with deltaTime
         if (magnetRange > 0 && obstacle.type === 'boltBox') {
             const dx = (player.x + player.width/2) - (obstacle.x + obstacle.width/2);
             const dy = (player.y + player.height/2) - (obstacle.y + obstacle.height/2);
@@ -1286,8 +1358,8 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             
             if (distance < magnetRange) {
                 const force = (magnetRange - distance) / magnetRange * 0.6;
-                obstacle.x += dx * force * 0.3;
-                obstacle.y += dy * force * 0.3;
+                obstacle.x += dx * force * 0.3 * deltaTime;
+                obstacle.y += dy * force * 0.3 * deltaTime;
                 
                 if (obstacle.y > CANVAS.groundY - obstacle.height) {
                     obstacle.y = CANVAS.groundY - obstacle.height;
@@ -1320,6 +1392,9 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
     }
 }
 
+
+
+
 // Keep all other existing functions (updateExplosions, updateEffects, etc.)
 export function updateExplosions() {
     for (let i = explosions.length - 1; i >= 0; i--) {
@@ -1330,9 +1405,14 @@ export function updateExplosions() {
     }
 }
 
+
+
+
 export function updateEffects(timeSlowFactor, gameStateParam) {
+    const deltaTime = gameState.deltaTime || 1;
+    
     if (gameStateParam.comboTimer > 0) {
-        gameStateParam.comboTimer -= gameState.deltaTime;
+        gameStateParam.comboTimer -= deltaTime;
         
         if (gameStateParam.comboTimer <= 0) {
             gameStateParam.comboTimer = 0;
@@ -1340,61 +1420,61 @@ export function updateEffects(timeSlowFactor, gameStateParam) {
         }
     }
     
-    // Update blood particles
+    // Update blood particles with deltaTime
     for (let i = bloodParticles.length - 1; i >= 0; i--) {
         const particle = bloodParticles[i];
-        particle.x += particle.velocityX * gameState.deltaTime;
-        particle.y += particle.velocityY * gameState.deltaTime;
-        particle.velocityY += 0.2 * gameState.deltaTime;
-        particle.life -= gameState.deltaTime;
+        particle.x += particle.velocityX * deltaTime;
+        particle.y += particle.velocityY * deltaTime;
+        particle.velocityY += 0.2 * deltaTime;
+        particle.life -= deltaTime;
         
         if (particle.life <= 0) {
             bloodParticles.splice(i, 1);
         }
     }
 
-    // Update lightning effects
+    // Update lightning effects with deltaTime
     for (let i = lightningEffects.length - 1; i >= 0; i--) {
         const effect = lightningEffects[i];
-        effect.life -= gameState.deltaTime;
+        effect.life -= deltaTime;
         
         if (effect.life <= 0) {
             lightningEffects.splice(i, 1);
         }
     }
 
-    // Update score popups
+    // Update score popups with deltaTime
     for (let i = scorePopups.length - 1; i >= 0; i--) {
         const popup = scorePopups[i];
-        popup.y -= gameState.deltaTime;
-        popup.life -= gameState.deltaTime;
+        popup.y -= deltaTime;
+        popup.life -= deltaTime;
         
         if (popup.life <= 0) {
             scorePopups.splice(i, 1);
         }
     }
 
-    // Update double jump particles
+    // Update double jump particles with deltaTime
     for (let i = doubleJumpParticles.length - 1; i >= 0; i--) {
         const particle = doubleJumpParticles[i];
-        particle.x += particle.velocityX * gameState.deltaTime;
-        particle.y += particle.velocityY * gameState.deltaTime;
-        particle.velocityY += 0.1 * gameState.deltaTime;
-        particle.life -= gameState.deltaTime;
+        particle.x += particle.velocityX * deltaTime;
+        particle.y += particle.velocityY * deltaTime;
+        particle.velocityY += 0.1 * deltaTime;
+        particle.life -= deltaTime;
         
         if (particle.life <= 0) {
             doubleJumpParticles.splice(i, 1);
         }
     }
     
-    // Update drop particles
+    // Update drop particles with deltaTime
     for (let i = dropParticles.length - 1; i >= 0; i--) {
         const particle = dropParticles[i];
-        particle.x += particle.velocityX * gameState.deltaTime;
-        particle.y += particle.velocityY * gameState.deltaTime;
-        particle.velocityX *= Math.pow(0.95, gameState.deltaTime);
-        particle.velocityY *= Math.pow(0.95, gameState.deltaTime);
-        particle.life -= gameState.deltaTime;
+        particle.x += particle.velocityX * deltaTime;
+        particle.y += particle.velocityY * deltaTime;
+        particle.velocityX *= Math.pow(0.95, deltaTime);
+        particle.velocityY *= Math.pow(0.95, deltaTime);
+        particle.life -= deltaTime;
         
         if (particle.life <= 0) {
             dropParticles.splice(i, 1);
@@ -1402,25 +1482,28 @@ export function updateEffects(timeSlowFactor, gameStateParam) {
     }
 }
 
+
+
 export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
-    // PERFORMANCE: Only update drops every other frame
-    if (gameState.frameCount % 2 !== 0) return;
+    // FIXED: Update every frame instead of every other frame for smooth animation
     
     for (let i = drops.length - 1; i >= 0; i--) {
         const drop = drops[i];
         
-        // Physics update
-        drop.velocityY += 0.3 * 2; // Double the gravity since we update half as often
-        drop.y += drop.velocityY * 2;
+        // Physics update with deltaTime
+        const deltaTime = gameState.deltaTime || 1;
+        drop.velocityY += 0.3 * deltaTime;
+        drop.y += drop.velocityY * deltaTime;
         
         if (drop.y >= CANVAS.groundY - drop.height) {
             drop.y = CANVAS.groundY - drop.height;
             drop.velocityY = -drop.velocityY * 0.5;
         }
         
-        // PERFORMANCE: Skip rotation update - handled in draw function
+        // Rotation update for smooth spinning
+        drop.rotation = (drop.rotation || 0) + 0.05 * deltaTime;
         
-        // Magnet effect - simplified
+        // Magnet effect - simplified but smooth
         if (magnetRange > 0) {
             const dx = (player.x + player.width/2) - (drop.x + drop.width/2);
             const dy = (player.y + player.height/2) - (drop.y + drop.height/2);
@@ -1429,8 +1512,8 @@ export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
             if (distanceSq < magnetRange * magnetRange) {
                 const distance = Math.sqrt(distanceSq);
                 const force = (magnetRange - distance) / magnetRange * 0.5;
-                drop.x += dx * force * 0.4; // Doubled force since half updates
-                drop.y += dy * force * 0.4;
+                drop.x += dx * force * 0.4 * deltaTime;
+                drop.y += dy * force * 0.4 * deltaTime;
                 
                 if (drop.y > CANVAS.groundY - drop.height) {
                     drop.y = CANVAS.groundY - drop.height;
@@ -1455,6 +1538,10 @@ export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
         }
     }
 }
+
+
+
+
 export function updateAllEntities(gameStateParam) {
     updateObstacles(gameStateParam.gameSpeed, gameStateParam.enemySlowFactor, gameStateParam.level, gameStateParam.magnetRange, gameStateParam);
     updateBullets(gameStateParam);

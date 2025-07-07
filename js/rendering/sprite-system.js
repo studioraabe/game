@@ -185,13 +185,18 @@ drawSprite(ctx, spriteName, animationName, x, y, scale = 1, flipX = false, delta
     }
     
     // PERFORMANCE: Simplified multi-frame animation
-    const normalizedDeltaTime = Math.min(deltaTime, 2);
+    const normalizedDeltaTime = Math.min(deltaTime, 1.5); // Reduced cap for smoother animation
     
     // Update animation timer
     animState.elapsedTime += normalizedDeltaTime;
     
     // PERFORMANCE: Simple frame advancement without smoothing
-    const frameDuration = Math.max(60 / animation.frameRate, 1);
+    let frameDuration = Math.max(60 / animation.frameRate, 2); 
+    
+  // SPECIAL: Slower animation for skeletons to reduce stuttering
+    if (spriteName === 'skeleton') {
+        frameDuration *= 1.5; // 50% slower animation
+    }
     
     // Update frame if needed
     if (animState.elapsedTime >= frameDuration) {

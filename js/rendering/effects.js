@@ -342,14 +342,40 @@ export function drawDrop(ctx, drop) {
         drop._lastRotationUpdate = currentTime;
     }
     
-    // PERFORMANCE: Simplified glow with less gradient stops
-    ctx.save();
+    // FIXED: Circular glow instead of rectangle
+    const centerX = x + 12;
+    const centerY = y + 12;
+    const glowRadius = 20 + drop.glowIntensity * 10;
     
-    // Single glow layer instead of gradient
-    ctx.fillStyle = `${drop.info.color}44`;
-    ctx.fillRect(x - 8, y - 8, 40, 40);
+    const dropGradient = ctx.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, glowRadius
+    );
+    
+    // Parse color for gradient
+    const dropColor = drop.info.color;
+    let r, g, b;
+    if (dropColor.startsWith('#')) {
+        r = parseInt(dropColor.slice(1, 3), 16);
+        g = parseInt(dropColor.slice(3, 5), 16);
+        b = parseInt(dropColor.slice(5, 7), 16);
+    } else {
+        // Default fallback
+        r = 255; g = 215; b = 0;
+    }
+    
+    dropGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${drop.glowIntensity * 0.6})`);
+    dropGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${drop.glowIntensity * 0.4})`);
+    dropGradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${drop.glowIntensity * 0.2})`);
+    dropGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    
+    ctx.fillStyle = dropGradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
     
     // Container
+    ctx.save();
     ctx.translate(x + 12, y + 12);
     ctx.rotate(drop.rotation);
     
@@ -366,9 +392,10 @@ export function drawDrop(ctx, drop) {
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#000000';
     ctx.fillText(drop.info.icon, x + 12, y + 12);
     
-    // PERFORMANCE: Reduce sparkle frequency
+    // FIXED: Circular sparkles
     if (!drop._lastSparkle || currentTime - drop._lastSparkle > 100) {
         drop._sparkleVisible = Math.random() > 0.3;
         drop._lastSparkle = currentTime;
@@ -376,7 +403,12 @@ export function drawDrop(ctx, drop) {
     
     if (drop._sparkleVisible) {
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(x + 20, y + 4, 2, 2);
-        ctx.fillRect(x + 4, y + 20, 2, 2);
+        const sparkle1X = centerX + Math.cos(drop.rotation) * 15;
+        const sparkle1Y = centerY + Math.sin(drop.rotation) * 15;
+        const sparkle2X = centerX + Math.cos(drop.rotation + Math.PI) * 12;
+        const sparkle2Y = centerY + Math.sin(drop.rotation + Math.PI) * 12;
+        
+        ctx.fillRect(sparkle1X - 1, sparkle1Y - 1, 2, 2);
+        ctx.fillRect(sparkle2X - 1, sparkle2Y - 1, 2, 2);
     }
 }
