@@ -6,6 +6,10 @@ import { DROP_INFO, DROP_CONFIG, CANVAS, WEAPON_DROPS } from './core/constants.j
 import { camera } from './core/camera.js';
 import { setComboGlow, clearComboGlow } from './enhanced-damage-system.js';
 
+
+
+
+
 // Initialize enhanced UI containers
 export function initEnhancedContainers() {
     // Remove existing containers

@@ -170,21 +170,22 @@ window.updateEnhancedDisplays = () => {
 window.updateRoguelikeSystems = () => {
     const now = Date.now();
     
-    // Update regeneration systems (less frequent)
-    if (now - lastRegenUpdateTime >= 100) { // Every 100ms
+    // Update regeneration less frequently
+    if (now - lastRegenUpdateTime >= 500) { // Changed from 100ms to 500ms
         updateRegeneration();
         lastRegenUpdateTime = now;
     }
     
-    // Update drop buffs and weapon timers
-    updateDropBuffs();
+    // Update drop buffs only every 3rd frame
+    if (gameState.frameCount % 3 === 0) {
+        updateDropBuffs();
+    }
     
-    // Check achievements
-    if (gameState.gameRunning) {
+    // Check achievements only every 30 frames
+    if (gameState.gameRunning && gameState.frameCount % 30 === 0) {
         checkAchievements();
     }
 };
-
 window.update = () => {
     update();
     window.updateRoguelikeSystems();

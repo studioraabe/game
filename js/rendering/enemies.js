@@ -1501,32 +1501,39 @@ function drawSpider(ctx, x, y, isBoss = false, animTime = 0) {
 }
 
 
-
-
 function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
+    // PERFORMANCE: Skip rendering every other frame for regular wolves
+    if (!isAlpha && obstacle && obstacle._skipFrame === true) {
+        obstacle._skipFrame = false;
+        return;
+    }
+    if (!isAlpha && obstacle) {
+        obstacle._skipFrame = true;
+    }
+    
     const scale = isAlpha ? 2.4 : 1.8; // Alpha deutlich größer
     const timeScale = animTime * 0.001;
     const prowl = Math.sin(timeScale * 3) * 1.5; // Raubtierbewegung
     const breathe = Math.sin(timeScale * 4) * 1; // Schweres Atmen
     const snarl = Math.sin(timeScale * 8) > 0.5; // Zähne fletschen
     
-   let shouldFlip = false;
+    let shouldFlip = false;
 
-if (obstacle && obstacle.type === 'alphaWolf') {
-    if (obstacle.isFuryCharging || obstacle.isLeaping) {
-        // Im Fury Mode: Zum Spieler schauen - richtige Richtungsbestimmung
-        const playerCenterX = player.x + player.width/2;
-        const wolfCenterX = obstacle.x + obstacle.width/2;
-        
-        // Wenn Spieler LINKS vom Wolf ist -> Wolf muss nach LINKS schauen (spiegeln)
-        shouldFlip = playerCenterX < wolfCenterX;
-    } else {
-        // Normale Bewegung: Standard-Spiegelungslogik
-        shouldFlip = obstacle.facingDirection === -1;
+    if (obstacle && obstacle.type === 'alphaWolf') {
+        if (obstacle.isFuryCharging || obstacle.isLeaping) {
+            // Im Fury Mode: Zum Spieler schauen - richtige Richtungsbestimmung
+            const playerCenterX = player.x + player.width/2;
+            const wolfCenterX = obstacle.x + obstacle.width/2;
+            
+            // Wenn Spieler LINKS vom Wolf ist -> Wolf muss nach LINKS schauen (spiegeln)
+            shouldFlip = playerCenterX < wolfCenterX;
+        } else {
+            // Normale Bewegung: Standard-Spiegelungslogik
+            shouldFlip = obstacle.facingDirection === -1;
+        }
     }
-}
 
-const facingLeft = shouldFlip;
+    const facingLeft = shouldFlip;
     
     // Bedrohlicher Schatten
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -1846,6 +1853,7 @@ const facingLeft = shouldFlip;
         ctx.restore();
     }
 }
+
 
 
 

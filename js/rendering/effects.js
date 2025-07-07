@@ -322,27 +322,37 @@ export function drawBullet(ctx, x, y, enhanced = false, hasPiercingBullets = fal
 }
 
 
-// Drop items
+
+
+// Drop items - OPTIMIZED
 export function drawDrop(ctx, drop) {
     const x = getScreenX(drop.x);
     const y = drop.y;
     
-    // Glow aura with slower pulsing (0.002 statt 0.005)
-    const glowIntensity = drop.glowIntensity || (0.5 + Math.sin(Date.now() * 0.002) * 0.3);
-    const gradient = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 20);
-    gradient.addColorStop(0, `${drop.info.color}88`);
-    gradient.addColorStop(0.5, `${drop.info.color}44`);
-    gradient.addColorStop(1, `${drop.info.color}00`);
+    // PERFORMANCE: Cache time-based calculations
+    const currentTime = Date.now();
+    if (!drop._lastGlowUpdate || currentTime - drop._lastGlowUpdate > 50) {
+        drop.glowIntensity = 0.5 + Math.sin(currentTime * 0.002) * 0.3;
+        drop._lastGlowUpdate = currentTime;
+    }
     
-    ctx.fillStyle = gradient;
+    // PERFORMANCE: Only update rotation occasionally
+    if (!drop._lastRotationUpdate || currentTime - drop._lastRotationUpdate > 16) {
+        drop.rotation = (drop.rotation || 0) + 0.05;
+        drop._lastRotationUpdate = currentTime;
+    }
+    
+    // PERFORMANCE: Simplified glow with less gradient stops
+    ctx.save();
+    
+    // Single glow layer instead of gradient
+    ctx.fillStyle = `${drop.info.color}44`;
     ctx.fillRect(x - 8, y - 8, 40, 40);
     
-    // Rotating container with corrected rotation value
-    ctx.save();
+    // Container
     ctx.translate(x + 12, y + 12);
     ctx.rotate(drop.rotation);
     
-    // Container box
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.fillRect(-10, -10, 20, 20);
     
@@ -358,8 +368,13 @@ export function drawDrop(ctx, drop) {
     ctx.textBaseline = 'middle';
     ctx.fillText(drop.info.icon, x + 12, y + 12);
     
-    // Sparkle effect with slower animation (0.005 statt 0.01)
-    if (Math.sin(Date.now() * 0.005 + drop.x) > 0.7) {
+    // PERFORMANCE: Reduce sparkle frequency
+    if (!drop._lastSparkle || currentTime - drop._lastSparkle > 100) {
+        drop._sparkleVisible = Math.random() > 0.3;
+        drop._lastSparkle = currentTime;
+    }
+    
+    if (drop._sparkleVisible) {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(x + 20, y + 4, 2, 2);
         ctx.fillRect(x + 4, y + 20, 2, 2);

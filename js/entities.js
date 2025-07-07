@@ -1403,29 +1403,34 @@ export function updateEffects(timeSlowFactor, gameStateParam) {
 }
 
 export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
+    // PERFORMANCE: Only update drops every other frame
+    if (gameState.frameCount % 2 !== 0) return;
+    
     for (let i = drops.length - 1; i >= 0; i--) {
         const drop = drops[i];
         
-        drop.velocityY += 0.3 * gameState.deltaTime;
-        drop.y += drop.velocityY * gameState.deltaTime;
+        // Physics update
+        drop.velocityY += 0.3 * 2; // Double the gravity since we update half as often
+        drop.y += drop.velocityY * 2;
         
         if (drop.y >= CANVAS.groundY - drop.height) {
             drop.y = CANVAS.groundY - drop.height;
             drop.velocityY = -drop.velocityY * 0.5;
         }
         
-        drop.rotation += 0.05 * gameState.deltaTime;
-        drop.glowIntensity = 0.5 + Math.sin(Date.now() * 0.001) * 0.3;
+        // PERFORMANCE: Skip rotation update - handled in draw function
         
+        // Magnet effect - simplified
         if (magnetRange > 0) {
             const dx = (player.x + player.width/2) - (drop.x + drop.width/2);
             const dy = (player.y + player.height/2) - (drop.y + drop.height/2);
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distanceSq = dx * dx + dy * dy; // Avoid sqrt
             
-            if (distance < magnetRange) {
+            if (distanceSq < magnetRange * magnetRange) {
+                const distance = Math.sqrt(distanceSq);
                 const force = (magnetRange - distance) / magnetRange * 0.5;
-                drop.x += dx * force * 0.2;
-                drop.y += dy * force * 0.2;
+                drop.x += dx * force * 0.4; // Doubled force since half updates
+                drop.y += dy * force * 0.4;
                 
                 if (drop.y > CANVAS.groundY - drop.height) {
                     drop.y = CANVAS.groundY - drop.height;
@@ -1433,6 +1438,7 @@ export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
             }
         }
         
+        // Collection check
         if (player.x < drop.x + drop.width &&
             player.x + player.width > drop.x &&
             player.y < drop.y + drop.height &&
@@ -1443,12 +1449,12 @@ export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
             continue;
         }
         
+        // Off-screen check
         if (drop.x + drop.width < camera.x - 100) {
             drops.splice(i, 1);
         }
     }
 }
-
 export function updateAllEntities(gameStateParam) {
     updateObstacles(gameStateParam.gameSpeed, gameStateParam.enemySlowFactor, gameStateParam.level, gameStateParam.magnetRange, gameStateParam);
     updateBullets(gameStateParam);
