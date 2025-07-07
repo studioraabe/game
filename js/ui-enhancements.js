@@ -1,19 +1,20 @@
-// ui-enhancements.js - Enhanced UI Visualizations - SYNTAX KORRIGIERT
+// ui-enhancements.js - Enhanced UI for Roguelike System
 
 import { gameState } from './core/gameState.js';
-import { activeDropBuffs } from './systems.js';
-import { DROP_INFO, DROP_CONFIG, CANVAS } from './core/constants.js';
+import { activeDropBuffs, activeWeaponDrops } from './systems.js';
+import { DROP_INFO, DROP_CONFIG, CANVAS, WEAPON_DROPS } from './core/constants.js';
 import { camera } from './core/camera.js';
 import { setComboGlow, clearComboGlow } from './enhanced-damage-system.js';
-
 
 // Initialize enhanced UI containers
 export function initEnhancedContainers() {
     // Remove existing containers
     const existingBuff = document.getElementById('enhancedBuffs');
     const existingCombo = document.getElementById('comboDisplay');
+    const existingWeapons = document.getElementById('weaponsDisplay');
     if (existingBuff) existingBuff.remove();
     if (existingCombo) existingCombo.remove();
+    if (existingWeapons) existingWeapons.remove();
     
     // Create enhanced buffs container
     const buffContainer = document.createElement('div');
@@ -24,8 +25,22 @@ export function initEnhancedContainers() {
         bottom: 12px !important;
         left: 16px !important;
         z-index: 20 !important;
+        max-width: 180px;
     `;
     document.getElementById('gameContainer').appendChild(buffContainer);
+    
+    // Create weapons display container
+    const weaponsContainer = document.createElement('div');
+    weaponsContainer.id = 'weaponsDisplay';
+    weaponsContainer.className = 'weapons-display-container';
+    weaponsContainer.style.cssText = `
+        position: absolute !important;
+        bottom: 12px !important;
+        right: 16px !important;
+        z-index: 20 !important;
+        max-width: 200px;
+    `;
+    document.getElementById('gameContainer').appendChild(weaponsContainer);
     
     // Create combo display container
     const comboDisplay = document.createElement('div');
@@ -48,7 +63,7 @@ let lastComboCount = 0;
 let lastComboTimer = 0;
 let displayWasVisible = false;
 
-// Helper function für RGBA conversion - MUSS VOR der Funktion stehen!
+// Helper function for RGBA conversion
 function hexToRgba(hex, alpha = 1) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -68,7 +83,7 @@ export function updateEnhancedComboDisplay() {
         document.getElementById('gameContainer').appendChild(comboDisplay);
     }
     
-    // Timer-Ablauf/Reset Detection
+    // Timer expiration/reset detection
     const timerExpired = lastComboTimer > 0 && gameState.comboTimer <= 0;
     const comboReset = gameState.comboCount < lastComboCount;
     
@@ -82,8 +97,7 @@ export function updateEnhancedComboDisplay() {
         lastComboCount = gameState.comboCount;
         lastComboTimer = gameState.comboTimer;
         
-        const canvas = document.getElementById('gameCanvas');
-        if (canvas) canvas.style.filter = '';
+        clearComboGlow();
         return;
     }
     
@@ -101,58 +115,57 @@ export function updateEnhancedComboDisplay() {
         comboDisplay.className = 'combo-display-enhanced combo-subtle';
         
         const getComboColor = (count) => {
-            if (count >= 200) return '#FF00FF';
-            if (count >= 100) return '#DC143C';
-            if (count >= 50) return '#FF4500';
-            if (count >= 30) return '#00ff88';
-            if (count >= 20) return '#00ff88';
+            if (count >= 200) return '#FF00FF'; // Magenta
+            if (count >= 100) return '#DC143C'; // Crimson
+            if (count >= 50) return '#FF4500';  // Orange Red
+            if (count >= 30) return '#FFD700';  // Gold
+            if (count >= 20) return '#00ff88';  // Primary green
             if (count >= 10) return '#00ff88';
             if (count >= 5) return '#00ff88';
             return '#00ff88';
         };
         
+        const getComboRank = (count) => {
+            if (count >= 200) return 'GODLIKE';
+            if (count >= 100) return 'LEGENDARY';
+            if (count >= 50) return 'EPIC';
+            if (count >= 30) return 'RARE';
+            if (count >= 20) return 'UNCOMMON';
+            if (count >= 10) return 'GOOD';
+            if (count >= 5) return 'NICE';
+            return 'COMBO';
+        };
+        
         const timerPercent = Math.max(0, Math.min(100, (gameState.comboTimer / 300) * 100));
         const comboColor = getComboColor(gameState.comboCount);
+        const comboRank = getComboRank(gameState.comboCount);
         const shouldWiggle = gameState.comboCount > (lastComboCount - 1) && displayWasVisible;
         
         comboDisplay.innerHTML = `
             <div class="combo-number-subtle ${shouldWiggle ? 'combo-wiggle' : ''}" style="color: ${comboColor}">
                 ${gameState.comboCount}x
             </div>
+            <div class="combo-rank" style="color: ${comboColor}; font-size: 12px; margin-top: 2px;">
+                ${comboRank}
+            </div>
             <div class="combo-timer-subtle">
                 <div class="combo-timer-fill-subtle" style="width: ${timerPercent}%; background-color: ${comboColor}"></div>
             </div>
         `;
         
-        // Canvas glow effect - FIXED VERSION
-        const canvas = document.getElementById('gameCanvas');
-        const container = document.getElementById('gameContainer');
-
-           if (canvas && gameState.comboCount >= 20) {
-        const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 10);
-        const comboColor = getComboColor(gameState.comboCount);
-        
-        // NEW: Use enhanced glow system
-        setComboGlow(glowIntensity, comboColor);
-        
-        // REMOVE these old lines:
-        // container.style.boxShadow = ... // DELETE
-        // canvas.style.boxShadow = ... // DELETE
-        
-    } else {
-        // Clear combo glow when no combo
-        clearComboGlow();
-        
-        // REMOVE these old lines:
-        // if (canvas) canvas.style.boxShadow = ''; // DELETE  
-        // if (container) container.style.boxShadow = ''; // DELETE
-    }
-
+        // Enhanced glow effects for high combos
+        if (gameState.comboCount >= 20) {
+            const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 10);
+            setComboGlow(glowIntensity, comboColor);
+        } else {
+            clearComboGlow();
+        }
     }
 }
 
-// Enhanced Buff Display
+// Enhanced Buff Display with Weapons
 let previousBuffs = new Set();
+let previousWeapons = new Set();
 
 export function updateEnhancedBuffDisplay() {
     if (!gameState) return;
@@ -167,7 +180,7 @@ export function updateEnhancedBuffDisplay() {
             position: absolute !important;
             bottom: 12px !important;
             left: 16px !important;
-            max-width: 160px;
+            max-width: 180px;
             z-index: 100 !important;
             pointer-events: none;
             display: block !important;
@@ -179,7 +192,7 @@ export function updateEnhancedBuffDisplay() {
     const activeBuffsHTML = [];
     const currentBuffs = new Set();
     
-    // SHIELD FIRST - Always on top of the list
+    // SHIELD FIRST - Always on top
     if (gameState.shieldCharges > 0) {
         const isNew = !previousBuffs.has('shield');
         const chargeText = gameState.shieldCharges === 1 ? '1x Charge' : `${gameState.shieldCharges}x Charges`;
@@ -196,7 +209,49 @@ export function updateEnhancedBuffDisplay() {
         currentBuffs.add('shield');
     }
     
-    // THEN temporary buffs with timers (below shield)
+    // HEALTH DISPLAY - Show current/max HP
+    const healthPercent = (gameState.currentHealth / gameState.maxHealth) * 100;
+    const healthColor = healthPercent > 75 ? '#00ff88' : healthPercent > 25 ? '#FFD700' : '#FF4444';
+    
+    activeBuffsHTML.push(`
+        <div class="buff-item buff-health">
+            <div class="buff-icon">❤️</div>
+            <div class="buff-info">
+                <div class="buff-name">Health</div>
+                <div class="buff-status" style="color: ${healthColor};">
+                    ${gameState.currentHealth}/${gameState.maxHealth}
+                </div>
+                <div class="buff-progress">
+                    <div class="buff-progress-fill" style="width: ${healthPercent}%; background-color: ${healthColor};"></div>
+                </div>
+            </div>
+        </div>
+    `);
+    
+    // STAT BUFFS - Show active permanent buffs
+    const stats = gameState.stats;
+    if (stats.damageBonus > 0 || stats.critChance > 0 || stats.lifeSteal > 0 || stats.healthRegen > 0) {
+        const statTexts = [];
+        if (stats.damageBonus > 0) statTexts.push(`+${Math.round(stats.damageBonus * 100)}% DMG`);
+        if (stats.critChance > 0) statTexts.push(`${Math.round(stats.critChance * 100)}% CRIT`);
+        if (stats.lifeSteal > 0) statTexts.push(`${Math.round(stats.lifeSteal * 100)}% STEAL`);
+        if (stats.healthRegen > 0) statTexts.push(`${stats.healthRegen.toFixed(1)} HP/s`);
+        
+        activeBuffsHTML.push(`
+            <div class="buff-item buff-stats">
+                <div class="buff-icon">⚔️</div>
+                <div class="buff-info">
+                    <div class="buff-name">Stats</div>
+                    <div class="buff-status" style="font-size: 10px;">
+                        ${statTexts.slice(0, 2).join('<br>')}
+                    </div>
+                </div>
+            </div>
+        `);
+        currentBuffs.add('stats');
+    }
+    
+    // TEMPORARY BUFFS with timers
     if (activeDropBuffs && typeof activeDropBuffs === 'object') {
         Object.keys(activeDropBuffs).forEach(buffKey => {
             const remaining = activeDropBuffs[buffKey];
@@ -236,9 +291,82 @@ export function updateEnhancedBuffDisplay() {
     }
     
     previousBuffs = currentBuffs;
+    
+    // Update weapons display
+    updateWeaponsDisplay();
 }
 
-// Stats Overlay
+// New Weapons Display Function
+export function updateWeaponsDisplay() {
+    let weaponsContainer = document.getElementById('weaponsDisplay');
+    
+    if (!weaponsContainer) {
+        weaponsContainer = document.createElement('div');
+        weaponsContainer.id = 'weaponsDisplay';
+        weaponsContainer.className = 'weapons-display-container';
+        weaponsContainer.style.cssText = `
+            position: absolute !important;
+            bottom: 12px !important;
+            right: 16px !important;
+            max-width: 200px;
+            z-index: 100 !important;
+            pointer-events: none;
+            display: block !important;
+            visibility: visible !important;
+        `;
+        document.getElementById('gameContainer').appendChild(weaponsContainer);
+    }
+    
+    const activeWeaponsHTML = [];
+    const currentWeapons = new Set();
+    
+    if (activeWeaponDrops && typeof activeWeaponDrops === 'object') {
+        Object.keys(activeWeaponDrops).forEach(weaponKey => {
+            const remaining = activeWeaponDrops[weaponKey];
+            if (remaining <= 0) return;
+            
+            const weaponInfo = WEAPON_DROPS[weaponKey];
+            if (!weaponInfo) return;
+            
+            const originalDuration = weaponInfo.duration;
+            const percentage = (remaining / originalDuration) * 100;
+            const isLow = remaining < 180; // Less than 3 seconds
+            const isNew = !previousWeapons.has(weaponKey);
+            
+            // Determine rarity styling
+            const rarityClass = weaponInfo.rarity <= 1 ? 'legendary' : 
+                               weaponInfo.rarity <= 2 ? 'epic' : 
+                               weaponInfo.rarity <= 3 ? 'rare' : 'common';
+            
+            activeWeaponsHTML.push(`
+                <div class="weapon-item ${rarityClass} ${isLow ? 'weapon-expiring' : ''} ${isNew ? 'weapon-new' : ''}">
+                    <div class="weapon-icon">${weaponInfo.icon}</div>
+                    <div class="weapon-info">
+                        <div class="weapon-name">${weaponInfo.name}</div>
+                        <div class="weapon-timer">${Math.ceil(remaining / 60)}s</div>
+                        <div class="weapon-progress">
+                            <div class="weapon-progress-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            currentWeapons.add(weaponKey);
+        });
+    }
+    
+    // Update container
+    weaponsContainer.innerHTML = activeWeaponsHTML.join('');
+    
+    if (activeWeaponsHTML.length === 0) {
+        weaponsContainer.style.display = 'none';
+    } else {
+        weaponsContainer.style.display = 'block';
+    }
+    
+    previousWeapons = currentWeapons;
+}
+
+// Enhanced Stats Overlay for Roguelike
 export function createStatsOverlay() {
     let overlay = document.getElementById('statsOverlay');
     if (!overlay) {
@@ -265,9 +393,11 @@ export function updateStatsOverlay() {
     const unlockedCount = Object.values(achievements).filter(a => a.unlocked).length;
     const totalAchievements = Object.keys(achievements).length;
     
+    const stats = gameState.stats;
+    
     overlay.innerHTML = `
         <div class="stats-overlay-content">
-            <h3>📊 GAME STATISTICS</h3>
+            <h3>📊 DUNGEON STATISTICS</h3>
             
             <div class="stats-section">
                 <h4>Performance</h4>
@@ -294,6 +424,50 @@ export function updateStatsOverlay() {
             </div>
             
             <div class="stats-section">
+                <h4>Character Stats</h4>
+                <div class="stat-row">
+                    <span>Health:</span>
+                    <span class="stat-value">${gameState.currentHealth}/${gameState.maxHealth} HP</span>
+                </div>
+                <div class="stat-row">
+                    <span>Base Damage:</span>
+                    <span class="stat-value">${gameState.baseDamage}</span>
+                </div>
+                <div class="stat-row">
+                    <span>Damage Bonus:</span>
+                    <span class="stat-value">+${Math.round(stats.damageBonus * 100)}%</span>
+                </div>
+                <div class="stat-row">
+                    <span>Critical Chance:</span>
+                    <span class="stat-value">${Math.round(stats.critChance * 100)}%</span>
+                </div>
+                <div class="stat-row">
+                    <span>Critical Damage:</span>
+                    <span class="stat-value">${stats.critDamage.toFixed(1)}x</span>
+                </div>
+                <div class="stat-row">
+                    <span>Attack Speed:</span>
+                    <span class="stat-value">${(1 + stats.attackSpeed).toFixed(1)}x</span>
+                </div>
+                <div class="stat-row">
+                    <span>Move Speed:</span>
+                    <span class="stat-value">${stats.moveSpeed.toFixed(1)}x</span>
+                </div>
+                <div class="stat-row">
+                    <span>Lifesteal:</span>
+                    <span class="stat-value">${Math.round(stats.lifeSteal * 100)}%</span>
+                </div>
+                <div class="stat-row">
+                    <span>Health Regen:</span>
+                    <span class="stat-value">${stats.healthRegen.toFixed(1)} HP/3s</span>
+                </div>
+                <div class="stat-row">
+                    <span>Bullet Regen:</span>
+                    <span class="stat-value">${stats.bulletRegen.toFixed(1)} bullets/2s</span>
+                </div>
+            </div>
+            
+            <div class="stats-section">
                 <h4>Progress</h4>
                 <div class="stat-row">
                     <span>Current Floor:</span>
@@ -304,8 +478,8 @@ export function updateStatsOverlay() {
                     <span class="stat-value">${gameState.bossesKilled}</span>
                 </div>
                 <div class="stat-row">
-                    <span>Lives:</span>
-                    <span class="stat-value">${gameState.lives}/${gameState.maxLives}</span>
+                    <span>Shield Charges:</span>
+                    <span class="stat-value">${gameState.shieldCharges}</span>
                 </div>
                 <div class="stat-row">
                     <span>Bolts:</span>
@@ -315,6 +489,23 @@ export function updateStatsOverlay() {
                     <span>Achievements:</span>
                     <span class="stat-value">${unlockedCount}/${totalAchievements}</span>
                 </div>
+            </div>
+            
+            <div class="stats-section">
+                <h4>Active Weapons</h4>
+                ${Object.keys(activeWeaponDrops).length === 0 ? 
+                    '<div class="stat-row"><span>No active weapons</span></div>' :
+                    Object.keys(activeWeaponDrops).map(weapon => {
+                        const weaponInfo = WEAPON_DROPS[weapon];
+                        const timeLeft = Math.ceil(activeWeaponDrops[weapon] / 60);
+                        return `
+                            <div class="stat-row">
+                                <span>${weaponInfo?.icon || '🔫'} ${weaponInfo?.name || weapon}:</span>
+                                <span class="stat-value">${timeLeft}s</span>
+                            </div>
+                        `;
+                    }).join('')
+                }
             </div>
             
             <div class="stats-section">
@@ -329,11 +520,11 @@ export function updateStatsOverlay() {
                 </div>
                 <div class="stat-row">
                     <span>Drop Chance Bonus:</span>
-                    <span class="stat-value">+${Math.min(gameState.comboCount, 20)}%</span>
+                    <span class="stat-value">+${Math.round(stats.dropBonus * 100)}%</span>
                 </div>
                 <div class="stat-row">
-                    <span>Achievement Drop Bonus:</span>
-                    <span class="stat-value">${achievements.firstBlood?.unlocked ? '+10%' : '0%'}</span>
+                    <span>Combo Drop Bonus:</span>
+                    <span class="stat-value">+${Math.min(gameState.comboCount, 20)}%</span>
                 </div>
             </div>
             
@@ -379,8 +570,8 @@ export function showAchievementPopup(achievement) {
     }, 4000);
 }
 
-// Damage Numbers
-export function createDamageNumber(x, y, damage, critical = false) {
+// Enhanced Damage Numbers with Color Coding
+export function createDamageNumber(x, y, damage, critical = false, color = null) {
     const screenX = x - camera.x;
     if (screenX < -50 || screenX > CANVAS.width + 50) return;
     
@@ -390,10 +581,24 @@ export function createDamageNumber(x, y, damage, critical = false) {
     damageNum.style.left = `${screenX}px`;
     damageNum.style.top = `${y}px`;
     
+    // Color coding for different damage types
+    if (color) {
+        damageNum.style.color = color;
+    } else if (critical) {
+        damageNum.style.color = '#FFD700'; // Gold for crits
+    } else {
+        damageNum.style.color = '#FF6B6B'; // Red for normal damage
+    }
+    
+    // Add floating animation
+    damageNum.style.animation = critical ? 
+        'damageNumberCritical 1.2s ease-out forwards' : 
+        'damageNumber 1s ease-out forwards';
+    
     document.getElementById('gameContainer').appendChild(damageNum);
     
-    // Animate and remove
-    setTimeout(() => damageNum.remove(), 1000);
+    // Remove after animation
+    setTimeout(() => damageNum.remove(), critical ? 1200 : 1000);
 }
 
 // Helper functions
@@ -456,6 +661,138 @@ function createComboParticle() {
 export function initEnhancements() {
     // Initialize containers
     initEnhancedContainers();
+    
+    // Add CSS animations for damage numbers if not already added
+    if (!document.querySelector('#damageNumberStyles')) {
+        const style = document.createElement('style');
+        style.id = 'damageNumberStyles';
+        style.textContent = `
+            @keyframes damageNumber {
+                0% { 
+                    transform: translateY(0) scale(0.8); 
+                    opacity: 1; 
+                }
+                50% { 
+                    transform: translateY(-20px) scale(1.1); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: translateY(-40px) scale(1); 
+                    opacity: 0; 
+                }
+            }
+            
+            @keyframes damageNumberCritical {
+                0% { 
+                    transform: translateY(0) scale(1); 
+                    opacity: 1; 
+                    text-shadow: 0 0 10px currentColor;
+                }
+                25% { 
+                    transform: translateY(-15px) scale(1.3); 
+                    opacity: 1; 
+                    text-shadow: 0 0 15px currentColor;
+                }
+                50% { 
+                    transform: translateY(-25px) scale(1.2); 
+                    opacity: 1; 
+                    text-shadow: 0 0 20px currentColor;
+                }
+                100% { 
+                    transform: translateY(-50px) scale(1); 
+                    opacity: 0; 
+                    text-shadow: 0 0 5px currentColor;
+                }
+            }
+            
+            .damage-number {
+                position: absolute;
+                font-family: 'Rajdhani', sans-serif;
+                font-weight: bold;
+                font-size: 16px;
+                pointer-events: none;
+                z-index: 1000;
+                user-select: none;
+            }
+            
+            .damage-critical {
+                font-size: 20px;
+                font-weight: 900;
+                text-shadow: 0 0 10px currentColor;
+            }
+            
+            .weapon-item {
+                display: flex;
+                align-items: center;
+                background: rgba(0, 0, 0, 0.7);
+                border-radius: 8px;
+                padding: 8px;
+                margin-bottom: 4px;
+                border-left: 3px solid;
+            }
+            
+            .weapon-item.legendary { border-left-color: #FF6B00; }
+            .weapon-item.epic { border-left-color: #A335EE; }
+            .weapon-item.rare { border-left-color: #0070DD; }
+            .weapon-item.common { border-left-color: #9D9D9D; }
+            
+            .weapon-item.weapon-expiring {
+                animation: weaponExpiring 1s infinite;
+            }
+            
+            .weapon-item.weapon-new {
+                animation: weaponNew 2s ease-out;
+            }
+            
+            @keyframes weaponExpiring {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+            
+            @keyframes weaponNew {
+                0% { transform: translateX(-20px); opacity: 0; }
+                100% { transform: translateX(0); opacity: 1; }
+            }
+            
+            .weapon-icon {
+                font-size: 16px;
+                margin-right: 8px;
+                min-width: 20px;
+            }
+            
+            .weapon-info {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .weapon-name {
+                font-size: 11px;
+                font-weight: bold;
+                color: #ffffff;
+                margin-bottom: 2px;
+            }
+            
+            .weapon-timer {
+                font-size: 10px;
+                color: #cccccc;
+                margin-bottom: 2px;
+            }
+            
+            .weapon-progress {
+                background: rgba(255, 255, 255, 0.2);
+                height: 3px;
+                border-radius: 2px;
+                overflow: hidden;
+            }
+            
+            .weapon-progress-fill {
+                background: #00ff88;
+                height: 100%;
+                transition: width 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
     // Add keyboard listener for stats overlay
     document.addEventListener('keydown', (e) => {
