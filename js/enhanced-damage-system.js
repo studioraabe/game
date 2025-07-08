@@ -16,7 +16,8 @@ class GlowManager {
             combo: { active: false, intensity: 0, color: '', persistent: true },
             damage: { active: false, intensity: 0, color: '', timer: 0, persistent: false },
             critical: { active: false, intensity: 0, color: '', timer: 0, persistent: false },
-            shield: { active: false, intensity: 0, color: '', timer: 0, persistent: false }
+            shield: { active: false, intensity: 0, color: '', timer: 0, persistent: false },
+            corruption: { active: false, intensity: 0, color: '', timer: 0, persistent: false }
         };
         
         this.gameContainer = null;
@@ -105,15 +106,19 @@ class GlowManager {
         if (this.activeGlows.critical.active) {
             primaryGlow = this.activeGlows.critical;
         }
-        // 2. Regular damage second priority  
+        // 2. Corruption has high priority (bat blood curse)
+        else if (this.activeGlows.corruption.active) {
+            primaryGlow = this.activeGlows.corruption;
+        }
+        // 3. Regular damage third priority  
         else if (this.activeGlows.damage.active) {
             primaryGlow = this.activeGlows.damage;
         }
-        // 3. Shield effects third priority
+        // 4. Shield effects fourth priority
         else if (this.activeGlows.shield.active) {
             primaryGlow = this.activeGlows.shield;
         }
-        // 4. Combo glow lowest priority (background)
+        // 5. Combo glow lowest priority (background)
         else if (this.activeGlows.combo.active) {
             primaryGlow = this.activeGlows.combo;
         }
@@ -172,7 +177,7 @@ class GlowManager {
             'damage': '255, 23, 68',      // --error
             'critical': '255, 23, 68',    // --error  
             'shield': '65, 105, 225',     // Shield blue
-            'corruption': '139, 0, 139',  // Purple
+            'corruption': '139, 0, 139',  // Purple/lilac for bat blood curse
             '#ff1744': '255, 23, 68',     // --error
             '#4169E1': '65, 105, 225',    // Shield blue
             '#00ff88': '0, 255, 136',     // --primary
@@ -391,6 +396,7 @@ function enhanceAudioFeedback(damageType, hpRemaining, hasShields) {
             break;
     }
 }
+
 // ========================================
 // MAIN DAMAGE FEEDBACK FUNCTION
 // ========================================
@@ -433,7 +439,7 @@ export function triggerDamageEffects(gameStateParam, damageType = 'health') {
             }
             break;
         case 'corruption':
-            // Corruption/blood curse damage
+            // Corruption/blood curse damage with lilac/purple effects
             shakeIntensity = 6;
             shakeDuration = 18;
             break;

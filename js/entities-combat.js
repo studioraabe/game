@@ -645,7 +645,7 @@ function updateAlphaWolf(obstacle, level, gameStateParam) {
             );
             
             if (distanceToPlayer < landingRadius && !isPlayerInvulnerable(gameStateParam)) {
-                handleDamage(gameStateParam, 'Alpha Wolf Fury', -1, 'fury');
+                handlePlayerDamage(gameStateParam, 'Alpha Wolf Fury', 'fury');
             }
             
             createBloodParticles(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height);
@@ -767,100 +767,84 @@ function updateBatAI(obstacle, gameStateParam) {
 }
 
 // ========================================
-// COLLISION SYSTEM
+// COLLISION SYSTEM - FIXED FOR ONE-WAY DAMAGE
 // ========================================
 
-
-// CLEAN SOLUTION: Use isStationary check in checkCollisions function
-
-export function checkCollisions(gameStateParam) {
-    if (isPlayerInvulnerable(gameStateParam)) {
-        return false;
-    }
-
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obstacle = obstacles[i];
-        
-        // Check if obstacle is stationary environmental object
-        const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
-                            obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' ||
-                            obstacle.type === 'sarcophagus';
-        
-        // Tesla Coil collision (special case - active zapping)
-        if (obstacle.type === 'teslaCoil') {
-            if (obstacle.state === 'zapping' && obstacle.zapActive) {
-                const zapX = obstacle.x + obstacle.width/2 - 8;
-                const zapY = obstacle.y + obstacle.height;
-                const zapWidth = 16;
-                const zapHeight = CANVAS.groundY - zapY;
-                
-                if (player.x < zapX + zapWidth &&
-                    player.x + player.width > zapX &&
-                    player.y < zapY + zapHeight &&
-                    player.y + player.height > zapY) {
-                    
-                    return handleDamage(gameStateParam, 'teslaCoil', i);
-                }
-            }
-            continue;
-        }
-        
-        // Frankenstein Table collision (special case - active zapping)
-        if (obstacle.type === 'frankensteinTable') {
-            if (obstacle.state === 'zapping' && obstacle.zapActive) {
-                const zapX = obstacle.x + obstacle.width/2 - 12;
-                const zapY = 0;
-                const zapWidth = 24;
-                const zapHeight = obstacle.y + obstacle.height - 55;
-                
-                if (player.x < zapX + zapWidth &&
-                    player.x + player.width > zapX &&
-                    player.y < zapY + zapHeight &&
-                    player.y + player.height > zapY) {
-                    
-                    return handleDamage(gameStateParam, 'frankensteinTable', i);
-                }
-            }
-            continue;
-        }
-        
-        // Normal collision detection
-        const hitbox = getObstacleHitbox(obstacle);
-        
-        if (player.x < hitbox.x + hitbox.width &&
-            player.x + player.width > hitbox.x &&
-            player.y < hitbox.y + hitbox.height &&
-            player.y + player.height > hitbox.y) {
-            
-            if (obstacle.type === 'boltBox') {
-                // Bolt boxes give ammo
-                gameStateParam.bullets += 20;
-                createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, '+20 Bolts');
-                obstacles.splice(i, 1);
-                continue;
-            }
-            
-            if (isStationary) {
-                // Environmental obstacles (rock, sarcophagus) - block movement, no damage
-                if (player.velocityX > 0) {
-                    player.x = hitbox.x - player.width;
-                } else if (player.velocityX < 0) {
-                    player.x = hitbox.x + hitbox.width;
-                }
-                player.velocityX = 0;
-                // NO DAMAGE - just blocking
-                continue;
-            }
-            
-            // All non-stationary obstacles (enemies) cause damage
-            return handleDamage(gameStateParam, obstacle.type, i);
-        }
+// NEW: Player-only damage function (enemies unaffected)
+function handlePlayerDamage(gameStateParam, damageSource, damageCategory = 'enemy') {
+    console.log(`🎯 Player takes damage from ${damageSource} (${damageCategory}) - enemy unaffected`);
+    
+    // Calculate damage amount
+    let damageAmount = 0;
+    
+    if (damageSource === 'corruption' || damageSource === 'Blood Curse') {
+        damageAmount = Math.max(10, Math.floor(gameStateParam.maxHP * 0.1)); // 10% of max HP
+    } else if (typeof damageSource === 'string') {
+        // Enemy damage based on type and level
+        damageAmount = calculateEnemyDamage(damageSource, gameStateParam.level);
+    } else {
+        // Fallback damage
+        damageAmount = Math.max(15, Math.floor(gameStateParam.maxHP * 0.15));
     }
     
-    return false;
+    // Shield check first
+    if (gameStateParam.shieldCharges > 0) {
+        const wasLastShield = gameStateParam.shieldCharges === 1;
+        gameStateParam.shieldCharges--;
+        
+        if (gameStateParam.shieldCharges <= 0) {
+            gameStateParam.hasShield = false;
+            gameStateParam.shieldCharges = 0;
+            createScorePopup(player.x + player.width/2, player.y, 'Shield Broken!');
+            triggerDamageEffects(gameStateParam, 'shield');
+        } else {
+            createScorePopup(player.x + player.width/2, player.y, 
+                `Shield: ${gameStateParam.shieldCharges} left`);
+            triggerDamageEffects(gameStateParam, 'shield');
+        }
+        
+        // Do NOT remove enemy - only set invulnerability
+        gameStateParam.postDamageInvulnerability = 60;
+        player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+        
+        if (!wasLastShield) {
+            soundManager.hit();
+        }
+        
+        return false;
+    }
+    
+    // HP damage to player only
+    const playerDied = takeDamage(damageAmount);
+    
+    // Show damage number
+    createDamageNumber(
+        player.x + player.width/2, 
+        player.y - 10, 
+        damageAmount, 
+        damageAmount >= gameStateParam.maxHP * 0.25 // Critical if 25%+ of max HP
+    );
+    
+    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
+    
+    gameStateParam.postDamageInvulnerability = 120;
+    player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+    
+    // Reset combo on damage
+    gameStateParam.bulletsHit = 0;
+    gameStateParam.comboCount = 0;
+    gameStateParam.comboTimer = 0;
+    gameStateParam.consecutiveHits = 0;
+    
+    // Do NOT remove the enemy - they should remain alive after collision
+    // Enemies are only damaged/destroyed by bullets, not by player collision
+    
+    soundManager.hit();
+    
+    return playerDied;
 }
 
-
+// ORIGINAL: Bullet damage function (for bullets hitting enemies)
 function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCategory = 'enemy') {
     console.log(`🎯 Damage from ${damageSource} (${damageCategory})`);
     
@@ -937,6 +921,100 @@ function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCa
     
     return playerDied;
 }
+
+export function checkCollisions(gameStateParam) {
+    if (isPlayerInvulnerable(gameStateParam)) {
+        return false;
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obstacle = obstacles[i];
+        
+        // Check if obstacle is stationary environmental object
+        const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
+                            obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' ||
+                            obstacle.type === 'sarcophagus';
+        
+        // Tesla Coil collision (special case - active zapping)
+        if (obstacle.type === 'teslaCoil') {
+            if (obstacle.state === 'zapping' && obstacle.zapActive) {
+                const zapX = obstacle.x + obstacle.width/2 - 8;
+                const zapY = obstacle.y + obstacle.height;
+                const zapWidth = 16;
+                const zapHeight = CANVAS.groundY - zapY;
+                
+                if (player.x < zapX + zapWidth &&
+                    player.x + player.width > zapX &&
+                    player.y < zapY + zapHeight &&
+                    player.y + player.height > zapY) {
+                    
+                    return handlePlayerDamage(gameStateParam, 'teslaCoil');
+                }
+            }
+            continue;
+        }
+        
+        // Frankenstein Table collision (special case - active zapping)
+        if (obstacle.type === 'frankensteinTable') {
+            if (obstacle.state === 'zapping' && obstacle.zapActive) {
+                const zapX = obstacle.x + obstacle.width/2 - 12;
+                const zapY = 0;
+                const zapWidth = 24;
+                const zapHeight = obstacle.y + obstacle.height - 55;
+                
+                if (player.x < zapX + zapWidth &&
+                    player.x + player.width > zapX &&
+                    player.y < zapY + zapHeight &&
+                    player.y + player.height > zapY) {
+                    
+                    return handlePlayerDamage(gameStateParam, 'frankensteinTable');
+                }
+            }
+            continue;
+        }
+        
+        // Normal collision detection
+        const hitbox = getObstacleHitbox(obstacle);
+        
+        if (player.x < hitbox.x + hitbox.width &&
+            player.x + player.width > hitbox.x &&
+            player.y < hitbox.y + hitbox.height &&
+            player.y + player.height > hitbox.y) {
+            
+            if (obstacle.type === 'boltBox') {
+                // Bolt boxes give ammo
+                gameStateParam.bullets += 20;
+                createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, '+20 Bolts');
+                obstacles.splice(i, 1);
+                continue;
+            }
+            
+            if (obstacle.type === 'rock' || obstacle.type === 'sarcophagus') {
+                // Decorative elements - no collision, player walks through
+                continue;
+            }
+            
+            if (isStationary) {
+                // Other environmental obstacles block movement, no damage
+                if (player.velocityX > 0) {
+                    player.x = hitbox.x - player.width;
+                } else if (player.velocityX < 0) {
+                    player.x = hitbox.x + hitbox.width;
+                }
+                player.velocityX = 0;
+                // NO DAMAGE - just blocking
+                continue;
+            }
+            
+            // All non-stationary obstacles (enemies) cause damage to player only
+            // Do NOT remove or damage the enemy - only damage the player
+            return handlePlayerDamage(gameStateParam, obstacle.type);
+        }
+    }
+    
+    return false;
+}
+
 export function isPlayerInvulnerable(gameStateParam) {
     return player.damageResistance > 0 || 
            gameStateParam.postBuffInvulnerability > 0 || 
