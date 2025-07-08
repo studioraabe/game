@@ -816,7 +816,7 @@ export function checkCollisions(gameStateParam) {
                 if (player.x < zapX + zapWidth &&
                     player.x + player.width > zapX &&
                     player.y < zapY + zapHeight &&
-                    player.y + player.height > zipY) {
+                    player.y + player.height > zapY) {
                     
                     return handleDamage(gameStateParam, 'frankensteinTable', i);
                 }

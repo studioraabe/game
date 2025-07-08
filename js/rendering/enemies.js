@@ -723,7 +723,6 @@ export function drawEnemy(obstacle, ctx, gameState) {
             if (!obstacle.health || obstacle.health <= 0) {
                 obstacle.health = obstacle.maxHealth;
             }
-            console.log(`🔧 Fixed health for ${obstacle.type}: ${obstacle.health}/${obstacle.maxHealth}`);
         }
     }
     
@@ -783,7 +782,6 @@ export function drawEnemy(obstacle, ctx, gameState) {
     const enemyTypesWithHealth = ['skeleton', 'vampire', 'spider', 'wolf', 'alphaWolf', 'bat'];
     
     if (enemyTypesWithHealth.includes(obstacle.type) && obstacle.maxHealth > 1) {
-        console.log(`🎯 Rendering health bar for ${obstacle.type}: ${obstacle.health}/${obstacle.maxHealth}`);
         drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, 
                      obstacle.health, obstacle.maxHealth, obstacle.type);
     }

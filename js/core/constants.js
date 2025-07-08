@@ -29,15 +29,15 @@ export const GAME_CONSTANTS = {
 
 // NEW: ENEMY BASE STATS OBJECT (separate from GAME_CONSTANTS)
 export const ENEMY_BASE_STATS = {
-    bat: { hp: 50, damage: 10 },
-    spider: { hp: 100, damage: 15 },
-    vampire: { hp: 200, damage: 20 },
-    skeleton: { hp: 150, damage: 15 },
-    wolf: { hp: 300, damage: 25 },
-    alphaWolf: { hp: 800, damage: 40 },
-    rock: { hp: 1, damage: 15 },
-    teslaCoil: { hp: 1, damage: 30 },
-    frankensteinTable: { hp: 1, damage: 35 },
+    bat: { hp: 20, damage: 10 },
+    spider: { hp: 30, damage: 15 },
+    vampire: { hp: 50, damage: 20 },
+    skeleton: { hp: 100, damage: 15 },
+    wolf: { hp: 80, damage: 25 },
+    alphaWolf: { hp: 200, damage: 40 },
+    rock: { hp: 1, damage: 0 },
+    teslaCoil: { hp: 1, damage: 50 },
+    frankensteinTable: { hp: 1, damage: 50 },
     sarcophagus: { hp: 1, damage: 0 },
     boltBox: { hp: 1, damage: 0 }
 };
