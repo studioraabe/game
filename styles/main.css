@@ -13,6 +13,7 @@
     --bg-tertiary: #000000;
     --glass: rgba(0, 201, 108, 0.1);
     --glass-dark: rgba(0, 80, 43, 0.1);
+	 --glass-hud: linear-gradient(to top, rgba(0, 80, 43, 0.0), rgba(0, 80, 43, 0.1));
     --glass-border: rgba(0, 211, 112, 0.25);
     --text-primary: #ffffff;
     --text-secondary: #d0d0d0;
@@ -126,9 +127,9 @@ body::before {
 
 .ui-panel {
     position: absolute;
-    background: var(--glass-dark);
+    background: var(--glass-hud);
     backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
+    border: 0px solid var(--glass-border);
     border-radius: var(--border-radius);
     padding: 12px 12px;
     z-index: 10;
@@ -141,14 +142,15 @@ body::before {
 
 /* HEALTH BAR POSITIONING AND VISIBILITY */
 #healthBar {
-    position: absolute;
+   position: absolute;
     top: 20px;
     left: 20px;
     width: 180px;
     height: 48px;
     z-index: 10;
-    display: block !important;
+    display: flex;
     visibility: visible !important;
+	align-items:center; 
 }
 
 .health-container {
@@ -171,12 +173,14 @@ body::before {
     overflow: hidden;
 }
 
+/* Base HP Fill */
 .hp-fill {
     height: 100%;
     transition: all 0.3s ease;
     position: relative;
     border-radius: 6px;
     background: linear-gradient(90deg, #00ff88 0%, #00cc6a 100%);
+    z-index: 1;
 }
 
 .hp-fill.healthy {
@@ -192,37 +196,127 @@ body::before {
     animation: criticalPulse 0.8s ease-in-out infinite;
 }
 
-.hp-text {
+/* NEW: Shield Overlay - covers entire health bar when shields are active */
+.shield-overlay {
     position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, 
+        rgba(65, 105, 225, 0.8) 0%, 
+        rgba(30, 144, 255, 0.9) 50%, 
+        rgba(65, 105, 225, 0.8) 100%);
+    border-radius: 6px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: shieldFlow 2s ease-in-out infinite;
+}
+
+/* Show shield overlay when shields are active */
+.health-container.shield-active .shield-overlay {
+    opacity: 1;
+}
+
+/* Shield flow animation */
+@keyframes shieldFlow {
+    0%, 100% { 
+        background: linear-gradient(90deg, 
+            rgba(65, 105, 225, 0.8) 0%, 
+            rgba(30, 144, 255, 0.9) 50%, 
+            rgba(65, 105, 225, 0.8) 100%);
+    }
+    50% { 
+        background: linear-gradient(90deg, 
+            rgba(30, 144, 255, 0.9) 0%, 
+            rgba(65, 105, 225, 1.0) 50%, 
+            rgba(30, 144, 255, 0.9) 100%);
+    }
+}
+
+/* Health text in the middle */
+.hp-text {
+position: absolute;
     top: 50%;
-    left: 50%;
+    left: 36px;
     transform: translate(-50%, -50%);
     color: #ffffff;
     font-family: 'Rajdhani', monospace;
     font-size: 14px;
     font-weight: 700;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     pointer-events: none;
-    z-index: 2;
+    z-index: 4;
+    letter-spacing: 0.5px;
 }
 
-.shield-indicator {
+/* NEW: Shield counter in right corner */
+.shield-counter {
     position: absolute;
-    top: -8px;
+    top: 50%;
     right: 8px;
-    background: rgba(65, 105, 225, 0.9);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #ffffff;
     font-family: 'Rajdhani', monospace;
-    box-shadow: 0 0 10px rgba(65, 105, 225, 0.5);
-    animation: shieldPulse 2s ease-in-out infinite;
-    z-index: 3;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 4;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-/* HP Bar animations */
+/* Show shield counter when shields are active */
+.health-container.shield-active .shield-counter {
+    opacity: 1;
+}
+
+.shield-counter .shield-icon {
+    font-size: 14px;
+    filter: drop-shadow(0 0 4px rgba(65, 105, 225, 0.8));
+    animation: shieldIconPulse 2s ease-in-out infinite;
+}
+
+.shield-counter .shield-count {
+    min-width: 12px;
+    text-align: center;
+}
+
+/* Shield icon pulse animation */
+@keyframes shieldIconPulse {
+    0%, 100% { 
+        transform: scale(1);
+        filter: drop-shadow(0 0 4px rgba(65, 105, 225, 0.8));
+    }
+    50% { 
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 8px rgba(65, 105, 225, 1.0));
+    }
+}
+
+/* Enhanced container border when shields are active */
+.health-container.shield-active {
+    border-color: rgba(65, 105, 225, 0.8);
+    box-shadow: 0 0 15px rgba(65, 105, 225, 0.5);
+    animation: shieldContainerPulse 2s ease-in-out infinite;
+}
+
+@keyframes shieldContainerPulse {
+    0%, 100% { 
+        border-color: rgba(65, 105, 225, 0.8);
+        box-shadow: 0 0 15px rgba(65, 105, 225, 0.5);
+    }
+    50% { 
+        border-color: rgba(65, 105, 225, 1.0);
+        box-shadow: 0 0 25px rgba(65, 105, 225, 0.8);
+    }
+}
+
+/* HP Bar shine effect */
 .hp-fill::after {
     content: '';
     position: absolute;
@@ -232,6 +326,7 @@ body::before {
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
     animation: hpShine 3s infinite;
+    z-index: 1;
 }
 
 @keyframes hpShine {
@@ -239,6 +334,7 @@ body::before {
     100% { left: 100%; }
 }
 
+/* Critical health animations */
 @keyframes criticalPulse {
     0%, 100% { 
         opacity: 1;
@@ -250,27 +346,11 @@ body::before {
     }
 }
 
-@keyframes shieldPulse {
-    0%, 100% { 
-        opacity: 1;
-        box-shadow: 0 0 10px rgba(65, 105, 225, 0.5);
-    }
-    50% { 
-        opacity: 0.9;
-        box-shadow: 0 0 20px rgba(65, 105, 225, 0.8);
-    }
-}
-
 /* Critical health container effects */
 .health-container.critical-health {
     border-color: rgba(255, 23, 68, 0.8) !important;
     box-shadow: 0 0 15px rgba(255, 23, 68, 0.6) !important;
     animation: criticalContainerPulse 1.2s ease-in-out infinite;
-}
-
-.health-container.shield-active {
-    border-color: rgba(65, 105, 225, 0.5);
-    box-shadow: 0 0 10px rgba(65, 105, 225, 0.3);
 }
 
 @keyframes criticalContainerPulse {
@@ -284,6 +364,90 @@ body::before {
     }
 }
 
+/* Critical health overrides shield effects when health is very low */
+.health-container.critical-health.shield-active {
+    border-color: rgba(255, 23, 68, 0.8) !important;
+    box-shadow: 0 0 15px rgba(255, 23, 68, 0.6) !important;
+    animation: criticalContainerPulse 1.2s ease-in-out infinite;
+}
+
+.health-container.critical-health .shield-overlay {
+    background: linear-gradient(90deg, 
+        rgba(255, 23, 68, 0.6) 0%, 
+        rgba(65, 105, 225, 0.8) 30%, 
+        rgba(65, 105, 225, 0.8) 70%, 
+        rgba(255, 23, 68, 0.6) 100%);
+    animation: criticalShieldFlow 1s ease-in-out infinite;
+}
+
+@keyframes criticalShieldFlow {
+    0%, 100% { 
+        background: linear-gradient(90deg, 
+            rgba(255, 23, 68, 0.6) 0%, 
+            rgba(65, 105, 225, 0.8) 30%, 
+            rgba(65, 105, 225, 0.8) 70%, 
+            rgba(255, 23, 68, 0.6) 100%);
+    }
+    50% { 
+        background: linear-gradient(90deg, 
+            rgba(255, 23, 68, 0.8) 0%, 
+            rgba(65, 105, 225, 0.6) 30%, 
+            rgba(65, 105, 225, 0.6) 70%, 
+            rgba(255, 23, 68, 0.8) 100%);
+    }
+}
+
+/* Remove old shield indicator (since we now have inline shield counter) */
+.shield-indicator {
+    display: none;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    #healthBar {
+        width: 150px;
+        height: 40px;
+    }
+    
+    .health-container {
+        height: 28px;
+    }
+    
+    .hp-text {
+        font-size: 12px;
+    }
+    
+    .shield-counter {
+        font-size: 10px;
+        right: 6px;
+    }
+    
+    .shield-counter .shield-icon {
+        font-size: 12px;
+    }
+}
+
+/* Accessibility: Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .shield-overlay,
+    .shield-counter .shield-icon,
+    .health-container.shield-active,
+    .health-container.critical-health {
+        animation: none;
+    }
+    
+    .health-container.shield-active {
+        border-color: rgba(65, 105, 225, 0.8);
+        box-shadow: 0 0 15px rgba(65, 105, 225, 0.5);
+    }
+    
+    .shield-overlay {
+        background: linear-gradient(90deg, 
+            rgba(65, 105, 225, 0.8) 0%, 
+            rgba(30, 144, 255, 0.9) 50%, 
+            rgba(65, 105, 225, 0.8) 100%) !important;
+    }
+}
 /* BULLET COUNT STYLES */
 #bulletCount {
 position: absolute;
@@ -731,7 +895,7 @@ h3 {
 }
 
 .stats-grid {
-    display: grid;
+    display: none;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     margin: 12px 0;

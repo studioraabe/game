@@ -176,19 +176,22 @@ export function updateUI() {
 
 
 
+// Enhanced Health Bar Update Function with Shield Overlay
+// Add this to your ui.js file, replacing the existing updateHealthBar function
+
 export function updateHealthBar() {
     const healthContainer = document.getElementById('healthContainer');
     if (!healthContainer) return;
     
-    // Clear existing segments
+    // Clear existing content
     healthContainer.innerHTML = '';
-    
-    // NEW: Create HP bar instead of segments
-    const hpBar = document.createElement('div');
-    hpBar.className = 'hp-bar';
     
     // Calculate HP percentage
     const hpPercent = Math.max(0, (gameState.currentHP / gameState.maxHP) * 100);
+    
+    // Create main HP bar container
+    const hpBar = document.createElement('div');
+    hpBar.className = 'hp-bar';
     
     // Create HP fill
     const hpFill = document.createElement('div');
@@ -207,26 +210,46 @@ export function updateHealthBar() {
         healthContainer.classList.remove('critical-health');
     }
     
-    // Create HP text overlay
+    // Create shield overlay (blue overlay when shields are active)
+    const shieldOverlay = document.createElement('div');
+    shieldOverlay.className = 'shield-overlay';
+    
+    // Create HP text (center of bar)
     const hpText = document.createElement('div');
     hpText.className = 'hp-text';
     hpText.textContent = `${gameState.currentHP} / ${gameState.maxHP}`;
     
-    // Shield indicator
+    // Create shield counter (right corner)
+    const shieldCounter = document.createElement('div');
+    shieldCounter.className = 'shield-counter';
+    
+    const shieldIcon = document.createElement('span');
+    shieldIcon.className = 'shield-icon';
+    shieldIcon.textContent = '🛡️';
+    
+    const shieldCount = document.createElement('span');
+    shieldCount.className = 'shield-count';
+    shieldCount.textContent = gameState.shieldCharges;
+    
+    shieldCounter.appendChild(shieldIcon);
+    shieldCounter.appendChild(shieldCount);
+    
+    // Handle shield state
     if (gameState.shieldCharges > 0) {
-        const shieldIndicator = document.createElement('div');
-        shieldIndicator.className = 'shield-indicator';
-        shieldIndicator.textContent = `🛡️ ${gameState.shieldCharges}`;
-        healthContainer.appendChild(shieldIndicator);
         healthContainer.classList.add('shield-active');
     } else {
         healthContainer.classList.remove('shield-active');
     }
     
-    // Assemble HP bar
+    // Assemble the health bar
     hpBar.appendChild(hpFill);
+    hpBar.appendChild(shieldOverlay);
     hpBar.appendChild(hpText);
+    hpBar.appendChild(shieldCounter);
+    
     healthContainer.appendChild(hpBar);
+    
+
 }
 
 
