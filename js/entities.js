@@ -1,13 +1,15 @@
-// entities.js - Enhanced with Roguelike Combat System
+// entities.js - VOLLSTÄNDIG KORRIGIERTE VERSION OHNE SYNTAX FEHLER
 
 import { GAME_CONSTANTS, SPAWN_CHANCES, ENEMY_CONFIG, MIN_SPAWN_DISTANCE, CANVAS } from './core/constants.js';
 import { camera, getScreenX } from './core/camera.js';
 import { player } from './core/player.js';
 import { gameState } from './core/gameState.js';
-import { soundManager, rollForDrop, collectDrop, calculateDamage, rollCritical, applyLifesteal, damagePlayer, activeWeaponDrops } from './systems.js';
+import { soundManager, rollForDrop, collectDrop } from './systems.js';
 import { createDamageNumber } from './ui-enhancements.js';
 import { triggerDamageEffects } from './enhanced-damage-system.js';
 import { cleanupSkeletonEntity } from './rendering/sprite-system.js';
+
+
 
 // Entity Arrays
 export const obstacles = [];
@@ -45,7 +47,10 @@ export function clearArrays() {
     batProjectiles.length = 0;
 }
 
-// Utility Functions
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
+
 export function createBloodParticles(x, y) {
     for (let i = 0; i < 8; i++) {
         bloodParticles.push({
@@ -95,6 +100,8 @@ export function createDoubleJumpParticles(x, y) {
     }
 }
 
+
+
 export function getObstacleHitbox(obstacle) {
     const reduction = 0.2;
     const widthReduction = obstacle.width * reduction;
@@ -108,22 +115,10 @@ export function getObstacleHitbox(obstacle) {
     };
 }
 
-// Enhanced Enemy Scaling for Roguelike
-function getEnemyScaledStats(enemyType, level) {
-    const baseConfig = ENEMY_CONFIG[enemyType];
-    if (!baseConfig) return { health: 50, damage: 10 };
-    
-    const healthMultiplier = Math.pow(1.5, level - 1); // 1.5x HP per level
-    const damageMultiplier = Math.pow(1.3, level - 1); // 1.3x damage per level
-    
-    return {
-        health: Math.floor(baseConfig.baseHealth * healthMultiplier),
-        maxHealth: Math.floor(baseConfig.baseHealth * healthMultiplier),
-        damage: Math.floor(baseConfig.baseDamage * damageMultiplier)
-    };
-}
+// ========================================
+// SPAWN FUNCTIONS
+// ========================================
 
-// Spawn Functions
 function isSpawnPositionValid(x, width) {
     for (const spawn of recentSpawnPositions) {
         if (x < spawn.x + spawn.width + MIN_SPAWN_DISTANCE && 
@@ -148,8 +143,6 @@ function calculateSpawnTimer(baseTimer, minTimer, level) {
 }
 
 function createObstacle(type, x, y, width, height) {
-    const scaledStats = getEnemyScaledStats(type, gameState.level);
-    
     const obstacle = {
         x: x,
         y: y,
@@ -157,18 +150,15 @@ function createObstacle(type, x, y, width, height) {
         height: height,
         type: type,
         passed: false,
-        health: scaledStats.health,
-        maxHealth: scaledStats.maxHealth,
-        damage: scaledStats.damage,
+        health: 1,
+        maxHealth: 1,
         animationTime: Math.random() * 1000,
-        id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        lastDamageTime: 0,
-        damageFlashTimer: 0
+        id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
     
     // Add type-specific properties
     if (type === 'skeleton') {
-        obstacle.velocityX = 0;
+        obstacle.velocityX = 0; // Will be set to -speed in updateObstacles
         obstacle.lastAnimation = 'idle';
         obstacle.isDead = false;
         obstacle.isAttacking = false;
@@ -176,26 +166,21 @@ function createObstacle(type, x, y, width, height) {
         obstacle.deathTimer = 0;
     }
     
-  if (type === 'alphaWolf') {
+    if (type === 'alphaWolf') {
         const jumpFrequency = Math.max(60 - (gameState.level * 5), 20);
         obstacle.verticalMovement = 0;
         obstacle.jumpTimer = jumpFrequency;
         obstacle.originalY = y;
-        
-        // FIXED: Add Fury Rage properties
-        obstacle.furyChargeTime = 0;
-        obstacle.isFuryCharging = false;
-        obstacle.isLeaping = false;
-        obstacle.furyTriggerHealth = Math.floor(obstacle.maxHealth * 0.3); // Trigger at 30% health
-        obstacle.lastFuryTime = 0;
-        obstacle.facingDirection = -1; // Default facing left
-        console.log(`Alpha Wolf created with fury trigger at ${obstacle.furyTriggerHealth} HP`);
     }
+    
+    // ... other type-specific initializations
     
     return obstacle;
 }
+// ========================================
+// BAT PROJEKTILE SYSTEM
+// ========================================
 
-// Enhanced Bat Projectile System
 function createBatProjectile(startX, startY, targetX, targetY) {
     const dx = targetX - startX;
     const dy = targetY - startY;
@@ -205,10 +190,6 @@ function createBatProjectile(startX, startY, targetX, targetY) {
     const velocityX = (dx / distance) * speed;
     const velocityY = (dy / distance) * speed;
     
-    // Scale projectile damage by level
-    const baseDamage = 15;
-    const projectileDamage = Math.floor(baseDamage * Math.pow(1.3, gameState.level - 1));
-    
     batProjectiles.push({
         x: startX,
         y: startY,
@@ -217,7 +198,6 @@ function createBatProjectile(startX, startY, targetX, targetY) {
         life: 300,
         maxLife: 300,
         size: 8,
-        damage: projectileDamage,
         corrupt: true,
         glowIntensity: 1.0,
         trailParticles: [],
@@ -225,22 +205,18 @@ function createBatProjectile(startX, startY, targetX, targetY) {
     });
 }
 
-
-
 export function updateBatProjectiles(gameStateParam) {
     for (let i = batProjectiles.length - 1; i >= 0; i--) {
         const projectile = batProjectiles[i];
         
-        // FIXED: Use deltaTime for smooth movement
-        const deltaTime = gameState.deltaTime || 1;
+        // Move projectile
+        projectile.x += projectile.velocityX * gameState.deltaTime;
+        projectile.y += projectile.velocityY * gameState.deltaTime;
         
-        projectile.x += projectile.velocityX * deltaTime;
-        projectile.y += projectile.velocityY * deltaTime;
+        projectile.velocityY += 0.05 * gameState.deltaTime;
+        projectile.life -= gameState.deltaTime;
         
-        projectile.velocityY += 0.05 * deltaTime;
-        projectile.life -= deltaTime;
-        
-        // Trail effect - smooth updates
+        // Trail effect
         if (projectile.trailParticles.length < 5) {
             projectile.trailParticles.push({
                 x: projectile.x,
@@ -250,10 +226,10 @@ export function updateBatProjectiles(gameStateParam) {
             });
         }
         
-        // Update trail particles with deltaTime
+        // Update trail particles
         for (let t = projectile.trailParticles.length - 1; t >= 0; t--) {
-            projectile.trailParticles[t].life -= deltaTime;
-            projectile.trailParticles[t].alpha *= Math.pow(0.9, deltaTime);
+            projectile.trailParticles[t].life--;
+            projectile.trailParticles[t].alpha *= 0.9;
             if (projectile.trailParticles[t].life <= 0) {
                 projectile.trailParticles.splice(t, 1);
             }
@@ -261,28 +237,21 @@ export function updateBatProjectiles(gameStateParam) {
         
         // Check collision with player
         if (!isPlayerInvulnerable(gameStateParam) &&
-            projectile.x < player.x + player.width &&
-            projectile.x + projectile.size > player.x &&
-            projectile.y < player.y + player.height &&
-            projectile.y + projectile.size > player.y) {
-            
-            // Enhanced corruption damage system
-            const corruptionDamage = Math.floor(projectile.damage * 0.5); // Corruption does 50% damage
-            const playerDied = damagePlayer(corruptionDamage, 'corruption');
-            
-            if (playerDied) {
-                window.gameOver();
-                return;
-            }
-            
-            gameStateParam.isCorrupted = true;
-            gameStateParam.corruptionTimer = 180;
-            gameStateParam.postDamageInvulnerability = 30;
-            
-            createBloodParticles(player.x + player.width/2, player.y + player.height/2);
-            createScorePopup(player.x + player.width/2, player.y - 20, `CORRUPTED! -${corruptionDamage} HP`);
-            
-            triggerDamageEffects(gameStateParam, 'corruption');
+    projectile.x < player.x + player.width &&
+    projectile.x + projectile.size > player.x &&
+    projectile.y < player.y + player.height &&
+    projectile.y + projectile.size > player.y) {
+    
+    // CORRUPTION EFFECT
+    gameStateParam.isCorrupted = true;
+    gameStateParam.corruptionTimer = 180;
+    gameStateParam.postDamageInvulnerability = 30;
+    
+    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
+    createScorePopup(player.x + player.width/2, player.y - 20, 'BLOOD CURSED!');
+    
+    // NEW: Corruption damage effects
+    triggerDamageEffects(gameStateParam, 'corruption');
             
             // Impact particles
             for (let p = 0; p < 12; p++) {
@@ -304,6 +273,7 @@ export function updateBatProjectiles(gameStateParam) {
             projectile.velocityX *= 0.7;
             projectile.life = Math.min(projectile.life, 60);
             
+            // Ground impact effect
             for (let p = 0; p < 6; p++) {
                 createBloodParticles(
                     projectile.x + (Math.random() - 0.5) * 16,
@@ -312,6 +282,7 @@ export function updateBatProjectiles(gameStateParam) {
             }
         }
         
+        // Remove if expired or off screen
         if (projectile.life <= 0 || 
             projectile.x < camera.x - 100 || 
             projectile.x > camera.x + CANVAS.width + 100 || 
@@ -321,9 +292,10 @@ export function updateBatProjectiles(gameStateParam) {
     }
 }
 
+// ========================================
+// OBSTACLE SPAWNING
+// ========================================
 
-
-// Enhanced Obstacle Spawning
 export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
     obstacleTimer -= gameState.deltaTime * timeSlowFactor;
     
@@ -349,7 +321,7 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         const frankensteinChance = humanChance + staticObstacleChance * 0.75;
         const rockChance = humanChance + staticObstacleChance * 1.0;
         
-        // Determine obstacle properties with enhanced spawning
+        // Determine obstacle properties
         if (obstacleType < 0.15 && bulletBoxesFound < 4) {
             obstacleTypeStr = 'boltBox';
             const config = ENEMY_CONFIG[obstacleTypeStr];
@@ -447,10 +419,16 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             return;
         }
         
-        // Create obstacle with enhanced stats
+        // Create obstacle
         const newObstacle = createObstacle(obstacleTypeStr, spawnX, obstacleY, obstacleWidth, obstacleHeight);
         
         // Add special properties
+        const config = ENEMY_CONFIG[obstacleTypeStr];
+        if (config.health > 1) {
+            newObstacle.health = config.health;
+            newObstacle.maxHealth = config.health;
+        }
+        
         if (obstacleTypeStr === 'alphaWolf') {
             const jumpFrequency = Math.max(60 - (level * 5), 20);
             newObstacle.verticalMovement = 0;
@@ -471,8 +449,6 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             newObstacle.zapActive = false;
             newObstacle.isPermanent = true;
             newObstacle.isIndestructible = true;
-            // Scale tesla damage
-            newObstacle.damage = Math.floor(25 * Math.pow(1.3, level - 1));
         }
         
         if (obstacleTypeStr === 'frankensteinTable') {
@@ -484,8 +460,6 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             newObstacle.zapActive = false;
             newObstacle.isPermanent = true;
             newObstacle.isIndestructible = true;
-            // Scale frankenstein damage
-            newObstacle.damage = Math.floor(30 * Math.pow(1.3, level - 1));
         }
         
         obstacles.push(newObstacle);
@@ -511,846 +485,435 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
     }
 }
 
-// Enhanced Shooting System with Weapon Support
-export function shoot(gameStateParam) {
-    if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
-    
-    // MAJOR PERFORMANCE FIX: Simple time-based cooldown
-    const now = Date.now();
-    if (!gameState.lastShotTime) gameState.lastShotTime = 0;
-    
-    // Calculate fire rate (simpler calculation)
-    const attackSpeedBonus = gameState.stats?.attackSpeed || 0;
-    const baseFireRate = 100; // milliseconds between shots
-    const actualFireRate = Math.max(50, baseFireRate / (1 + attackSpeedBonus * 0.5));
-    
-    // Too soon to shoot again?
-    if (now - gameState.lastShotTime < actualFireRate) return;
-    gameState.lastShotTime = now;
-    
-    // SIMPLIFIED WEAPON DETECTION (avoid repeated object lookups)
-    const weapons = activeWeaponDrops || {};
-    const buffs = gameStateParam.activeBuffs || {};
-    
-    const hasMultiShot = buffs.chainLightning > 0;
-    const hasShotgun = weapons.shotgunBlast > 0;
-    const hasPiercing = weapons.piercingShots > 0 || gameStateParam.hasPiercingBullets;
-    
-    // Determine bullet count
-    let bulletCount = 1;
-    if (hasShotgun) bulletCount = 5;
-    else if (hasMultiShot && (gameStateParam.bullets >= 3 || gameStateParam.isBerserker)) bulletCount = 3;
-    
-    // CREATE BULLETS (simplified)
-    const startX = player.x + (player.facingDirection === 1 ? player.width + 24 : -24);
-    const startY = player.y + player.height / 2;
-    const baseSpeed = GAME_CONSTANTS.BULLET_SPEED * player.facingDirection;
-    
-    for (let i = 0; i < bulletCount; i++) {
-        const offsetY = bulletCount > 1 ? (i - Math.floor(bulletCount/2)) * 8 : 0;
-        const offsetAngle = hasShotgun ? (i - 2) * 0.2 : 0;
-        
-        // SIMPLIFIED BULLET OBJECT (only essential properties)
-        const bullet = {
-            x: startX,
-            y: startY + offsetY,
-            speed: baseSpeed,
-            velocityX: baseSpeed * Math.cos(offsetAngle),
-            velocityY: baseSpeed * Math.sin(offsetAngle),
-            enhanced: bulletCount > 1,
-            direction: player.facingDirection,
-            piercing: hasPiercing,
-            age: 0,
-            tailX: startX,
-            currentLength: 30,
-            hit: false,
-            hitTime: 0
-        };
-        
-        // Only add advanced properties if needed (performance)
-        if (weapons.ricochetShots > 0) {
-            bullet.ricochet = true;
-            bullet.ricochets = 0;
-            bullet.maxRicochets = 3;
-        }
-        
-        if (weapons.explosiveRounds > 0) bullet.explosive = true;
-        if (weapons.homingMissiles > 0) bullet.homing = true;
-        if (weapons.chainLightning2 > 0) bullet.chainLightning = true;
-        
-        bulletsFired.push(bullet);
-    }
-    
-    // Update ammo
-    if (!gameStateParam.isBerserker) {
-        gameStateParam.bullets -= Math.min(bulletCount, gameStateParam.bullets);
-    }
-    
-    soundManager.shoot();
-}
-
-
-
-function initializeObstacleProperties(obstacle) {
-    if (obstacle.type === 'teslaCoil') {
-        if (!obstacle.state) {
-            obstacle.state = 'charging';
-            obstacle.stateTimer = obstacle.chargeTime || 120;
-            obstacle.zapActive = false;
-            console.log('Tesla coil initialized');
-        }
-    }
-    
-    if (obstacle.type === 'frankensteinTable') {
-        if (!obstacle.state) {
-            obstacle.state = 'charging';
-            obstacle.stateTimer = obstacle.chargeTime || 120;
-            obstacle.zapActive = false;
-            console.log('Frankenstein table initialized');
-        }
-    }
-    
-    if (obstacle.type === 'bat') {
-        if (obstacle.spitTimer === undefined) {
-            obstacle.spitTimer = 180 + Math.random() * 120;
-            obstacle.isSpitting = false;
-            obstacle.spitChargeTime = 0;
-            obstacle.hasTargeted = false;
-            obstacle.facingPlayer = 1;
-            console.log('Bat AI initialized');
-        }
-    }
-}
-
-// Enhanced Bullet Update System
-export function updateBullets(gameStateParam) {
-    // PERFORMANCE: Early exit if no bullets
-    if (bulletsFired.length === 0) return;
-    
-    let anyBulletHit = false;
-    
-    for (let i = bulletsFired.length - 1; i >= 0; i--) {
-        const bullet = bulletsFired[i];
-        
-        bullet.age++;
-        
-        if (!bullet.hit) {
-            // SIMPLIFIED HOMING (only if needed)
-            if (bullet.homing && bullet.homingTarget && !bullet.homingTarget.isDead) {
-                const target = bullet.homingTarget;
-                const dx = (target.x + target.width/2) - bullet.x;
-                const dy = (target.y + target.height/2) - bullet.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance > 0) {
-                    const homingStrength = 0.1;
-                    bullet.velocityX += (dx / distance) * homingStrength;
-                    bullet.velocityY += (dy / distance) * homingStrength;
-                    
-                    // Normalize speed
-                    const currentSpeed = Math.sqrt(bullet.velocityX * bullet.velocityX + bullet.velocityY * bullet.velocityY);
-                    const targetSpeed = Math.abs(bullet.speed);
-                    bullet.velocityX = (bullet.velocityX / currentSpeed) * targetSpeed;
-                    bullet.velocityY = (bullet.velocityY / currentSpeed) * targetSpeed;
-                }
-            }
-            
-            // Move bullet
-            bullet.x += (bullet.velocityX || bullet.speed) * gameState.deltaTime;
-            bullet.y += (bullet.velocityY || 0) * gameState.deltaTime;
-            
-            // SIMPLIFIED stretch effect
-            if (bullet.age < 10) {
-                bullet.currentLength = 30 + (30 * (bullet.age / 10));
-            }
-            
-            const tailDelay = bullet.currentLength / Math.abs(bullet.speed);
-            if (bullet.age > tailDelay) {
-                bullet.tailX += (bullet.velocityX || bullet.speed) * gameState.deltaTime;
-            }
-        } else {
-            // Contract on hit
-            bullet.hitTime++;
-            if (bullet.hitTime < 8) {
-                bullet.tailX += (bullet.velocityX || bullet.speed) * 3 * gameState.deltaTime;
-                bullet.currentLength = Math.max(4, bullet.currentLength - 10);
-            } else {
-                bulletsFired.splice(i, 1);
-                continue;
-            }
-        }
-        
-        let bulletHitSomething = false;
-        
-        // PERFORMANCE: Simple collision detection (only check obstacles on screen)
-        for (let j = obstacles.length - 1; j >= 0; j--) {
-            const obstacle = obstacles[j];
-            
-            // Safety check
-            if (!obstacle || !obstacle.type) continue;
-            
-            // Skip certain types
-            if (obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' || 
-                obstacle.type === 'boltBox' || (obstacle.type === 'skeleton' && obstacle.isDead)) {
-                continue;
-            }
-            
-            // SIMPLE AABB collision (faster than complex shapes)
-            if (bullet.x < obstacle.x + obstacle.width &&
-                bullet.x + 8 > obstacle.x &&
-                bullet.y < obstacle.y + obstacle.height &&
-                bullet.y + 4 > obstacle.y) {
-                
-                // Calculate damage
-                const isCritical = rollCritical();
-                const baseDamage = gameState.baseDamage;
-                const finalDamage = calculateDamage(baseDamage, isCritical);
-                
-                // Apply damage
-                obstacle.health -= finalDamage;
-                obstacle.lastDamageTime = Date.now();
-                obstacle.damageFlashTimer = 15;
-                
-                // Create damage number (only occasionally to save performance)
-                if (Math.random() < 0.7) { // Only 70% of the time
-                    createDamageNumber(
-                        obstacle.x + obstacle.width/2, 
-                        obstacle.y,
-                        finalDamage,
-                        isCritical,
-                        isCritical ? '#FFD700' : '#FF6B6B'
-                    );
-                }
-                
-                // Sound effects (limit frequency)
-                if (Math.random() < 0.3) { // Only 30% of the time
-                    if (isCritical) {
-                        soundManager.criticalHit();
-                    } else {
-                        soundManager.hit();
-                    }
-                }
-                
-                // Apply lifesteal
-                applyLifesteal(finalDamage, obstacle.health);
-                
-                // Mark bullet as hit
-                if (!bullet.piercing) {
-                    bullet.hit = true;
-                    bullet.hitTime = 0;
-                }
-                
-                // Handle enemy death
-                if (obstacle.health <= 0) {
-                    handleEnemyDeath(obstacle, j, gameStateParam);
-                } else {
-                    // Enemy still alive
-                    if (obstacle.type === 'skeleton') {
-                        obstacle.damageResistance = 30;
-                    }
-                }
-                
-                // Advanced weapon effects (only if needed)
-                if (bullet.explosive) {
-                    createExplosion(bullet.x, bullet.y, 60, finalDamage * 0.7);
-                }
-                
-                if (bullet.chainLightning) {
-                    createChainLightning(obstacle, finalDamage * 0.8, 7);
-                }
-                
-                createLightningEffect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
-                
-                gameStateParam.consecutiveHits++;
-                bulletHitSomething = true;
-                anyBulletHit = true;
-                
-                if (!bullet.piercing) {
-                    bulletsFired.splice(i, 1);
-                    break;
-                }
-            }
-        }
-        
-        // Clean up off-screen bullets
-        if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100 || 
-            bullet.y < -100 || bullet.y > CANVAS.height + 100)) {
-            if (!bulletHitSomething) {
-                gameStateParam.consecutiveHits = 0;
-            }
-            bulletsFired.splice(i, 1);
-        }
-    }
-}
-// Enhanced Enemy Death Handler
-function handleEnemyDeath(obstacle, index, gameStateParam) {
-    // Safety check
-    if (!obstacle || index < 0 || index >= obstacles.length) return;
-    
-    if (obstacle.type === 'skeleton') {
-        obstacle.isDead = true;
-        obstacle.deathTimer = 0;
-    } else {
-        // Safely remove obstacle
-        if (obstacles[index]) {
-            obstacles.splice(index, 1);
-        }
-    }
-    
-    const config = ENEMY_CONFIG[obstacle.type];
-    const basePoints = config?.points || 10;
-    const levelBonus = (gameStateParam.level - 1) * 5;
-    const points = (basePoints + levelBonus) * gameStateParam.scoreMultiplier;
-    
-    gameStateParam.score += points;
-    createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
-
-    const isCritical = gameStateParam.comboCount >= 20;
-    const currentTime = Date.now();
-    if (currentTime - gameStateParam.lastScoreTime < 30000) {
-        gameStateParam.scoreIn30Seconds += points;
-    } else {
-        gameStateParam.scoreIn30Seconds = points;
-        gameStateParam.lastScoreTime = currentTime;
-    }
-    
-    rollForDrop(obstacle.type, obstacle.x + obstacle.width/2, obstacle.y);
-    
-    if (obstacle.type === 'alphaWolf') {
-        gameStateParam.bossesKilled++;
-    }
-    
-    gameStateParam.enemiesDefeated++;
-    gameStateParam.bulletsHit++;
-    gameStateParam.levelProgress += 3;
-    
-    gameStateParam.comboCount++;
-    if (gameStateParam.comboCount >= 2) {
-        gameStateParam.comboTimer = 300;
-    }
-    
-    // Enhanced life gain system for HP-based gameplay
-    const bulletsNeeded = gameStateParam.activeBuffs.undeadResilience > 0 ? 10 : 15;
-    if (gameStateParam.bulletsHit >= bulletsNeeded) {
-        const healAmount = Math.floor(gameStateParam.maxHealth * 0.25); // Heal 25% max health
-        gameStateParam.currentHealth = Math.min(gameStateParam.currentHealth + healAmount, gameStateParam.maxHealth);
-        createScorePopup(player.x + player.width/2, player.y, `+${healAmount} HP!`);
-        gameStateParam.bulletsHit = 0;
-    }
-}
-
-// New Weapon Effect Functions
-function createExplosion(x, y, radius, damage) {
-    explosions.push({
-        x: x,
-        y: y,
-        radius: radius,
-        maxRadius: radius,
-        frame: 0,
-        maxFrame: 20,
-        damage: damage
-    });
-    
-    // Damage nearby enemies
-    obstacles.forEach(obstacle => {
-        const dx = (obstacle.x + obstacle.width/2) - x;
-        const dy = (obstacle.y + obstacle.height/2) - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < radius && obstacle.health > 0) {
-            const explosionDamage = Math.floor(damage * (1 - distance / radius));
-            obstacle.health -= explosionDamage;
-            
-            createDamageNumber(
-                obstacle.x + obstacle.width/2,
-                obstacle.y,
-                explosionDamage,
-                false,
-                '#FF8800'
-            );
-            
-            if (obstacle.health <= 0) {
-                handleEnemyDeath(obstacle, obstacles.indexOf(obstacle), gameState);
-            }
-        }
-    });
-}
-
-function createChainLightning(startEnemy, damage, maxChains) {
-    // Safety check
-    if (!startEnemy || !startEnemy.type) return;
-    
-    const chainedEnemies = new Set([startEnemy]);
-    let currentDamage = damage;
-    let currentEnemy = startEnemy;
-    
-    for (let i = 0; i < maxChains; i++) {
-        let nextEnemy = null;
-        let closestDistance = 150; // Chain range
-        
-        obstacles.forEach(obstacle => {
-            if (!obstacle || !obstacle.type) return; // Safety check
-            if (!chainedEnemies.has(obstacle) && obstacle.health > 0) {
-                const dx = (obstacle.x + obstacle.width/2) - (currentEnemy.x + currentEnemy.width/2);
-                const dy = (obstacle.y + obstacle.height/2) - (currentEnemy.y + currentEnemy.height/2);
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    nextEnemy = obstacle;
-                }
-            }
-        });
-        
-        if (!nextEnemy) break;
-        
-        // Create lightning effect
-        createLightningEffect(
-            (currentEnemy.x + currentEnemy.width/2 + nextEnemy.x + nextEnemy.width/2) / 2,
-            (currentEnemy.y + currentEnemy.height/2 + nextEnemy.y + nextEnemy.height/2) / 2
-        );
-        
-        // Apply damage
-        nextEnemy.health -= Math.floor(currentDamage);
-        createDamageNumber(
-            nextEnemy.x + nextEnemy.width/2,
-            nextEnemy.y,
-            Math.floor(currentDamage),
-            false,
-            '#00FFFF'
-        );
-        
-        if (nextEnemy.health <= 0) {
-            const enemyIndex = obstacles.indexOf(nextEnemy);
-            if (enemyIndex >= 0) {
-                handleEnemyDeath(nextEnemy, enemyIndex, gameState);
-            }
-        }
-        
-        chainedEnemies.add(nextEnemy);
-        currentEnemy = nextEnemy;
-        currentDamage *= 0.8; // Reduce damage with each chain
-    }
-}
-
-function createRicochetBullet(originalBullet, hitEnemy) {
-    // Safety checks
-    if (!originalBullet || !hitEnemy) return;
-    
-    // Find nearest enemy for ricochet
-    let targetEnemy = null;
-    let closestDistance = 200;
-    
-    obstacles.forEach(obstacle => {
-        if (!obstacle || !obstacle.type) return; // Safety check
-        if (obstacle !== hitEnemy && obstacle.health > 0 && obstacle.type !== 'boltBox' && obstacle.type !== 'rock') {
-            const dx = (obstacle.x + obstacle.width/2) - originalBullet.x;
-            const dy = (obstacle.y + obstacle.height/2) - originalBullet.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                targetEnemy = obstacle;
-            }
-        }
-    });
-    
-    if (targetEnemy) {
-        const dx = (targetEnemy.x + targetEnemy.width/2) - originalBullet.x;
-        const dy = (targetEnemy.y + targetEnemy.height/2) - originalBullet.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        const newBullet = {
-            ...originalBullet,
-            velocityX: (dx / distance) * Math.abs(originalBullet.speed),
-            velocityY: (dy / distance) * Math.abs(originalBullet.speed),
-            age: 0,
-            hit: false,
-            ricochets: originalBullet.ricochets + 1
-        };
-        
-        bulletsFired.push(newBullet);
-        createLightningEffect(originalBullet.x, originalBullet.y);
-    }
-}
-
-// Enhanced Collision System for HP-based Combat
-export function checkCollisions(gameStateParam) {
-    if (isPlayerInvulnerable(gameStateParam)) {
-        return false;
-    }
-
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obstacle = obstacles[i];
-        
-        // Safety check: ensure obstacle exists and has required properties
-        if (!obstacle || !obstacle.type) continue;
-        
-        // Tesla Coil damage
-        if (obstacle.type === 'teslaCoil') {
-            if (obstacle.state === 'zapping' && obstacle.zapActive) {
-                const zapX = obstacle.x + obstacle.width/2 - 8;
-                const zapY = obstacle.y + obstacle.height;
-                const zapWidth = 16;
-                const zapHeight = CANVAS.groundY - zapY;
-                
-                if (player.x < zapX + zapWidth &&
-                    player.x + player.width > zapX &&
-                    player.y < zapY + zapHeight &&
-                    player.y + player.height > zapY) {
-                    
-                    return handlePlayerDamage(gameStateParam, obstacle.damage || 25, 'Tesla Coil');
-                }
-            }
-            continue;
-        }
-        
-        // Frankenstein Table damage
-        if (obstacle.type === 'frankensteinTable') {
-            if (obstacle.state === 'zapping' && obstacle.zapActive) {
-                const zapX = obstacle.x + obstacle.width/2 - 12;
-                const zapY = 0;
-                const zapWidth = 24;
-                const zapHeight = obstacle.y + obstacle.height - 55;
-                
-                if (player.x < zapX + zapWidth &&
-                    player.x + player.width > zapX &&
-                    player.y < zapY + zapHeight &&
-                    player.y + player.height > zapY) {
-                    
-                    return handlePlayerDamage(gameStateParam, obstacle.damage || 30, 'Frankenstein Table');
-                }
-            }
-            continue;
-        }
-        
-        // Regular enemy collision
-        const hitbox = getObstacleHitbox(obstacle);
-        
-        if (player.x < hitbox.x + hitbox.width &&
-            player.x + player.width > hitbox.x &&
-            player.y < hitbox.y + hitbox.height &&
-            player.y + player.height > hitbox.y) {
-            
-            if (obstacle.type === 'boltBox') {
-                gameStateParam.bullets += 20;
-                createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, '+20 Bolts');
-                obstacles.splice(i, 1);
-                continue;
-            }
-            
-            if (obstacle.type === 'rock' || obstacle.type === 'sarcophagus') {
-                continue;
-            }
-            
-            return handlePlayerDamage(gameStateParam, obstacle.damage || 15, obstacle.type, i);
-        }
-    }
-    
-    return false;
-}
-
-// Enhanced Player Damage Handler
-function handlePlayerDamage(gameStateParam, damageAmount, damageSource, obstacleIndex = -1) {
-    console.log(`🎯 Player taking ${damageAmount} damage from ${damageSource}`);
-    
-    // Shield protection
-    if (gameStateParam.shieldCharges > 0) {
-        const wasLastShield = gameStateParam.shieldCharges === 1;
-        gameStateParam.shieldCharges--;
-        
-        if (gameStateParam.shieldCharges <= 0) {
-            gameStateParam.hasShield = false;
-            gameStateParam.shieldCharges = 0;
-            createScorePopup(player.x + player.width/2, player.y, 'Shield Broken!');
-        } else {
-            createScorePopup(player.x + player.width/2, player.y, 
-                `Shield: ${gameStateParam.shieldCharges} left`);
-        }
-        
-        triggerDamageEffects(gameStateParam, 'shield');
-        
-        if (obstacleIndex >= 0 && obstacles[obstacleIndex]) {
-            obstacles.splice(obstacleIndex, 1);
-        }
-        gameStateParam.postDamageInvulnerability = 60;
-        player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
-        
-        soundManager.hit();
-        return false;
-    }
-    
-    // Apply damage to HP
-    const finalDamage = Math.max(1, damageAmount);
-    const playerDied = damagePlayer(finalDamage, damageSource);
-    
-    if (playerDied) {
-        return true; // Game Over
-    }
-    
-    // Enhanced damage effects
-    triggerDamageEffects(gameStateParam, 'health');
-    
-    // Set invulnerability and reset stats
-    gameStateParam.postDamageInvulnerability = 120;
-    player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
-    
-    gameStateParam.bulletsHit = 0;
-    gameStateParam.comboCount = 0;
-    gameStateParam.comboTimer = 0;
-    gameStateParam.consecutiveHits = 0;
-    
-    // Remove obstacle
-    if (obstacleIndex >= 0 && obstacles[obstacleIndex]) {
-        obstacles.splice(obstacleIndex, 1);
-    }
-    
-    soundManager.hit();
-    return false; // Continue playing
-}
-
-export function isPlayerInvulnerable(gameStateParam) {
-    return player.damageResistance > 0 || 
-           gameStateParam.postBuffInvulnerability > 0 || 
-           gameStateParam.postDamageInvulnerability > 0 || 
-           gameStateParam.isGhostWalking;
-}
-
-// Keep all existing update functions but enhance them for the new system
-
+// ========================================
+// UPDATE FUNCTIONS
+// ========================================
 
 export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, gameStateParam) {
     const speed = gameSpeed * enemySlowFactor * 0.7;
-    const deltaTime = gameState.deltaTime || 1;
     
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
-        
-        // Initialize properties if needed
-        initializeObstacleProperties(obstacle);
-        
-        // Update damage flash timer with deltaTime
-        if (obstacle.damageFlashTimer > 0) {
-            obstacle.damageFlashTimer -= deltaTime;
-        }
-        
-        // TESLA COIL LOGIC - FIXED with deltaTime
-        if (obstacle.type === 'teslaCoil') {
-            obstacle.stateTimer -= deltaTime;
-            
-            switch (obstacle.state) {
-                case 'charging':
-                    if (obstacle.stateTimer <= 0) {
-                        obstacle.state = 'zapping';
-                        obstacle.stateTimer = obstacle.zapDuration || 80;
-                        obstacle.zapActive = true;
-                        console.log('⚡ Tesla coil ZAPPING!');
-                    }
-                    break;
-                    
-                case 'zapping':
-                    if (obstacle.stateTimer <= 0) {
-                        obstacle.state = 'cooldown';
-                        obstacle.stateTimer = obstacle.cooldown || 120;
-                        obstacle.zapActive = false;
-                        console.log('❄️ Tesla coil cooling down');
-                    }
-                    break;
-                    
-                case 'cooldown':
-                    if (obstacle.stateTimer <= 0) {
-                        obstacle.state = 'charging';
-                        obstacle.stateTimer = obstacle.chargeTime || 120;
-                        console.log('🔋 Tesla coil charging');
-                    }
-                    break;
-            }
-            continue; // Tesla coils don't move
-        }
-        
-        // FRANKENSTEIN TABLE LOGIC - FIXED with deltaTime
-        if (obstacle.type === 'frankensteinTable') {
-            obstacle.stateTimer -= deltaTime;
-            
-            switch (obstacle.state) {
-                case 'charging':
-                    if (obstacle.stateTimer <= 0) {
-                        obstacle.state = 'zapping';
-                        obstacle.stateTimer = obstacle.zapDuration || 80;
-                        obstacle.zapActive = true;
-                        console.log('⚡ Frankenstein table ZAPPING!');
-                    }
-                    break;
-                    
-                case 'zapping':
-                    if (obstacle.stateTimer <= 0) {
-                        obstacle.state = 'cooldown';
-                        obstacle.stateTimer = obstacle.cooldown || 180;
-                        obstacle.zapActive = false;
-                        console.log('❄️ Frankenstein table cooling down');
-                    }
-                    break;
-                    
-                case 'cooldown':
-                    if (obstacle.stateTimer <= 0) {
-                        obstacle.state = 'charging';
-                        obstacle.stateTimer = obstacle.chargeTime || 120;
-                        console.log('🔋 Frankenstein table charging');
-                    }
-                    break;
-            }
-            continue; // Frankenstein tables don't move
-        }
-        
-        // BAT AI LOGIC - FIXED with deltaTime
-        if (obstacle.type === 'bat') {
-            obstacle.spitTimer -= deltaTime;
-            
-            // Determine facing direction
-            const playerCenterX = player.x + player.width/2;
-            const batCenterX = obstacle.x + obstacle.width/2;
-            obstacle.facingPlayer = playerCenterX > batCenterX ? 1 : -1;
-            
-            // Start spitting sequence
-            if (obstacle.spitTimer <= 0 && !obstacle.isSpitting) {
-                obstacle.isSpitting = true;
-                obstacle.spitChargeTime = 60; // 1 second charge time
-                obstacle.hasTargeted = true;
-                console.log('🦇 Bat charging spit attack!');
-            }
-            
-            // Handle spitting charge with deltaTime
-            if (obstacle.isSpitting && obstacle.spitChargeTime > 0) {
-                obstacle.spitChargeTime -= deltaTime;
-                
-                // Fire projectile when charge completes
-                if (obstacle.spitChargeTime <= 0) {
-                    const targetX = player.x + player.width/2;
-                    const targetY = player.y + player.height/2;
-                    
-                    createBatProjectile(
-                        obstacle.x + obstacle.width/2,
-                        obstacle.y + obstacle.height/2,
-                        targetX,
-                        targetY
-                    );
-                    
-                    // Reset bat state
-                    obstacle.isSpitting = false;
-                    obstacle.hasTargeted = false;
-                    obstacle.spitTimer = 300 + Math.random() * 180; // 5-8 seconds until next attack
-                    console.log('🩸 Bat fired blood projectile!');
-                }
-            }
-            
-            // Bat movement (hover around player) with deltaTime
-            const dx = (player.x + player.width/2) - (obstacle.x + obstacle.width/2);
-            const dy = (player.y + player.height/2) - (obstacle.y + obstacle.height/2);
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance > 150) {
-                // Move closer to player
-                obstacle.x += Math.sign(dx) * speed * 0.5 * deltaTime;
-                obstacle.y += Math.sign(dy) * speed * 0.3 * deltaTime;
-            } else if (distance < 80) {
-                // Move away from player
-                obstacle.x -= Math.sign(dx) * speed * 0.3 * deltaTime;
-                obstacle.y -= Math.sign(dy) * speed * 0.2 * deltaTime;
-            }
-            
-            // Constrain bat to screen bounds
-            obstacle.y = Math.max(50, Math.min(obstacle.y, CANVAS.groundY - obstacle.height - 50));
-        }
 		
 		
-		      if (obstacle.type === 'alphaWolf') {
-            const now = Date.now();
+		
+		 if (obstacle.type === 'skeleton' && obstacle.isDead) {
+            obstacle.deathTimer += gameState.deltaTime;
             
-            // Check if health is low enough to trigger fury
-            const healthPercent = obstacle.health / obstacle.maxHealth;
-            const shouldTriggerFury = healthPercent <= 0.3 && !obstacle.isFuryCharging && 
-                                    (now - obstacle.lastFuryTime) > 5000; // 5 second cooldown
-            
-            if (shouldTriggerFury) {
-                obstacle.isFuryCharging = true;
-                obstacle.furyChargeTime = 90; // 1.5 seconds charge time
-                obstacle.lastFuryTime = now;
-                console.log('🔥 Alpha Wolf FURY RAGE triggered!');
-            }
-            
-            // Handle fury charging
-            if (obstacle.isFuryCharging && obstacle.furyChargeTime > 0) {
-                obstacle.furyChargeTime -= deltaTime;
-                
-                // Update facing direction to player during fury
-                const playerCenterX = player.x + player.width/2;
-                const wolfCenterX = obstacle.x + obstacle.width/2;
-                obstacle.facingDirection = playerCenterX < wolfCenterX ? -1 : 1;
-                
-                // When charge completes, start leap
-                if (obstacle.furyChargeTime <= 0) {
-                    obstacle.isFuryCharging = false;
-                    obstacle.isLeaping = true;
-                    obstacle.leapDuration = 60; // 1 second leap
-                    console.log('🚀 Alpha Wolf FURY LEAP!');
-                }
-            }
-            
-            // Handle fury leap
-            if (obstacle.isLeaping && obstacle.leapDuration > 0) {
-                obstacle.leapDuration -= deltaTime;
-                
-                // Fast movement towards player during leap
-                const dx = (player.x + player.width/2) - (obstacle.x + obstacle.width/2);
-                const leapSpeed = speed * 3; // 3x normal speed
-                obstacle.x += Math.sign(dx) * leapSpeed * deltaTime;
-                
-                // End leap
-                if (obstacle.leapDuration <= 0) {
-                    obstacle.isLeaping = false;
-                    console.log('🎯 Alpha Wolf fury leap complete');
-                }
-            }
-        }
-        
-        // Skeleton-specific logic for dead skeletons with deltaTime
-        if (obstacle.type === 'skeleton' && obstacle.isDead) {
-            obstacle.deathTimer += deltaTime;
-            
-            if (obstacle.deathTimer > 30) {
+            if (obstacle.deathTimer > 30) { // 2 seconds
+                // Cleanup sprite animation
                 if (obstacle.id && window.spriteManager) {
                     window.spriteManager.cleanupEntity('skeleton', obstacle.id);
                 }
                 obstacles.splice(i, 1);
                 continue;
             }
-            continue;
+            continue; // Skip other processing for dead skeletons
         }
         
-        // Living skeleton logic with deltaTime
+        // SKELETON-SPECIFIC LOGIC (for living skeletons)
         if (obstacle.type === 'skeleton') {
-            obstacle.x -= speed * deltaTime;
+            // ✅ NOW we can use speed because it's defined in this function
+            obstacle.velocityX = -speed; // Set velocity for animation system
             
+            // Update damage resistance
             if (obstacle.damageResistance > 0) {
-                obstacle.damageResistance -= deltaTime;
+                obstacle.damageResistance -= gameState.deltaTime;
             }
             
-            // Use deltaTime for smooth floating motion
-           // obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * deltaTime;
+            // Vertical movement (floating/bobbing effect)
+obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * gameState.deltaTime;
         }
+		
         
-        // Movement for non-stationary obstacles with deltaTime
         const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
                             obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' ||
                             obstacle.type === 'sarcophagus';
         
-        if (!isStationary) {
-            obstacle.x -= speed * deltaTime;
+        if (!isStationary || ((obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable') && !obstacle.isPermanent)) {
+            obstacle.x -= speed * gameState.deltaTime;
+        }
+        
+        // Tesla Coil State Machine
+        if (obstacle.type === 'teslaCoil') {
+            obstacle.stateTimer -= gameState.deltaTime;
+            
+            switch(obstacle.state) {
+                case 'idle':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'charging';
+                        obstacle.stateTimer = obstacle.chargeTime;
+                    }
+                    break;
+                    
+                case 'charging':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'zapping';
+                        obstacle.stateTimer = obstacle.zapDuration;
+                        obstacle.zapActive = true;
+                        
+                        createLightningEffect(
+                            obstacle.x + obstacle.width/2, 
+                            obstacle.y + obstacle.height
+                        );
+                    }
+                    break;
+                    
+                case 'zapping':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'cooldown';
+                        obstacle.stateTimer = obstacle.cooldown;
+                        obstacle.zapActive = false;
+                    }
+                    break;
+                    
+                case 'cooldown':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'charging';
+                        obstacle.stateTimer = obstacle.chargeTime;
+                    }
+                    break;
+            }
+        }
+        
+        // Frankenstein Table State Machine
+        if (obstacle.type === 'frankensteinTable') {
+            obstacle.stateTimer -= gameState.deltaTime;
+            
+            switch(obstacle.state) {
+                case 'idle':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'charging';
+                        obstacle.stateTimer = obstacle.chargeTime;
+                    }
+                    break;
+                    
+                case 'charging':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'zapping';
+                        obstacle.stateTimer = obstacle.zapDuration;
+                        obstacle.zapActive = true;
+                        
+                        createLightningEffect(
+                            obstacle.x + obstacle.width/2, 
+                            obstacle.y
+                        );
+                    }
+                    break;
+                    
+                case 'zapping':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'cooldown';
+                        obstacle.stateTimer = obstacle.cooldown;
+                        obstacle.zapActive = false;
+                    }
+                    break;
+                    
+                case 'cooldown':
+                    if (obstacle.stateTimer <= 0) {
+                        obstacle.state = 'idle';
+                        obstacle.stateTimer = Math.random() * 120 + 60;
+                    }
+                    break;
+            }
+        }
+        
+        // ALPHA WOLF FURY ATTACK - KORRIGIERTER CODE
+        if (obstacle.type === 'alphaWolf' && obstacle.jumpTimer !== undefined) {
+            // NEUE: Fury Attack Initialisierung
+            if (obstacle.furyAttackCooldown === undefined) {
+                obstacle.furyAttackCooldown = 0;
+                obstacle.isFuryCharging = false;
+                obstacle.furyChargeTime = 0;
+                obstacle.isLeaping = false;
+                obstacle.leapVelocityX = 0;
+                obstacle.leapVelocityY = 0;
+                obstacle.furyTriggered = false;
+                obstacle.targetX = 0;
+                obstacle.targetY = 0;
+                obstacle.facingDirection = 1;
+                obstacle.lastHealth = obstacle.health; // NEUE: Track health changes
+            }
+            
+            // VERBESSERTER FURY TRIGGER - AB ERSTEM TREFFER!
+            const healthLost = obstacle.lastHealth - obstacle.health;
+            if (healthLost > 0 && !obstacle.furyTriggered && obstacle.furyAttackCooldown <= 0) {
+                obstacle.isFuryCharging = true;
+                obstacle.furyChargeTime = 90; // 1.5 Sekunden bei 60 FPS
+                obstacle.furyTriggered = true;
+                
+                // Update lastHealth für nächsten Fury (alle 2-3 Treffer)
+                obstacle.lastHealth = obstacle.health;
+                
+                // Stoppe normale Bewegung
+                obstacle.verticalMovement = 0;
+                obstacle.y = obstacle.originalY;
+                
+                // Ziel-Vorhersage
+                const predictedX = player.x + (player.velocityX * 30);
+                const predictedY = player.y + (player.velocityY * 15);
+                obstacle.targetX = predictedX + player.width/2;
+                obstacle.targetY = Math.max(predictedY + player.height/2, CANVAS.groundY - 25);
+                
+                // SOFORT zum Spieler drehen
+                const directionToPlayer = obstacle.targetX > (obstacle.x + obstacle.width/2) ? 1 : -1;
+                obstacle.facingDirection = directionToPlayer;
+                
+                console.log(`🐺 Alpha Wolf FURY triggered! Health: ${obstacle.health}/${obstacle.maxHealth}`);
+            }
+            
+            // FURY CHARGING PHASE
+            if (obstacle.isFuryCharging && obstacle.furyChargeTime > 0) {
+                obstacle.furyChargeTime -= gameState.deltaTime;
+                
+                // KONTINUIERLICH zum Spieler schauen während Charging
+                const currentDirectionToPlayer = (player.x + player.width/2) > (obstacle.x + obstacle.width/2) ? 1 : -1;
+                obstacle.facingDirection = currentDirectionToPlayer;
+                
+                // Stoppe alle normale Bewegung während Charging
+                obstacle.jumpTimer = 60; // Reset jump timer
+                
+                if (obstacle.furyChargeTime <= 0) {
+                    // FURY LEAP STARTEN
+                    obstacle.isFuryCharging = false;
+                    obstacle.isLeaping = true;
+                    
+                    // Berechne Sprung-Vektor zum Ziel
+                    const dx = obstacle.targetX - (obstacle.x + obstacle.width/2);
+                    const dy = obstacle.targetY - (obstacle.y + obstacle.height/2);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    const leapSpeed = 8; // Sehr schnell
+                    obstacle.leapVelocityX = (dx / distance) * leapSpeed;
+                    obstacle.leapVelocityY = (dy / distance) * leapSpeed;
+                    
+                    // KÜRZERER Fury Cooldown für häufigere Angriffe
+                    obstacle.furyAttackCooldown = 180; // 3 Sekunden statt 5
+                    
+                    console.log(`🐺 Alpha Wolf LEAPING! Target: ${obstacle.targetX}, ${obstacle.targetY}`);
+                }
+            }
+            
+            // FURY LEAP BEWEGUNG
+            if (obstacle.isLeaping) {
+                obstacle.x += obstacle.leapVelocityX * gameState.deltaTime;
+                obstacle.y += obstacle.leapVelocityY * gameState.deltaTime;
+                
+                // Richtung während Sprung beibehalten
+                obstacle.facingDirection = obstacle.leapVelocityX > 0 ? 1 : -1;
+                
+                // Sprung-Distanz begrenzen
+                if (!obstacle.leapStartX) {
+                    obstacle.leapStartX = obstacle.x;
+                    obstacle.leapStartY = obstacle.y;
+                    obstacle.maxLeapDistance = 150;
+                }
+                
+                const distanceTraveled = Math.sqrt(
+                    (obstacle.x - obstacle.leapStartX) * (obstacle.x - obstacle.leapStartX) +
+                    (obstacle.y - obstacle.leapStartY) * (obstacle.y - obstacle.leapStartY)
+                );
+                
+                if (!obstacle.leapTimer) obstacle.leapTimer = 60;
+                obstacle.leapTimer -= gameState.deltaTime;
+                
+                if (obstacle.y >= obstacle.originalY || 
+                    distanceTraveled >= obstacle.maxLeapDistance || 
+                    obstacle.leapTimer <= 0) {
+                    
+                    obstacle.y = obstacle.originalY;
+                    obstacle.isLeaping = false;
+                    obstacle.leapVelocityX = 0;
+                    obstacle.leapVelocityY = 0;
+                    
+                    // Reset für nächsten Sprung
+                    delete obstacle.leapStartX;
+                    delete obstacle.leapStartY;
+                    delete obstacle.leapTimer;
+                    delete obstacle.maxLeapDistance;
+                    
+                    // Landungsschaden-Check mit Shield-Support
+                    const landingRadius = 40;
+                    const playerCenterX = player.x + player.width/2;
+                    const playerCenterY = player.y + player.height/2;
+                    const wolfCenterX = obstacle.x + obstacle.width/2;
+                    const wolfCenterY = obstacle.y + obstacle.height/2;
+                    
+                    const distanceToPlayer = Math.sqrt(
+                        (playerCenterX - wolfCenterX) * (playerCenterX - wolfCenterX) +
+                        (playerCenterY - wolfCenterY) * (playerCenterY - wolfCenterY)
+                    );
+                    
+                    if (distanceToPlayer < landingRadius && !isPlayerInvulnerable(gameStateParam)) {
+                        // SHIELD CHECK ZUERST
+                        if (gameStateParam.shieldCharges > 0) {
+                            gameStateParam.shieldCharges--;
+                            if (gameStateParam.shieldCharges <= 0) {
+                                gameStateParam.hasShield = false;
+                                gameStateParam.shieldCharges = 0;
+                            }
+                            createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, 
+                                gameStateParam.shieldCharges > 0 ? `Shield: ${gameStateParam.shieldCharges} left` : 'Shield Broken by Fury!');
+                            gameStateParam.postDamageInvulnerability = 60; // 1 Sekunde
+                        } else {
+                            // Normaler Landungsschaden
+                            gameStateParam.lives--;
+                            gameStateParam.damageThisLevel++;
+                            createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, 'FURY STRIKE!');
+                            gameStateParam.postDamageInvulnerability = 120; // 2 Sekunden
+                        }
+                        
+                        player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+                        gameStateParam.bulletsHit = 0;
+                        gameStateParam.comboCount = 0;
+                        gameStateParam.comboTimer = 0;
+                        gameStateParam.consecutiveHits = 0;
+                        soundManager.hit();
+                    }
+                    
+                    // Landungs-Effekte
+                    createBloodParticles(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height);
+                    createLightningEffect(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
+                    
+                    // NEUE: Reset furyTriggered für nächsten Fury
+                    obstacle.furyTriggered = false;
+                    
+                    console.log(`🐺 Alpha Wolf landed! Ready for next fury in ${obstacle.furyAttackCooldown} frames`);
+                }
+            }
+            
+            // Normale Sprung-Logik nur wenn nicht in Fury Mode
+            if (!obstacle.isFuryCharging && !obstacle.isLeaping) {
+                obstacle.jumpTimer -= enemySlowFactor * gameState.deltaTime;
+                obstacle.furyAttackCooldown -= gameState.deltaTime;
+                
+                if (obstacle.verticalMovement !== undefined && 
+                    (obstacle.verticalMovement !== 0 || obstacle.y < obstacle.originalY)) {
+                    
+                    obstacle.y += obstacle.verticalMovement * enemySlowFactor * gameState.deltaTime;
+                    obstacle.verticalMovement += 0.5 * enemySlowFactor * gameState.deltaTime;
+                    
+                    if (obstacle.y >= obstacle.originalY) {
+                        obstacle.y = obstacle.originalY;
+                        obstacle.verticalMovement = 0;
+                    }
+                }
+                
+                if (obstacle.jumpTimer <= 0 && obstacle.y >= obstacle.originalY && 
+                    (obstacle.verticalMovement === 0 || obstacle.verticalMovement === undefined)) {
+                    
+                    obstacle.verticalMovement = -5;
+                    const jumpFrequency = Math.max(60 - (level * 5), 60);
+                    obstacle.jumpTimer = Math.random() * jumpFrequency * 2 + jumpFrequency;
+                }
+            }
+        }
+        
+        // BAT SPEZIELLE LOGIK - OMNIDIREKTIONAL
+        if (obstacle.type === 'bat') {
+            obstacle.y += Math.sin(Date.now() * 0.01 * enemySlowFactor + i) * 1.5 * gameStateParam.deltaTime;
+            
+            if (obstacle.spitCooldown === undefined) {
+                obstacle.spitCooldown = Math.random() * 30 + 30; // 0.5-1 Sekunde
+                obstacle.isSpitting = false;
+                obstacle.spitChargeTime = 0;
+                obstacle.hasTargeted = false;
+                obstacle.targetX = 0;
+                obstacle.targetY = 0;
+                obstacle.firstAttack = true;
+            }
+            
+            obstacle.spitCooldown -= gameStateParam.deltaTime;
+            
+            // OMNIDIREKTIONALE DETECTION - keine Richtungseinschränkung
+            const horizontalDistance = Math.abs(player.x - obstacle.x);
+            const verticalDistance = Math.abs(player.y - obstacle.y);
+            const inRange = horizontalDistance < 350 && verticalDistance < 220;
+            
+            if (obstacle.spitCooldown <= 0 && inRange) {
+                if (!obstacle.isSpitting) {
+                    obstacle.isSpitting = true;
+                    
+                    if (obstacle.firstAttack) {
+                        obstacle.spitChargeTime = 30; // 0.5 Sekunden für ersten Angriff
+                        obstacle.firstAttack = false;
+                    } else {
+                        obstacle.spitChargeTime = 60; // 1 Sekunde für weitere Angriffe
+                    }
+                    
+                    obstacle.hasTargeted = false;
+                }
+                
+                if (obstacle.isSpitting && obstacle.spitChargeTime > 0) {
+                    obstacle.spitChargeTime -= gameStateParam.deltaTime;
+                    
+                    const targetingThreshold = obstacle.firstAttack ? 10 : 15;
+                    if (!obstacle.hasTargeted && obstacle.spitChargeTime <= targetingThreshold) {
+                        obstacle.hasTargeted = true;
+                        
+                        const predictedX = player.x + (player.velocityX * 25);
+                        const predictedY = player.y + (player.velocityY * 10);
+                        obstacle.targetX = predictedX + player.width/2;
+                        obstacle.targetY = Math.max(predictedY + player.height/2, CANVAS.groundY - 50);
+                        
+                        // Richtung für Rendering
+                        obstacle.facingPlayer = obstacle.targetX > obstacle.x ? 1 : -1;
+                    }
+                    
+                    if (obstacle.spitChargeTime <= 0) {
+                        createBatProjectile(
+                            obstacle.x + obstacle.width/2,
+                            obstacle.y + obstacle.height/2,
+                            obstacle.targetX,
+                            obstacle.targetY
+                        );
+                        
+                        obstacle.isSpitting = false;
+                        
+                        const distanceToPlayer = Math.sqrt(horizontalDistance * horizontalDistance + verticalDistance * verticalDistance);
+                        const baseCooldown = 120;
+                        const distanceBonus = Math.max(0, (350 - distanceToPlayer) / 350 * 60);
+                        
+                        obstacle.spitCooldown = Math.random() * baseCooldown + (baseCooldown - distanceBonus);
+                        obstacle.hasTargeted = false;
+                    }
+                }
+            }
+            
+            // Bat folgt dem Spieler
+            if (inRange && !obstacle.isSpitting) {
+                const followIntensity = 0.3;
+                
+                const targetY = player.y + player.height/2;
+                const currentY = obstacle.y + obstacle.height/2;
+                const yDiff = targetY - currentY;
+                obstacle.y += Math.sign(yDiff) * Math.min(Math.abs(yDiff), 1) * followIntensity * gameStateParam.deltaTime;
+                
+                const targetX = player.x + player.width/2;
+                const currentX = obstacle.x + obstacle.width/2;
+                const xDiff = targetX - currentX;
+                obstacle.x += Math.sign(xDiff) * Math.min(Math.abs(xDiff), 0.5) * followIntensity * 0.3 * gameStateParam.deltaTime;
+                
+                obstacle.y = Math.max(100, Math.min(obstacle.y, CANVAS.groundY - 100));
+            }
+            
+            if (inRange) {
+                obstacle.facingPlayer = player.x < obstacle.x ? -1 : 1;
+            }
+        }
+        
+        // Ground enemy movement
+        if (obstacle.type === 'skeleton') {
+            obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.6 * gameState.deltaTime;
+        }
+        
+        if (obstacle.type === 'spider') {
+            obstacle.y += Math.sin(Date.now() * 0.004 * enemySlowFactor + i) * 0.4 * gameState.deltaTime;
         }
         
         obstacle.animationTime = Date.now();
         
-        // Magnet effect for bolt boxes with deltaTime
+        // Magnet effect for bolt boxes
         if (magnetRange > 0 && obstacle.type === 'boltBox') {
             const dx = (player.x + player.width/2) - (obstacle.x + obstacle.width/2);
             const dy = (player.y + player.height/2) - (obstacle.y + obstacle.height/2);
@@ -1358,8 +921,8 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             
             if (distance < magnetRange) {
                 const force = (magnetRange - distance) / magnetRange * 0.6;
-                obstacle.x += dx * force * 0.3 * deltaTime;
-                obstacle.y += dy * force * 0.3 * deltaTime;
+                obstacle.x += dx * force * 0.3;
+                obstacle.y += dy * force * 0.3;
                 
                 if (obstacle.y > CANVAS.groundY - obstacle.height) {
                     obstacle.y = CANVAS.groundY - obstacle.height;
@@ -1393,9 +956,232 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
 }
 
 
+export function shoot(gameStateParam) {
+    if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
+    
+    const canUseMultiShot = gameStateParam.activeBuffs.chainLightning > 0 && (gameStateParam.bullets >= 3 || gameStateParam.isBerserker);
+    const bulletCount = canUseMultiShot ? 3 : 1;
+    const enhanced = canUseMultiShot;
+    
+    for (let i = 0; i < bulletCount; i++) {
+        const offsetY = bulletCount > 1 ? (i - 1) * 8 : 0;
+          const baseX = player.facingDirection === 1 ? player.x + player.width : player.x;
+        const startX = baseX + (24 * player.facingDirection); // +20px rechts, -20px links
+        
+        const bulletSpeed = GAME_CONSTANTS.BULLET_SPEED * player.facingDirection * GAME_CONSTANTS.BULLET_SPEED_MULTIPLIER;
+		
+		
+  
+			bulletsFired.push({
+	        x: startX,
+            y: player.y + player.height / 1.00 + offsetY,
+            speed: bulletSpeed,
+            enhanced: enhanced,
+            direction: player.facingDirection,
+            piercing: gameStateParam.hasPiercingBullets,
+            // NEW: Stretch effect properties
+            age: 0,
+            tailX: startX, // Tail position for stretch effect
+            baseLength: 30,
+            currentLength: 4, // Starts small
+            maxStretch: 60, // Maximum stretch
+            hit: false,
+            hitTime: 0
+        });
+    }
+    
+    if (!gameStateParam.isBerserker) {
+        gameStateParam.bullets -= bulletCount;
+    }
+    soundManager.shoot();
+}
 
+export function updateBullets(gameStateParam) {
+    let anyBulletHit = false;
+    
+    for (let i = bulletsFired.length - 1; i >= 0; i--) {
+        const bullet = bulletsFired[i];
+        
+		
+		  bullet.age++;
+        
+        if (!bullet.hit) {
+            // Move bullet
+            bullet.x += bullet.speed * gameState.deltaTime;
+            
+            // Update stretch effect
+            if (bullet.age < 10) {
+                // Initial stretch phase (first 10 frames)
+                bullet.currentLength = bullet.baseLength + (bullet.maxStretch * (bullet.age / 10));
+            } else {
+                // Maintain stretched length
+                bullet.currentLength = bullet.baseLength + bullet.maxStretch;
+            }
+            
+            // Update tail position with delay for stretch effect
+            const tailDelay = bullet.currentLength / Math.abs(bullet.speed);
+            if (bullet.age > tailDelay) {
+                bullet.tailX += bullet.speed * gameState.deltaTime;
+            }
+        } else {
+            // Contract on hit
+            bullet.hitTime++;
+            
+            if (bullet.hitTime < 8) {
+                // Rapid tail catch-up
+                bullet.tailX += bullet.speed * 3 * gameState.deltaTime;
+                bullet.currentLength = Math.max(4, bullet.currentLength - 10);
+            } else {
+                // Remove bullet after contraction
+                bulletsFired.splice(i, 1);
+                continue;
+            }
+        }
+		
+        
+        let bulletHitSomething = false;
+        
+        for (let j = obstacles.length - 1; j >= 0; j--) {
+            const obstacle = obstacles[j];
+            
+            // ✅ NO CONTINUE STATEMENTS - Use if-condition instead
+            if (obstacle.type !== 'teslaCoil' && 
+                obstacle.type !== 'frankensteinTable' && 
+                obstacle.type !== 'boltBox' && 
+                !(obstacle.type === 'skeleton' && obstacle.isDead)) {
+                
+                // Collision detection
+                if (bullet.x < obstacle.x + obstacle.width &&
+                    bullet.x + 8 > obstacle.x &&
+                    bullet.y < obstacle.y + obstacle.height &&
+                    bullet.y + 4 > obstacle.y) {
+					
 
-// Keep all other existing functions (updateExplosions, updateEffects, etc.)
+					
+					
+                    
+                    // Mark bullet as hit
+                    bullet.hit = true;
+                    bullet.hitTime = 0;
+                    
+                    const damage = bullet.enhanced ? 1 : 1;
+                    obstacle.health -= damage;
+                    
+                    // Skeleton-specific damage effects
+                    if (obstacle.type === 'skeleton') {
+                        obstacle.damageResistance = 30;
+                        
+                        if (obstacle.health <= 0) {
+                            obstacle.isDead = true;
+                            obstacle.deathTimer = 0;
+                            
+                            // Award points
+                            const config = ENEMY_CONFIG[obstacle.type];
+                            const basePoints = config?.points || 10;
+                            const levelBonus = (gameStateParam.level - 1) * 5;
+                            const points = (basePoints + levelBonus) * gameStateParam.scoreMultiplier;
+                            
+                            gameStateParam.score += points;
+                            createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
+                            
+                            rollForDrop(obstacle.type, obstacle.x + obstacle.width/2, obstacle.y);
+                            gameStateParam.enemiesDefeated++;
+                            gameStateParam.bulletsHit++;
+                            gameStateParam.levelProgress += 3;
+                            soundManager.hit();
+                            
+                            gameStateParam.comboCount++;
+                            if (gameStateParam.comboCount >= 2) {
+                                gameStateParam.comboTimer = 300;
+                            }
+                        }
+                    }
+                    
+                    createLightningEffect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
+                    
+                    gameStateParam.consecutiveHits++;
+                    bulletHitSomething = true;
+                    anyBulletHit = true;
+                    
+                    if (obstacle.health <= 0 && obstacle.type !== 'skeleton') {
+                        handleObstacleDestroyed(obstacle, j, gameStateParam);
+                    }
+                    
+                    if (!bullet.piercing || !gameStateParam.hasPiercingBullets) {
+                        bulletsFired.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Clean up off-screen bullets
+        if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100)) {
+            if (!bulletHitSomething) {
+                gameStateParam.consecutiveHits = 0;
+            }
+            bulletsFired.splice(i, 1);
+        }
+    }
+}
+        
+      
+function handleObstacleDestroyed(obstacle, index, gameStateParam) {
+    const config = ENEMY_CONFIG[obstacle.type];
+    const basePoints = config?.points || 10;
+    const levelBonus = (gameStateParam.level - 1) * 5;
+    const points = (basePoints + levelBonus) * gameStateParam.scoreMultiplier;
+    
+    gameStateParam.score += points;
+    createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
+
+    const isCritical = gameStateParam.comboCount >= 20;
+    if (typeof createDamageNumber === 'function') {
+        createDamageNumber(
+            obstacle.x + obstacle.width/2, 
+            obstacle.y + obstacle.height/2, 
+            points, 
+            isCritical
+        );
+    }
+    
+    const currentTime = Date.now();
+    if (currentTime - gameStateParam.lastScoreTime < 30000) {
+        gameStateParam.scoreIn30Seconds += points;
+    } else {
+        gameStateParam.scoreIn30Seconds = points;
+        gameStateParam.lastScoreTime = currentTime;
+    }
+    
+    rollForDrop(obstacle.type, obstacle.x + obstacle.width/2, obstacle.y);
+    
+    if (obstacle.type === 'alphaWolf') {
+        gameStateParam.bossesKilled++;
+    }
+    
+    obstacles.splice(index, 1);
+    gameStateParam.enemiesDefeated++;
+    gameStateParam.bulletsHit++;
+    gameStateParam.levelProgress += 3;
+    soundManager.hit();
+    
+    gameStateParam.comboCount++;
+    if (gameStateParam.comboCount >= 2) {
+        gameStateParam.comboTimer = 300;
+    }
+    
+    const bulletsNeeded = gameStateParam.activeBuffs.undeadResilience > 0 ? 10 : 15;
+    if (gameStateParam.bulletsHit >= bulletsNeeded) {
+        if (gameStateParam.lives < 5) {
+            gameStateParam.lives++;
+            if (gameStateParam.lives > gameStateParam.maxLives) gameStateParam.maxLives = gameStateParam.lives;
+        } else {
+            gameStateParam.score += 500 * gameStateParam.scoreMultiplier;
+            createScorePopup(player.x + player.width/2, player.y, '+500 Bonus!');
+        }
+        gameStateParam.bulletsHit = 0;
+    }
+}
 export function updateExplosions() {
     for (let i = explosions.length - 1; i >= 0; i--) {
         explosions[i].frame += gameState.deltaTime;
@@ -1405,14 +1191,9 @@ export function updateExplosions() {
     }
 }
 
-
-
-
 export function updateEffects(timeSlowFactor, gameStateParam) {
-    const deltaTime = gameState.deltaTime || 1;
-    
     if (gameStateParam.comboTimer > 0) {
-        gameStateParam.comboTimer -= deltaTime;
+        gameStateParam.comboTimer -= gameState.deltaTime;
         
         if (gameStateParam.comboTimer <= 0) {
             gameStateParam.comboTimer = 0;
@@ -1420,61 +1201,61 @@ export function updateEffects(timeSlowFactor, gameStateParam) {
         }
     }
     
-    // Update blood particles with deltaTime
+    // Update blood particles
     for (let i = bloodParticles.length - 1; i >= 0; i--) {
         const particle = bloodParticles[i];
-        particle.x += particle.velocityX * deltaTime;
-        particle.y += particle.velocityY * deltaTime;
-        particle.velocityY += 0.2 * deltaTime;
-        particle.life -= deltaTime;
+        particle.x += particle.velocityX * gameState.deltaTime;
+        particle.y += particle.velocityY * gameState.deltaTime;
+        particle.velocityY += 0.2 * gameState.deltaTime;
+        particle.life -= gameState.deltaTime;
         
         if (particle.life <= 0) {
             bloodParticles.splice(i, 1);
         }
     }
 
-    // Update lightning effects with deltaTime
+    // Update lightning effects
     for (let i = lightningEffects.length - 1; i >= 0; i--) {
         const effect = lightningEffects[i];
-        effect.life -= deltaTime;
+        effect.life -= gameState.deltaTime;
         
         if (effect.life <= 0) {
             lightningEffects.splice(i, 1);
         }
     }
 
-    // Update score popups with deltaTime
+    // Update score popups
     for (let i = scorePopups.length - 1; i >= 0; i--) {
         const popup = scorePopups[i];
-        popup.y -= deltaTime;
-        popup.life -= deltaTime;
+        popup.y -= gameState.deltaTime;
+        popup.life -= gameState.deltaTime;
         
         if (popup.life <= 0) {
             scorePopups.splice(i, 1);
         }
     }
 
-    // Update double jump particles with deltaTime
+    // Update double jump particles
     for (let i = doubleJumpParticles.length - 1; i >= 0; i--) {
         const particle = doubleJumpParticles[i];
-        particle.x += particle.velocityX * deltaTime;
-        particle.y += particle.velocityY * deltaTime;
-        particle.velocityY += 0.1 * deltaTime;
-        particle.life -= deltaTime;
+        particle.x += particle.velocityX * gameState.deltaTime;
+        particle.y += particle.velocityY * gameState.deltaTime;
+        particle.velocityY += 0.1 * gameState.deltaTime;
+        particle.life -= gameState.deltaTime;
         
         if (particle.life <= 0) {
             doubleJumpParticles.splice(i, 1);
         }
     }
     
-    // Update drop particles with deltaTime
+    // Update drop particles
     for (let i = dropParticles.length - 1; i >= 0; i--) {
         const particle = dropParticles[i];
-        particle.x += particle.velocityX * deltaTime;
-        particle.y += particle.velocityY * deltaTime;
-        particle.velocityX *= Math.pow(0.95, deltaTime);
-        particle.velocityY *= Math.pow(0.95, deltaTime);
-        particle.life -= deltaTime;
+        particle.x += particle.velocityX * gameState.deltaTime;
+        particle.y += particle.velocityY * gameState.deltaTime;
+        particle.velocityX *= Math.pow(0.95, gameState.deltaTime);
+        particle.velocityY *= Math.pow(0.95, gameState.deltaTime);
+        particle.life -= gameState.deltaTime;
         
         if (particle.life <= 0) {
             dropParticles.splice(i, 1);
@@ -1482,38 +1263,30 @@ export function updateEffects(timeSlowFactor, gameStateParam) {
     }
 }
 
-
-
 export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
-    // FIXED: Update every frame instead of every other frame for smooth animation
-    
     for (let i = drops.length - 1; i >= 0; i--) {
         const drop = drops[i];
         
-        // Physics update with deltaTime
-        const deltaTime = gameState.deltaTime || 1;
-        drop.velocityY += 0.3 * deltaTime;
-        drop.y += drop.velocityY * deltaTime;
+        drop.velocityY += 0.3 * gameState.deltaTime;
+        drop.y += drop.velocityY * gameState.deltaTime;
         
         if (drop.y >= CANVAS.groundY - drop.height) {
             drop.y = CANVAS.groundY - drop.height;
             drop.velocityY = -drop.velocityY * 0.5;
         }
         
-        // Rotation update for smooth spinning
-        drop.rotation = (drop.rotation || 0) + 0.05 * deltaTime;
+        drop.rotation += 0.05 * gameState.deltaTime;
+        drop.glowIntensity = 0.5 + Math.sin(Date.now() * 0.001) * 0.3;
         
-        // Magnet effect - simplified but smooth
         if (magnetRange > 0) {
             const dx = (player.x + player.width/2) - (drop.x + drop.width/2);
             const dy = (player.y + player.height/2) - (drop.y + drop.height/2);
-            const distanceSq = dx * dx + dy * dy; // Avoid sqrt
+            const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distanceSq < magnetRange * magnetRange) {
-                const distance = Math.sqrt(distanceSq);
+            if (distance < magnetRange) {
                 const force = (magnetRange - distance) / magnetRange * 0.5;
-                drop.x += dx * force * 0.4 * deltaTime;
-                drop.y += dy * force * 0.4 * deltaTime;
+                drop.x += dx * force * 0.2;
+                drop.y += dy * force * 0.2;
                 
                 if (drop.y > CANVAS.groundY - drop.height) {
                     drop.y = CANVAS.groundY - drop.height;
@@ -1521,7 +1294,6 @@ export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
             }
         }
         
-        // Collection check
         if (player.x < drop.x + drop.width &&
             player.x + player.width > drop.x &&
             player.y < drop.y + drop.height &&
@@ -1532,15 +1304,11 @@ export function updateDrops(gameSpeed, magnetRange, gameStateParam) {
             continue;
         }
         
-        // Off-screen check
         if (drop.x + drop.width < camera.x - 100) {
             drops.splice(i, 1);
         }
     }
 }
-
-
-
 
 export function updateAllEntities(gameStateParam) {
     updateObstacles(gameStateParam.gameSpeed, gameStateParam.enemySlowFactor, gameStateParam.level, gameStateParam.magnetRange, gameStateParam);
@@ -1551,6 +1319,190 @@ export function updateAllEntities(gameStateParam) {
     updateEffects(gameStateParam.timeSlowFactor, gameStateParam);
     updateBatProjectiles(gameStateParam);
 }
+
+// ENTITIES.JS - COLLISION SYSTEM KORREKTUR
+
+// ENTITIES.JS - KORRIGIERTE COLLISION SYSTEM
+
+export function checkCollisions(gameStateParam) {
+    // WICHTIG: Invulnerability check ZUERST für ALLE Collision-Types
+    if (isPlayerInvulnerable(gameStateParam)) {
+        // ❌ PROBLEM WAR HIER: Shield handling während Invulnerability
+        // Das alte System hat sowohl Shield UND Leben abgezogen
+        return false; // WICHTIG: Kein Schaden während Invulnerability
+    }
+
+    // ✅ KORREKTE SHIELD LOGIC - nur wenn NICHT invulnerable
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obstacle = obstacles[i];
+        
+        // Tesla Coil - nur Schaden bei ZAP + Position Check
+        if (obstacle.type === 'teslaCoil') {
+            if (obstacle.state === 'zapping' && obstacle.zapActive) {
+                const zapX = obstacle.x + obstacle.width/2 - 8;
+                const zapY = obstacle.y + obstacle.height;
+                const zapWidth = 16;
+                const zapHeight = CANVAS.groundY - zapY;
+                
+                if (player.x < zapX + zapWidth &&
+                    player.x + player.width > zapX &&
+                    player.y < zapY + zapHeight &&
+                    player.y + player.height > zapY) {
+                    
+                    return handleDamage(gameStateParam, 'Tesla Coil');
+                }
+            }
+            continue;
+        }
+        
+        // Frankenstein Table - nur Schaden bei ZAP + Position Check
+        if (obstacle.type === 'frankensteinTable') {
+            if (obstacle.state === 'zapping' && obstacle.zapActive) {
+                const zapX = obstacle.x + obstacle.width/2 - 12;
+                const zapY = 0;
+                const zapWidth = 24;
+                const zapHeight = obstacle.y + obstacle.height - 55;
+                
+                if (player.x < zapX + zapWidth &&
+                    player.x + player.width > zapX &&
+                    player.y < zapY + zapHeight &&
+                    player.y + player.height > zapY) {
+                    
+                    return handleDamage(gameStateParam, 'Frankenstein Table');
+                }
+            }
+            continue;
+        }
+        
+        // NORMALE GEGNER COLLISION
+        const hitbox = getObstacleHitbox(obstacle);
+        
+        if (player.x < hitbox.x + hitbox.width &&
+            player.x + player.width > hitbox.x &&
+            player.y < hitbox.y + hitbox.height &&
+            player.y + player.height > hitbox.y) {
+            
+            if (obstacle.type === 'boltBox') {
+                gameStateParam.bullets += 20;
+                createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, '+20 Bolts');
+                obstacles.splice(i, 1);
+                continue;
+            }
+            
+            if (obstacle.type === 'rock' || obstacle.type === 'sarcophagus') {
+                continue; // Kein Schaden
+            }
+            
+            // ✅ KORREKTE DAMAGE LOGIC mit Shield-Priorität
+            return handleDamage(gameStateParam, obstacle.type, i);
+        }
+    }
+    
+    return false; // Kein Game Over
+}
+
+// ✅ NEUE ZENTRALE DAMAGE-HANDLING FUNKTION
+
+
+
+function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCategory = 'enemy') {
+    console.log(`🎯 Damage from ${damageSource} (${damageCategory})`);
+    
+    // 1. SHIELD CHECK FIRST
+    if (gameStateParam.shieldCharges > 0) {
+        const wasLastShield = gameStateParam.shieldCharges === 1;
+        gameStateParam.shieldCharges--;
+        
+        if (gameStateParam.shieldCharges <= 0) {
+            // Last shield broken
+            gameStateParam.hasShield = false;
+            gameStateParam.shieldCharges = 0;
+            createScorePopup(player.x + player.width/2, player.y, 'Shield Broken!');
+            
+            // NEW: Enhanced shield break effects
+            triggerDamageEffects(gameStateParam, 'shield');
+            
+        } else {
+            // Shield absorbed damage
+            createScorePopup(player.x + player.width/2, player.y, 
+                `Shield: ${gameStateParam.shieldCharges} left`);
+            
+            // NEW: Shield hit effects
+            triggerDamageEffects(gameStateParam, 'shield');
+        }
+        
+        // Remove obstacle and set invulnerability
+        if (obstacleIndex >= 0 && obstacles[obstacleIndex]) {
+            obstacles.splice(obstacleIndex, 1);
+        }
+        gameStateParam.postDamageInvulnerability = 60;
+        player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+        
+        if (!wasLastShield) {
+            soundManager.hit(); // Normal shield hit sound
+        }
+        
+        return false; // No game over
+    }
+    
+    // 2. NO SHIELD - HEALTH DAMAGE
+    gameStateParam.lives--;
+    gameStateParam.damageThisLevel++;
+    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
+    
+    // NEW: Enhanced health damage effects
+    triggerDamageEffects(gameStateParam, 'health');
+    
+    // Set invulnerability and reset stats
+    gameStateParam.postDamageInvulnerability = 120;
+    player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+    
+    gameStateParam.bulletsHit = 0;
+    gameStateParam.comboCount = 0;
+    gameStateParam.comboTimer = 0;
+    gameStateParam.consecutiveHits = 0;
+    
+    // Remove obstacle
+    if (obstacleIndex >= 0 && obstacles[obstacleIndex]) {
+        obstacles.splice(obstacleIndex, 1);
+    }
+    
+    soundManager.hit();
+    
+    // Check for game over
+    if (gameStateParam.lives <= 0) {
+        return true; // Game Over
+    }
+    
+    return false; // Continue playing
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// ✅ KORRIGIERTE INVULNERABILITY CHECK
+export function isPlayerInvulnerable(gameStateParam) {
+    return player.damageResistance > 0 || 
+           gameStateParam.postBuffInvulnerability > 0 || 
+           gameStateParam.postDamageInvulnerability > 0 || 
+           gameStateParam.isGhostWalking;
+    // ❌ ENTFERNT: gameStateParam.hasShield - Shield ist KEIN Invulnerability!
+}
+
+// ✅ ZUSÄTZLICH: Shield Collection korrigieren in systems.js
+// In der collectDrop Funktion für DropType.SHIELD:
+
+
+
+
 
 // Environment functions
 export function initEnvironmentElements() {

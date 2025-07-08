@@ -144,28 +144,79 @@ export class SpriteManager {
     }
     
     // FIXED: Enhanced drawSprite method with better animation smoothing
-// FIXED: Enhanced drawSprite method with better animation smoothing
-drawSprite(ctx, spriteName, animationName, x, y, scale = 1, flipX = false, deltaTime = 1, entityId = 'default') {
-    const sprite = this.sprites[spriteName];
-    if (!sprite) {
-        console.warn(`Sprite not found: ${spriteName}`);
-        return false;
-    }
-    
-    const { image, config } = sprite;
-    const animation = config.animations[animationName];
-    if (!animation) {
-        console.warn(`Animation not found: ${animationName} for sprite ${spriteName}`);
-        return false;
-    }
-    
-    // Get animation state for this specific entity instance
-    const animState = this.getAnimationState(spriteName, entityId, animationName);
-    
-    // Single frame shortcut
-    if (animation.frames === 1) {
-        const sourceX = 0;
-        const sourceY = animation.row * config.frameHeight;
+    drawSprite(ctx, spriteName, animationName, x, y, scale = 1, flipX = false, deltaTime = 1, entityId = 'default') {
+        const sprite = this.sprites[spriteName];
+        if (!sprite) {
+            console.warn(`Sprite not found: ${spriteName}`);
+            return false;
+        }
+        
+        const { image, config } = sprite;
+        const animation = config.animations[animationName];
+        if (!animation) {
+            console.warn(`Animation not found: ${animationName} for sprite ${spriteName}`);
+            return false;
+        }
+        
+        // Get animation state for this specific entity instance
+        const animState = this.getAnimationState(spriteName, entityId, animationName);
+        
+        // FIXED: Improved smoothing control
+        const smoothing = animation.smooth !== false && animation.frames > 1;
+        
+        // Single frame shortcut
+        if (animation.frames === 1) {
+            const sourceX = 0;
+            const sourceY = animation.row * config.frameHeight;
+            
+            ctx.save();
+            
+            if (flipX) {
+                ctx.scale(-1, 1);
+                x = -x - (config.frameWidth * scale);
+            }
+            
+            ctx.drawImage(
+                image,
+                sourceX, sourceY, config.frameWidth, config.frameHeight,
+                x, y, config.frameWidth * scale, config.frameHeight * scale
+            );
+            
+            ctx.restore();
+            return true;
+        }
+        
+        // FIXED: Enhanced multi-frame animation with better timing
+        const normalizedDeltaTime = Math.min(deltaTime, 2);
+        
+        // Update animation timer
+        animState.elapsedTime += normalizedDeltaTime;
+        
+        // FIXED: Better frame duration calculation
+        const frameDuration = Math.max(60 / animation.frameRate, 1);
+        
+        // Update frame if needed
+        if (animState.elapsedTime >= frameDuration) {
+            const frameAdvance = Math.floor(animState.elapsedTime / frameDuration);
+            animState.elapsedTime = animState.elapsedTime % frameDuration;
+            animState.currentFrame += frameAdvance;
+            
+            // Handle looping with better logic
+            if (animState.currentFrame >= animation.frames) {
+                if (animation.loop !== false) {
+                    animState.currentFrame = animState.currentFrame % animation.frames;
+                    animState.finished = false;
+                } else {
+                    animState.currentFrame = animation.frames - 1;
+                    animState.finished = true;
+                }
+            }
+        }
+        
+        // Update transition timer
+        if (animState.transitionTime > 0) {
+            animState.transitionTime -= normalizedDeltaTime;
+        }
         
         ctx.save();
         
@@ -174,69 +225,59 @@ drawSprite(ctx, spriteName, animationName, x, y, scale = 1, flipX = false, delta
             x = -x - (config.frameWidth * scale);
         }
         
-        ctx.drawImage(
-            image,
-            sourceX, sourceY, config.frameWidth, config.frameHeight,
-            x, y, config.frameWidth * scale, config.frameHeight * scale
-        );
+        // FIXED: Simplified animation rendering - NO smooth blending for stable frames
+        if (smoothing && !animState.finished && animation.frames > 3) {
+            // Only use blending for very long animations and only at specific progress points
+            const frameProgress = animState.elapsedTime / frameDuration;
+            
+            if (frameProgress > 0.8 && frameProgress < 0.95 && animState.currentFrame > 0) {
+                // Very minimal blending only at the very end of frame transition
+                const prevFrame = (animState.currentFrame - 1 + animation.frames) % animation.frames;
+                const prevSourceX = prevFrame * config.frameWidth;
+                const prevSourceY = animation.row * config.frameHeight;
+                
+                const blendAmount = (frameProgress - 0.8) / 0.15; // Quick transition
+                
+                ctx.globalAlpha = Math.max(0.3, 1 - blendAmount);
+                ctx.drawImage(
+                    image,
+                    prevSourceX, prevSourceY, config.frameWidth, config.frameHeight,
+                    x, y, config.frameWidth * scale, config.frameHeight * scale
+                );
+            }
+            
+            // Draw current frame
+            const sourceX = animState.currentFrame * config.frameWidth;
+            const sourceY = animation.row * config.frameHeight;
+            
+            if (frameProgress > 0.8 && frameProgress < 0.95 && animState.currentFrame > 0) {
+                const blendAmount = (frameProgress - 0.8) / 0.15;
+                ctx.globalAlpha = Math.max(0.3, blendAmount);
+            } else {
+                ctx.globalAlpha = 1;
+            }
+            
+            ctx.drawImage(
+                image,
+                sourceX, sourceY, config.frameWidth, config.frameHeight,
+                x, y, config.frameWidth * scale, config.frameHeight * scale
+            );
+        } else {
+            // CLEAN frame-by-frame rendering - most stable approach
+            const sourceX = animState.currentFrame * config.frameWidth;
+            const sourceY = animation.row * config.frameHeight;
+            
+            ctx.globalAlpha = 1;
+            ctx.drawImage(
+                image,
+                sourceX, sourceY, config.frameWidth, config.frameHeight,
+                x, y, config.frameWidth * scale, config.frameHeight * scale
+            );
+        }
         
         ctx.restore();
         return true;
     }
-    
-    // PERFORMANCE: Simplified multi-frame animation
-    const normalizedDeltaTime = Math.min(deltaTime, 1.5); // Reduced cap for smoother animation
-    
-    // Update animation timer
-    animState.elapsedTime += normalizedDeltaTime;
-    
-    // PERFORMANCE: Simple frame advancement without smoothing
-    let frameDuration = Math.max(60 / animation.frameRate, 2); 
-    
-  // SPECIAL: Slower animation for skeletons to reduce stuttering
-    if (spriteName === 'skeleton') {
-        frameDuration *= 1.5; // 50% slower animation
-    }
-    
-    // Update frame if needed
-    if (animState.elapsedTime >= frameDuration) {
-        const frameAdvance = Math.floor(animState.elapsedTime / frameDuration);
-        animState.elapsedTime = animState.elapsedTime % frameDuration;
-        animState.currentFrame += frameAdvance;
-        
-        // Handle looping
-        if (animState.currentFrame >= animation.frames) {
-            if (animation.loop !== false) {
-                animState.currentFrame = animState.currentFrame % animation.frames;
-                animState.finished = false;
-            } else {
-                animState.currentFrame = animation.frames - 1;
-                animState.finished = true;
-            }
-        }
-    }
-    
-    ctx.save();
-    
-    if (flipX) {
-        ctx.scale(-1, 1);
-        x = -x - (config.frameWidth * scale);
-    }
-    
-    // PERFORMANCE: Direct frame rendering without blending
-    const sourceX = animState.currentFrame * config.frameWidth;
-    const sourceY = animation.row * config.frameHeight;
-    
-    ctx.globalAlpha = 1;
-    ctx.drawImage(
-        image,
-        sourceX, sourceY, config.frameWidth, config.frameHeight,
-        x, y, config.frameWidth * scale, config.frameHeight * scale
-    );
-    
-    ctx.restore();
-    return true;
-}
     
     // FIXED: Better easing functions
     easeInOutSine(t) {

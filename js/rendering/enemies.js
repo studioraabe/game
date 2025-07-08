@@ -777,52 +777,40 @@ export function drawEnemy(obstacle, ctx, gameState) {
 }
 
 
-
 function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
-    // Safety checks
+    // Zusätzliche Sicherheitsprüfung
     if (maxHealth <= 1 || type === 'boltBox' || type === 'bat') {
-        return; // Don't draw health bars for these types
+        return; // Zeichne nichts für diese Typen
+    }
+	 if (type === 'skeleton') {
+        console.log(`Skeleton health: ${health}/${maxHealth}`);
     }
     
-    const barHeight = 8;
-    const segmentWidth = width / maxHealth;
+    const barHeight = 8; // Größere Gesamthöhe für bessere Sichtbarkeit
+    const segmentWidth = width / maxHealth; // Breite pro Gesundheitspunkt
     
-    // Dark background
-    ctx.fillStyle = '#1A1A1A';
-    ctx.fillRect(x, y, width, barHeight);
-    
-    // Draw each health segment
+    // Zeichne jedes Segment einzeln
     for (let i = 0; i < maxHealth; i++) {
         const segmentX = x + i * segmentWidth;
         
-        // Segment background (lost HP) - dark gray
+        // Segment-Hintergrund (dunkelgrau für verlorene HP)
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2);
+        ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2); // Platz für Rahmen lassen
         
-        // Current health (if this segment has health)
+        // Aktuelle Gesundheit (rot für vorhandene HP)
         if (i < health) {
-            let healthColor;
-            if (type === 'alphaWolf') {
-                healthColor = '#FF6B00'; // Bright orange for alpha wolf
-            } else {
-                healthColor = '#CC0000'; // Brighter red for other enemies
-            }
-            
+            const healthColor = (type === 'alphaWolf') ? '#FF4500' : '#8B0000'; // Orange für Alpha, DarkRed für andere
             ctx.fillStyle = healthColor;
-            ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2);
-            
-            // Add a bright highlight to make it more visible
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, 2);
+            ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2); // Vollständig rote Füllung
         }
     }
     
-    // Strong black border for contrast
+    // Rahmen um die gesamte Health Bar (außen)
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, barHeight);
     
-    // Segment dividers
+    // Trennlinien zwischen den Segmenten
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
     for (let i = 1; i < maxHealth; i++) {
@@ -833,9 +821,6 @@ function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
         ctx.stroke();
     }
 }
-
-
-
 function drawSkeleton(ctx, x, y, animTime = 0) {
     const scale = 1.3;
     const timeScale = animTime * 0.001;
@@ -1502,51 +1487,31 @@ function drawSpider(ctx, x, y, isBoss = false, animTime = 0) {
 
 
 
+
 function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
-    // PERFORMANCE: Skip rendering every other frame for regular wolves
-    if (!isAlpha && obstacle && obstacle._skipFrame === true) {
-        obstacle._skipFrame = false;
-        return;
-    }
-    if (!isAlpha && obstacle) {
-        obstacle._skipFrame = true;
-    }
-    
     const scale = isAlpha ? 2.4 : 1.8; // Alpha deutlich größer
     const timeScale = animTime * 0.001;
     const prowl = Math.sin(timeScale * 3) * 1.5; // Raubtierbewegung
     const breathe = Math.sin(timeScale * 4) * 1; // Schweres Atmen
     const snarl = Math.sin(timeScale * 8) > 0.5; // Zähne fletschen
     
-    // FIXED: Initialize shouldFlip first, then derive facingLeft
-    let shouldFlip = false;
+   let shouldFlip = false;
 
-    if (obstacle && obstacle.type === 'alphaWolf') {
-        if (obstacle.isFuryCharging || obstacle.isLeaping) {
-            // Im Fury Mode: Zum Spieler schauen - richtige Richtungsbestimmung
-            const playerCenterX = player.x + player.width/2;
-            const wolfCenterX = obstacle.x + obstacle.width/2;
-            
-            // Wenn Spieler LINKS vom Wolf ist -> Wolf muss nach LINKS schauen (spiegeln)
-            shouldFlip = playerCenterX < wolfCenterX;
-        } else {
-            // Normale Bewegung: Standard-Spiegelungslogik
-            shouldFlip = obstacle.facingDirection === -1;
-        }
+if (obstacle && obstacle.type === 'alphaWolf') {
+    if (obstacle.isFuryCharging || obstacle.isLeaping) {
+        // Im Fury Mode: Zum Spieler schauen - richtige Richtungsbestimmung
+        const playerCenterX = player.x + player.width/2;
+        const wolfCenterX = obstacle.x + obstacle.width/2;
+        
+        // Wenn Spieler LINKS vom Wolf ist -> Wolf muss nach LINKS schauen (spiegeln)
+        shouldFlip = playerCenterX < wolfCenterX;
+    } else {
+        // Normale Bewegung: Standard-Spiegelungslogik
+        shouldFlip = obstacle.facingDirection === -1;
     }
+}
 
-    // FIXED: facingLeft is now properly initialized after shouldFlip
-    const facingLeft = shouldFlip;
-    
-    // FIXED: Ensure full opacity and proper canvas state
-    ctx.globalAlpha = 1.0;
-    
-    // FIXED: Only save/flip if needed
-    if (facingLeft) {
-        ctx.save();
-        ctx.scale(-1, 1);
-        x = -x - (52 * scale); // Adjust for wolf width
-    }
+const facingLeft = shouldFlip;
     
     // Bedrohlicher Schatten
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -1764,12 +1729,12 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
         ctx.fillRect(x + 2 * scale, y + 18 * scale + prowl + breathe, 8 * scale, 1 * scale);
         ctx.fillRect(x + 3 * scale, y + 19 * scale + prowl + breathe, 6 * scale, 1 * scale);
         
-        // FURY CHARGING EFFEKTE - FIXED: Circular glow
+        // FURY CHARGING EFFEKTE
         if (obstacle && obstacle.isFuryCharging && obstacle.furyChargeTime > 0) {
             const chargeProgress = (90 - obstacle.furyChargeTime) / 90;
             const intensity = Math.sin(timeScale * 25) * 0.5 + 0.5;
             
-            // FIXED: Circular fury charging aura
+            // INTENSIVE Lade-Aura
             const centerX = x + 20 * scale;
             const centerY = y + 15 * scale + prowl;
             const maxRadius = (25 + chargeProgress * 40) * scale;
@@ -1790,15 +1755,13 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
             ctx.arc(centerX, centerY, maxRadius, 0, Math.PI * 2);
             ctx.fill();
             
-            // Energie-Funken around the circle
+            // Energie-Funken
             if (Math.random() > 0.4) {
                 ctx.fillStyle = `rgba(255, 255, 0, ${intensity})`;
                 for (let s = 0; s < 8; s++) {
-                    const angle = (s / 8) * Math.PI * 2;
-                    const sparkRadius = maxRadius * (0.8 + Math.random() * 0.4);
-                    const sparkX = centerX + Math.cos(angle) * sparkRadius;
-                    const sparkY = centerY + Math.sin(angle) * sparkRadius;
-                    ctx.fillRect(sparkX - 1.5, sparkY - 1.5, 3 * scale, 3 * scale);
+                    const sparkX = centerX + (Math.random() - 0.5) * maxRadius * 1.5;
+                    const sparkY = centerY + (Math.random() - 0.5) * maxRadius * 1.5;
+                    ctx.fillRect(sparkX, sparkY, 3 * scale, 3 * scale);
                 }
             }
             
@@ -1863,14 +1826,12 @@ function drawWolf(ctx, x, y, isAlpha = false, animTime = 0, obstacle = null) {
         ctx.fillRect(bloodX, bloodY, 2 * scale, 2 * scale);
     }
     
-    // FIXED: Always restore if we flipped, and reset alpha
+    // Horizontal flip zurücksetzen
     if (facingLeft) {
         ctx.restore();
     }
-    
-    // FIXED: Ensure alpha is reset
-    ctx.globalAlpha = 1.0;
 }
+
 
 
 

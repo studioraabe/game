@@ -322,63 +322,27 @@ export function drawBullet(ctx, x, y, enhanced = false, hasPiercingBullets = fal
 }
 
 
-
-
-// Drop items - OPTIMIZED
+// Drop items
 export function drawDrop(ctx, drop) {
     const x = getScreenX(drop.x);
     const y = drop.y;
     
-    // PERFORMANCE: Cache time-based calculations
-    const currentTime = Date.now();
-    if (!drop._lastGlowUpdate || currentTime - drop._lastGlowUpdate > 50) {
-        drop.glowIntensity = 0.5 + Math.sin(currentTime * 0.002) * 0.3;
-        drop._lastGlowUpdate = currentTime;
-    }
+    // Glow aura with slower pulsing (0.002 statt 0.005)
+    const glowIntensity = drop.glowIntensity || (0.5 + Math.sin(Date.now() * 0.002) * 0.3);
+    const gradient = ctx.createRadialGradient(x + 12, y + 12, 0, x + 12, y + 12, 20);
+    gradient.addColorStop(0, `${drop.info.color}88`);
+    gradient.addColorStop(0.5, `${drop.info.color}44`);
+    gradient.addColorStop(1, `${drop.info.color}00`);
     
-    // PERFORMANCE: Only update rotation occasionally
-    if (!drop._lastRotationUpdate || currentTime - drop._lastRotationUpdate > 16) {
-        drop.rotation = (drop.rotation || 0) + 0.05;
-        drop._lastRotationUpdate = currentTime;
-    }
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - 8, y - 8, 40, 40);
     
-    // FIXED: Circular glow instead of rectangle
-    const centerX = x + 12;
-    const centerY = y + 12;
-    const glowRadius = 20 + drop.glowIntensity * 10;
-    
-    const dropGradient = ctx.createRadialGradient(
-        centerX, centerY, 0,
-        centerX, centerY, glowRadius
-    );
-    
-    // Parse color for gradient
-    const dropColor = drop.info.color;
-    let r, g, b;
-    if (dropColor.startsWith('#')) {
-        r = parseInt(dropColor.slice(1, 3), 16);
-        g = parseInt(dropColor.slice(3, 5), 16);
-        b = parseInt(dropColor.slice(5, 7), 16);
-    } else {
-        // Default fallback
-        r = 255; g = 215; b = 0;
-    }
-    
-    dropGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${drop.glowIntensity * 0.6})`);
-    dropGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${drop.glowIntensity * 0.4})`);
-    dropGradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${drop.glowIntensity * 0.2})`);
-    dropGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    
-    ctx.fillStyle = dropGradient;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Container
+    // Rotating container with corrected rotation value
     ctx.save();
     ctx.translate(x + 12, y + 12);
     ctx.rotate(drop.rotation);
     
+    // Container box
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.fillRect(-10, -10, 20, 20);
     
@@ -392,23 +356,12 @@ export function drawDrop(ctx, drop) {
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#000000';
     ctx.fillText(drop.info.icon, x + 12, y + 12);
     
-    // FIXED: Circular sparkles
-    if (!drop._lastSparkle || currentTime - drop._lastSparkle > 100) {
-        drop._sparkleVisible = Math.random() > 0.3;
-        drop._lastSparkle = currentTime;
-    }
-    
-    if (drop._sparkleVisible) {
+    // Sparkle effect with slower animation (0.005 statt 0.01)
+    if (Math.sin(Date.now() * 0.005 + drop.x) > 0.7) {
         ctx.fillStyle = '#FFFFFF';
-        const sparkle1X = centerX + Math.cos(drop.rotation) * 15;
-        const sparkle1Y = centerY + Math.sin(drop.rotation) * 15;
-        const sparkle2X = centerX + Math.cos(drop.rotation + Math.PI) * 12;
-        const sparkle2Y = centerY + Math.sin(drop.rotation + Math.PI) * 12;
-        
-        ctx.fillRect(sparkle1X - 1, sparkle1Y - 1, 2, 2);
-        ctx.fillRect(sparkle2X - 1, sparkle2Y - 1, 2, 2);
+        ctx.fillRect(x + 20, y + 4, 2, 2);
+        ctx.fillRect(x + 4, y + 20, 2, 2);
     }
 }

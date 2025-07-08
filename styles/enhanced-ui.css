@@ -1,402 +1,11 @@
-/* enhanced-ui.css - Enhanced UI Styles with Roguelike Features */
+/* enhanced-ui.css - Enhanced UI Styles with Controller Support */
 
 /* Ensure game container has proper positioning */
 #gameContainer {
     position: relative !important;
 }
 
-/* ===== NEW ROGUELIKE ELEMENTS ===== */
-
-/* Health Bar Enhancement for HP System */
-.health-bar-container {
-    position: relative;
-    width: 100%;
-    height: 28px;
-    background: rgba(0, 0, 0, 0.6);
-    border: 2px solid var(--glass-border);
-    border-radius: 10px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    padding: 2px;
-}
-
-.health-bar-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, 
-        rgba(255, 23, 68, 0.1) 0%, 
-        rgba(255, 23, 68, 0.05) 50%, 
-        rgba(0, 255, 136, 0.1) 100%);
-    border-radius: inherit;
-}
-
-.health-bar-fill {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    height: calc(100% - 4px);
-    background: linear-gradient(90deg, #00ff88 0%, #00cc6a 100%);
-    border-radius: 8px;
-    transition: width 0.3s ease;
-    min-width: 2px;
-}
-
-.health-bar-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-    animation: healthBarShine 3s infinite;
-}
-
-.health-bar-text {
-    position: relative;
-    z-index: 2;
-    color: #ffffff;
-    font-weight: 700;
-    font-family: 'Rajdhani', monospace;
-    font-size: 14px;
-    text-align: center;
-    width: 100%;
-    text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
-    line-height: 1;
-}
-
-@keyframes healthBarShine {
-    0% { left: -100%; }
-    100% { left: 100%; }
-}
-
-/* Health states */
-.health-bar-container.low-health .health-bar-fill {
-    background: linear-gradient(90deg, #ff8c00 0%, #ff6b35 100%);
-}
-
-.health-bar-container.critical-health .health-bar-fill {
-    background: linear-gradient(90deg, #ff1744 0%, #d50000 100%);
-    animation: criticalHealthPulse 1s ease-in-out infinite;
-}
-
-.health-bar-container.shield-active {
-    border-color: rgba(65, 105, 225, 0.6);
-    box-shadow: 0 0 12px rgba(65, 105, 225, 0.4);
-}
-
-.health-bar-container.shield-active .health-bar-fill {
-    background: linear-gradient(90deg, #4169e1 0%, #1e90ff 100%);
-}
-
-@keyframes criticalHealthPulse {
-    0%, 100% { 
-        opacity: 1;
-        box-shadow: 0 0 8px rgba(255, 23, 68, 0.6);
-    }
-    50% { 
-        opacity: 0.8;
-        box-shadow: 0 0 16px rgba(255, 23, 68, 0.9);
-    }
-}
-
-/* Stats Display - Real-time character stats */
-.stats-display {
-    position: absolute !important;
-    top: 80px !important;
-    left: 20px !important;
-    background: var(--glass-dark);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius);
-    padding: 8px 12px;
-    z-index: 25 !important;
-    min-width: 140px;
-    font-size: 11px;
-    line-height: 1.3;
-    color: var(--text-secondary);
-    font-family: 'Rajdhani', monospace;
-    font-weight: 500;
-}
-
-.stats-display:empty {
-    display: none !important;
-}
-
-/* Weapons Display - Right side */
-.weapons-display-container {
-    position: absolute !important;
-    bottom: 12px !important;
-    right: 16px !important;
-    max-width: 200px;
-    z-index: 100 !important;
-    pointer-events: none;
-    display: block !important;
-    visibility: visible !important;
-}
-
-.weapon-item {
-    display: flex;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.8);
-    border-radius: 10px;
-    padding: 8px 12px;
-    margin-bottom: 6px;
-    border-left: 3px solid;
-    transition: all 0.3s ease;
-    min-height: 40px;
-}
-
-.weapon-item.legendary { 
-    border-left-color: #FF6B00;
-    background: rgba(255, 107, 0, 0.1);
-}
-.weapon-item.epic { 
-    border-left-color: #A335EE;
-    background: rgba(163, 53, 238, 0.1);
-}
-.weapon-item.rare { 
-    border-left-color: #0070DD;
-    background: rgba(0, 112, 221, 0.1);
-}
-.weapon-item.common { 
-    border-left-color: #9D9D9D;
-    background: rgba(157, 157, 157, 0.1);
-}
-
-.weapon-item.weapon-expiring {
-    animation: weaponExpiring 0.8s infinite;
-}
-
-.weapon-item.weapon-new {
-    animation: weaponSlideIn 0.6s ease-out;
-}
-
-.weapon-icon {
-    font-size: 18px;
-    margin-right: 10px;
-    min-width: 22px;
-    text-align: center;
-    filter: drop-shadow(0 0 3px currentColor);
-}
-
-.weapon-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.weapon-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 3px;
-    font-family: 'Rajdhani', sans-serif;
-}
-
-.weapon-timer {
-    font-size: 11px;
-    color: #00ff88;
-    margin-bottom: 3px;
-    font-family: 'Rajdhani', monospace;
-    font-weight: 600;
-}
-
-.weapon-progress {
-    background: rgba(255, 255, 255, 0.15);
-    height: 3px;
-    border-radius: 2px;
-    overflow: hidden;
-    width: 100%;
-}
-
-.weapon-progress-fill {
-    background: linear-gradient(90deg, #00ff88, #00cc6a);
-    height: 100%;
-    transition: width 0.2s ease;
-    border-radius: 2px;
-}
-
-@keyframes weaponExpiring {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.98); }
-}
-
-@keyframes weaponSlideIn {
-    0% { 
-        transform: translateX(300px);
-        opacity: 0; 
-    }
-    100% { 
-        transform: translateX(0); 
-        opacity: 1; 
-    }
-}
-
-/* Enhanced Damage Numbers for Roguelike */
-.damage-number {
-    position: absolute;
-    font-family: 'Rajdhani', monospace;
-    font-weight: 800;
-    font-size: 18px;
-    pointer-events: none;
-    z-index: 1000;
-    user-select: none;
-    text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
-}
-
-.damage-critical {
-    font-size: 24px;
-    font-weight: 900;
-    text-shadow: 0 0 12px currentColor;
-    animation: criticalPulse 0.1s ease-out;
-}
-
-@keyframes criticalPulse {
-    0% { transform: scale(1.3); }
-    100% { transform: scale(1); }
-}
-
-@keyframes damageNumber {
-    0% { 
-        transform: translateY(0) scale(0.8); 
-        opacity: 1; 
-    }
-    50% { 
-        transform: translateY(-25px) scale(1.1); 
-        opacity: 1; 
-    }
-    100% { 
-        transform: translateY(-50px) scale(1); 
-        opacity: 0; 
-    }
-}
-
-@keyframes damageNumberCritical {
-    0% { 
-        transform: translateY(0) scale(1.2); 
-        opacity: 1; 
-        text-shadow: 0 0 15px currentColor;
-    }
-    25% { 
-        transform: translateY(-20px) scale(1.4); 
-        opacity: 1; 
-        text-shadow: 0 0 20px currentColor;
-    }
-    50% { 
-        transform: translateY(-30px) scale(1.3); 
-        opacity: 1; 
-        text-shadow: 0 0 25px currentColor;
-    }
-    100% { 
-        transform: translateY(-60px) scale(1.1); 
-        opacity: 0; 
-        text-shadow: 0 0 10px currentColor;
-    }
-}
-
-/* ===== ENHANCED UI PANEL ALIGNMENT ===== */
-
-/* Updated Health Bar Styling */
-#healthBar {
-    top: 20px;
-    left: 20px;
-    width: 220px;
-    padding: 12px;
-    height: 52px;
-    background: var(--glass-dark);
-    backdrop-filter: blur(15px);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius);
-    z-index: 10;
-}
-
-/* Enhanced Bullet Count */
-#bulletCount {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    height: 52px;
-    background: var(--glass-dark);
-    backdrop-filter: blur(15px);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius);
-    z-index: 10;
-    min-width: 100px;
-}
-
-.bulletcountValue {
-    color: var(--accent);
-    font-weight: 800;
-    font-family: 'Rajdhani', monospace;
-    font-size: 24px;
-    line-height: 1;
-    text-align: right;
-    text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-}
-
-#bulletCount .ui-label {
-    font-size: 20px;
-    color: var(--accent);
-    filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.5));
-}
-
-/* Enhanced Score Panel */
-#scorePanel {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 32px;
-    padding: 12px 20px;
-    align-items: center;
-    height: 52px;
-    background: var(--glass-dark);
-    backdrop-filter: blur(15px);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius);
-    z-index: 10;
-    min-width: 280px;
-}
-
-.score-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    color: var(--text-secondary);
-    min-width: 80px;
-}
-
-.ui-label {
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-family: 'Rajdhani', sans-serif;
-}
-
-.ui-value {
-    color: var(--text-accent);
-    font-weight: 700;
-    font-family: 'Rajdhani', monospace;
-    font-size: 20px;
-    line-height: 1;
-    text-shadow: 0 0 6px rgba(0, 255, 136, 0.4);
-}
-
-/* ===== EXISTING COMBO AND BUFF STYLES (Enhanced) ===== */
-
-/* Combo Display - Bottom Center */
+/* 1. ENHANCED COMBO DISPLAY - UNTEN MITTE */
 .combo-display-enhanced {
     position: absolute !important;
     bottom: 20px !important;
@@ -407,7 +16,7 @@
     pointer-events: none;
     transition: all 0.1s ease;
     
-    /* Hidden by default */
+    /* WICHTIG: Standardmäßig komplett unsichtbar */
     background: none !important;
     border: none !important;
     padding: 0 !important;
@@ -417,201 +26,8 @@
     height: auto !important;
 }
 
-/* Only visible when active */
-.combo-display-enhanced.combo-subtle {
-    min-width: 90px;
-    min-height: 50px;
-    padding: 10px 14px !important;
-    background: rgba(0, 0, 0, 0.8) !important;
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    backdrop-filter: blur(10px);
-}
-
-.combo-number-subtle {
-    font-size: 32px;
-    font-weight: 800;
-    font-family: 'Rajdhani', monospace;
-    margin-bottom: 4px;
-    color: #00ff88;
-    text-shadow: 0 0 10px currentColor;
-    transition: all 0.2s ease;
-    line-height: 1;
-}
-
-.combo-rank {
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'Rajdhani', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-    opacity: 0.9;
-}
-
-.combo-timer-subtle {
-    width: 70px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 0 auto;
-}
-
-.combo-timer-fill-subtle {
-    height: 100%;
-    background: #00ff88;
-    transition: width 0.1s linear;
-    border-radius: 2px;
-    box-shadow: 0 0 6px rgba(0, 255, 136, 0.6);
-}
-
-.combo-wiggle {
-    animation: comboWiggle 0.4s ease-out;
-}
-
-@keyframes comboWiggle {
-    0% { transform: scale(1) rotate(0deg); }
-    25% { transform: scale(1.2) rotate(-2deg); }
-    50% { transform: scale(1.2) rotate(2deg); }
-    75% { transform: scale(1.15) rotate(-1deg); }
-    100% { transform: scale(1) rotate(0deg); }
-}
-
-/* Enhanced Buffs Container */
-.enhanced-buffs-container {
-    position: absolute !important;
-    bottom: 12px !important;
-    left: 20px !important;
-    max-width: 180px;
-    z-index: 30 !important;
-    pointer-events: none;
-    min-width: 40px;
-    min-height: 40px;
-    padding: 4px !important;
-    overflow: visible;
-}
-
-.buff-item {
-    display: flex;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(8px);
-    min-height: 44px;
-}
-
-.buff-item.buff-new {
-    animation: buffSlideIn 0.6s ease-out;
-}
-
-.buff-icon {
-    font-size: 20px;
-    margin-right: 12px;
-    filter: drop-shadow(0 0 4px currentColor);
-    min-width: 24px;
-    text-align: center;
-}
-
-.buff-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.buff-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 3px;
-    font-family: 'Rajdhani', sans-serif;
-}
-
-.buff-timer {
-    font-size: 14px;
-    font-weight: 700;
-    color: #00ff88;
-    font-family: 'Rajdhani', monospace;
-    margin-bottom: 3px;
-}
-
-.buff-status {
-    font-size: 10px;
-    color: #00ff88;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-
-.buff-progress {
-    width: 100%;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-top: 4px;
-}
-
-.buff-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #00ff88, #00cc6a);
-    transition: width 0.2s ease;
-    border-radius: 2px;
-}
-
-/* Buff type styling */
-.buff-shield {
-    border-color: rgba(65, 105, 225, 0.4);
-    background: rgba(65, 105, 225, 0.1);
-    order: -10; /* Always first */
-}
-
-.buff-health {
-    border-color: rgba(255, 69, 0, 0.4);
-    background: rgba(255, 69, 0, 0.08);
-    order: -9; /* Second */
-}
-
-.buff-stats {
-    border-color: rgba(220, 20, 60, 0.4);
-    background: rgba(220, 20, 60, 0.08);
-    order: -8; /* Third */
-}
-
-.buff-expiring {
-    animation: buffExpiring 0.6s ease infinite;
-    border-color: rgba(255, 23, 68, 0.6);
-}
-
-.buff-expiring .buff-timer {
-    color: #ff1744;
-}
-
-.buff-expiring .buff-progress-fill {
-    background: linear-gradient(90deg, #ff1744, #ff6b35);
-}
-
-@keyframes buffSlideIn {
-    from { 
-        transform: translateX(-350px);
-        opacity: 0; 
-    }
-    to { 
-        transform: translateX(0); 
-        opacity: 1; 
-    }
-}
-
-@keyframes buffExpiring {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.8; }
-}
-
-/* ===== ENHANCED OPTIONS OVERLAY ===== */
-
+/* Enhanced Options Overlay with Tabs */
+/* Enhanced Options Overlay with Consistent Scrollbar Styling */
 #volumeOverlay {
     position: absolute;
     bottom: 80px;
@@ -631,12 +47,66 @@
     overflow: hidden;
 }
 
+/* Apply the same scrollbar styling as main screens */
+#volumeOverlay::-webkit-scrollbar,
+.options-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#volumeOverlay::-webkit-scrollbar-track,
+.options-content::-webkit-scrollbar-track {
+    background: var(--glass);
+    border-radius: 3px;
+}
+
+#volumeOverlay::-webkit-scrollbar-thumb,
+.options-content::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 3px;
+}
+
+#volumeOverlay::-webkit-scrollbar-thumb:hover,
+.options-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+
+/* Options Content with proper scrolling */
+.options-content {
+    padding: 20px;
+    max-height: 300px; /* Reduced to ensure scrolling when needed */
+    overflow-y: auto;
+    /* Add smooth scrolling */
+    scroll-behavior: smooth;
+}
+
+/* Firefox scrollbar styling */
+.options-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--glass-border) var(--glass);
+}
+
+/* Enhanced scrolling experience */
+.options-content:hover::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.3);
+}
+
+/* Ensure proper spacing when scrollbar appears */
+.options-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* Add padding-right to prevent content from touching scrollbar */
+    padding-right: 8px;
+}
+
 #volumeOverlay.show {
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: all;
 }
 
+/* Options Header with Tabs */
 .options-header {
     background: rgba(0, 0, 0, 0.3);
     border-bottom: 1px solid var(--glass-border);
@@ -681,41 +151,26 @@
     border-bottom-color: var(--primary);
 }
 
+/* Options Content */
 .options-content {
     padding: 20px;
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
-    scroll-behavior: smooth;
-}
-
-.options-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.options-content::-webkit-scrollbar-track {
-    background: var(--glass);
-    border-radius: 3px;
-}
-
-.options-content::-webkit-scrollbar-thumb {
-    background: var(--glass-border);
-    border-radius: 3px;
-}
-
-.options-content::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
 }
 
 .options-section {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-right: 8px;
 }
 
-/* Volume Controls */
+/* Volume Control (unchanged) */
 .volume-control {
     margin-bottom: 16px;
+}
+
+.volume-control:last-child {
+    margin-bottom: 0;
 }
 
 .volume-label {
@@ -734,6 +189,10 @@
     font-weight: 500;
 }
 
+.volume-label-icon {
+    font-size: 16px;
+}
+
 .volume-value {
     color: var(--text-accent);
     font-weight: 600;
@@ -743,6 +202,7 @@
     text-align: right;
 }
 
+/* Custom Slider */
 .volume-slider-container {
     position: relative;
     height: 24px;
@@ -779,6 +239,30 @@
     box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
 }
 
+.volume-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+    transition: all 0.2s ease;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+}
+
+.volume-slider::-moz-range-track {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    border: none;
+}
+
+/* Slider Fill Effect */
 .volume-slider-fill {
     position: absolute;
     top: 50%;
@@ -792,12 +276,316 @@
     z-index: -1;
 }
 
+/* ===== CONTROLLER SUPPORT STYLES ===== */
+
+/* Controller Status */
+.controller-status {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.status-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status-value {
+    font-family: 'Rajdhani', monospace;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.status-value.connected {
+    color: var(--success);
+}
+
+.status-value.disconnected {
+    color: var(--error);
+}
+
+.controller-info {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.controller-name {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.controller-features {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* Input Mode Selection */
+.input-mode-selection {
+    margin-bottom: 16px;
+}
+
+.input-mode-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.input-mode-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.input-mode-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text-secondary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.input-mode-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.input-mode-btn.active {
+    background: rgba(0, 255, 136, 0.2);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.input-mode-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Controller Settings */
+.controller-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.setting-control {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.setting-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.setting-value {
+    color: var(--text-accent);
+    font-family: 'Rajdhani', monospace;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.setting-slider-container {
+    position: relative;
+    height: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.setting-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.setting-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+    transition: all 0.2s ease;
+}
+
+.setting-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
+}
+
+.setting-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+    transition: all 0.2s ease;
+}
+
+.setting-slider::-moz-range-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    border: none;
+}
+
+/* Test Button */
+.test-btn {
+    background: linear-gradient(135deg, var(--accent) 0%, #0ea5e9 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    width: 100%;
+}
+
+.test-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+/* Controls Help */
+.controls-help {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.controls-help h4 {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+}
+
+.control-mapping {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.control-item span:first-child {
+    color: var(--text-accent);
+    font-weight: 600;
+    font-family: 'Rajdhani', monospace;
+}
+
+.control-item span:last-child {
+    color: var(--text-secondary);
+}
+
+/* Controller Notification Styles */
+.controller-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.controller-notification.controller-success {
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.controller-notification.controller-warning {
+    background: rgba(245, 158, 11, 0.9);
+    color: white;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.controller-notification.controller-error {
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.controller-notification.controller-info {
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Mute Indicators */
+.volume-control.muted .volume-label-text {
+    color: #ff4444;
+    text-decoration: line-through;
+}
+
+.volume-control.muted .volume-slider {
+    opacity: 0.5;
+}
+
+.volume-control.muted .volume-value {
+    color: #ff4444;
+}
+
+/* Master Mute Button */
 .master-controls {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: flex-end;
+    align-items: center;
 }
 
 .master-mute-btn {
@@ -825,28 +613,261 @@
     color: #000;
 }
 
-/* Mute states */
-.volume-control.muted .volume-label-text {
-    color: #ff4444;
-    text-decoration: line-through;
-}
-
-.volume-control.muted .volume-slider {
-    opacity: 0.5;
-}
-
-.volume-control.muted .volume-value {
-    color: #ff4444;
-}
-
+/* Mute Button Active State */
 #settingsButton.active {
     background: var(--glass);
     border-color: var(--primary);
     box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
 }
 
-/* ===== STATS OVERLAY ===== */
+/* Animation effects */
+@keyframes volumePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
 
+.volume-control.active .volume-label-icon {
+    animation: volumePulse 0.5s ease;
+}
+
+/* Responsive adjustments for options overlay */
+@media (max-width: 768px) {
+    #volumeOverlay {
+        width: 280px;
+        right: 10px;
+        max-height: 400px;
+    }
+    
+    .options-content {
+        padding: 16px;
+        max-height: 320px;
+    }
+    
+    .controller-notification {
+        right: 10px;
+        left: 10px;
+        width: auto;
+    }
+}
+
+/* ===== EXISTING COMBO AND BUFF STYLES ===== */
+
+/* NUR wenn aktiv - sichtbare Styling */
+.combo-display-enhanced.combo-subtle {
+    min-width: 80px;
+    min-height: 40px;
+    padding: 8px 12px !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Combo Nummer - dezenter */
+.combo-number-subtle {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Rajdhani', monospace;
+    margin-bottom: 4px;
+    color: #00ff88;
+    text-shadow: 0 0 8px currentColor;
+    transition: all 0.2s ease;
+}
+
+/* Timer Bar - viel subtiler */
+.combo-timer-subtle {
+    width: 60px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 1px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.combo-timer-fill-subtle {
+    height: 100%;
+    background: #00ff88;
+    transition: width 0.1s linear;
+    border-radius: 1px;
+}
+
+/* Wiggle Animation - nur bei Combo-Erhöhung */
+.combo-wiggle {
+    animation: comboWiggle 0.3s ease-out;
+}
+
+@keyframes comboWiggle {
+    0% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.15) rotate(-2deg); }
+    50% { transform: scale(1.15) rotate(2deg); }
+    75% { transform: scale(1.1) rotate(-1deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+/* 2. ENHANCED BUFF DISPLAY - LINKS UNTEN */
+.enhanced-buffs-container {
+    position: absolute !important;
+    bottom: 12px !important;
+    left: 20px !important;
+    max-width: 160px;
+    z-index: 30 !important;
+    pointer-events: none;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 4px !important;
+    overflow: hidden;
+}
+
+.buff-item {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.buff-item.buff-new {
+    animation: buffSlideIn 0.5s ease;
+}
+
+.buff-icon {
+    font-size: 24px;
+    margin-right: 10px;
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+.buff-info {
+    flex: 1;
+}
+
+.buff-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 2px;
+}
+
+.buff-timer {
+    font-size: 14px;
+    font-weight: 700;
+    color: #00ff88;
+    font-family: 'Rajdhani', monospace;
+}
+
+.buff-status {
+    font-size: 10px;
+    color: #00ff88;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.buff-progress {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.buff-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff88, #00cc6a);
+    transition: width 0.1s linear;
+}
+
+/* Buff specific styles */
+.buff-permanent {
+    border-color: rgba(0, 255, 136, 0.3);
+    background: rgba(0, 255, 136, 0.1);
+}
+
+.buff-shield {
+    border-color: rgba(65, 105, 225, 0.3);
+    background: rgba(65, 105, 225, 0.1);
+    order: -1;
+}
+
+.buff-expiring {
+    animation: buffExpiring 0.5s ease infinite;
+    border-color: rgba(255, 23, 68, 0.5);
+}
+
+.buff-expiring .buff-timer {
+    color: #ff1744;
+}
+
+.buff-expiring .buff-progress-fill {
+    background: linear-gradient(90deg, #ff1744, #ff6b35);
+}
+
+/* Buff animations - VON LINKS NACH RECHTS */
+@keyframes buffSlideIn {
+    from { 
+        transform: translateX(-300px);
+        opacity: 0; 
+    }
+    to { 
+        transform: translateX(0); 
+        opacity: 1; 
+    }
+}
+
+@keyframes buffExpiring {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Buff type specific animations */
+.buff-berserkerMode {
+    animation: berserkerPulse 0.5s ease infinite;
+}
+
+.buff-timeSlow {
+    animation: timeWave 2s ease infinite;
+}
+
+.buff-ghostWalk {
+    opacity: 0.7;
+    animation: ghostFade 1s ease infinite;
+}
+
+.buff-speedBoost .buff-icon {
+    animation: speedSpark 0.3s ease infinite;
+}
+
+.buff-magnetMode .buff-icon {
+    animation: magnetPull 2s ease infinite;
+}
+
+@keyframes berserkerPulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.3) hue-rotate(10deg); }
+}
+
+@keyframes timeWave {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-5px); }
+}
+
+@keyframes ghostFade {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes speedSpark {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+@keyframes magnetPull {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(180deg); }
+}
+
+/* 3. STATS OVERLAY */
 .stats-overlay {
     position: absolute;
     top: 0;
@@ -863,24 +884,22 @@
 }
 
 .stats-overlay-content {
-    background: var(--glass-dark);
+    background: rgba(0, 80, 43, 0.1);
     border: 2px solid rgba(0, 255, 136, 0.3);
     border-radius: 20px;
     padding: 32px;
-    max-width: 650px;
+    max-width: 600px;
     width: 90%;
     max-height: 90%;
     overflow-y: auto;
-    backdrop-filter: blur(15px);
 }
 
 .stats-overlay h3 {
     color: #00ff88;
-    font-size: 28px;
+    font-size: 24px;
     margin-bottom: 24px;
     text-align: center;
     font-family: 'Rajdhani', monospace;
-    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
 }
 
 .stats-section {
@@ -889,32 +908,27 @@
 
 .stats-section h4 {
     color: #ffffff;
-    font-size: 18px;
+    font-size: 16px;
     margin-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 8px;
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 600;
 }
 
 .stat-row {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
+    padding: 6px 0;
     font-size: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .stat-row span:first-child {
     color: #d0d0d0;
-    font-weight: 500;
 }
 
 .stat-value {
     color: #00ff88;
-    font-weight: 700;
+    font-weight: 600;
     font-family: 'Rajdhani', monospace;
-    text-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
 }
 
 .stats-hint {
@@ -922,25 +936,22 @@
     color: #888;
     font-size: 12px;
     margin-top: 20px;
-    font-style: italic;
 }
 
-/* ===== ACHIEVEMENT POPUP ===== */
-
+/* 4. ACHIEVEMENT POPUP */
 .achievement-popup {
     position: absolute;
     top: 120px;
     right: -400px;
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    border-radius: 15px;
-    padding: 18px 24px;
+    border-radius: 12px;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
-    gap: 18px;
-    box-shadow: 0 0 40px rgba(255, 215, 0, 0.8);
+    gap: 16px;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
     z-index: 20;
-    transition: right 0.6s ease;
-    border: 2px solid rgba(255, 215, 0, 0.6);
+    transition: right 0.5s ease;
 }
 
 .achievement-popup.achievement-show {
@@ -948,7 +959,7 @@
 }
 
 .achievement-icon {
-    font-size: 40px;
+    font-size: 36px;
     animation: trophySpin 2s ease infinite;
 }
 
@@ -957,21 +968,19 @@
 }
 
 .achievement-title {
-    font-size: 18px;
-    font-weight: 800;
+    font-size: 16px;
+    font-weight: 700;
     margin-bottom: 4px;
-    font-family: 'Rajdhani', sans-serif;
 }
 
 .achievement-desc {
-    font-size: 13px;
+    font-size: 12px;
     margin-bottom: 4px;
-    font-weight: 500;
 }
 
 .achievement-reward {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     color: #8B4513;
 }
 
@@ -980,30 +989,139 @@
     50% { transform: rotateY(180deg); }
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
+/* 5. DAMAGE NUMBERS */
+.damage-number {
+    position: absolute;
+    font-size: 20px;
+    font-weight: 700;
+    color: #FFD700;
+    pointer-events: none;
+    animation: damageFloat 1s ease forwards;
+    z-index: 16;
+    font-family: 'Rajdhani', monospace;
+}
 
+.damage-critical {
+    font-size: 28px;
+    color: #FF1744;
+    text-shadow: 0 0 10px currentColor;
+}
+
+@keyframes damageFloat {
+    0% {
+        transform: translateY(0) scale(1.5);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-60px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* 6. COMBO PARTICLES */
+.combo-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #FFD700;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particleFall 1s ease forwards;
+    z-index: 14;
+}
+
+@keyframes particleFall {
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(200px) translateX(calc(var(--random-x) * 100px));
+        opacity: 0;
+    }
+}
+
+/* 7. SCREEN EFFECTS */
+.screen-shake {
+    animation: screenShake 0.2s ease;
+}
+
+.health-segment.shielded {
+    background: linear-gradient(135deg, #4169E1 0%, #1E90FF 100%);
+    border: 2px solid #87CEEB;
+    position: relative;
+    overflow: visible;
+}
+
+.health-segment.shielded::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #4169E1 0%, #1E90FF 100%);
+    border-radius: inherit;
+    z-index: -1;
+    animation: shieldGlow 2s ease-in-out infinite;
+}
+
+@keyframes shieldGlow {
+    0%, 100% { 
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+.health-segment.shielded:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+@keyframes screenShake {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-5px, 0); }
+    50% { transform: translate(5px, -5px); }
+    75% { transform: translate(-5px, 5px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Controller notification animations */
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+/* Mobile adjustments */
 @media (max-width: 768px) {
-    /* Mobile adjustments */
     .enhanced-buffs-container {
-        max-width: 140px;
+        max-width: 100px;
         bottom: 80px !important;
-        left: 10px !important;
     }
     
-    .weapons-display-container {
-        max-width: 160px;
-        bottom: 80px !important;
-        right: 10px !important;
+    .buff-item {
+        padding: 6px 8px;
     }
     
-    .buff-item, .weapon-item {
-        padding: 6px 10px;
-        min-height: 36px;
+    .buff-icon {
+        font-size: 20px;
     }
     
-    .buff-icon, .weapon-icon {
-        font-size: 16px;
-        margin-right: 8px;
+    .buff-name {
+        font-size: 11px;
     }
     
     .combo-display-enhanced.combo-subtle {
@@ -1011,56 +1129,25 @@
         transform: translateX(-50%) scale(0.9);
     }
     
-    .stats-display {
-        top: 120px !important;
-        left: 10px !important;
-        max-width: 120px;
-        font-size: 10px;
+    .combo-number-subtle {
+        font-size: 24px;
     }
     
-    #volumeOverlay {
-        width: 280px;
-        right: 10px;
-        max-height: 400px;
-    }
-    
-    .achievement-popup {
-        max-width: 90%;
-        right: -100%;
-        font-size: 14px;
-    }
-    
-    .achievement-popup.achievement-show {
-        right: 5%;
+    .combo-timer-subtle {
+        width: 50px;
     }
     
     .stats-overlay-content {
         padding: 20px;
         font-size: 12px;
     }
-}
-
-/* ===== ANIMATIONS ===== */
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes volumePulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
-
-.volume-control.active .volume-label-icon {
-    animation: volumePulse 0.5s ease;
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    
+    .achievement-popup {
+        max-width: 90%;
+        right: -100%;
+    }
+    
+    .achievement-popup.achievement-show {
+        right: 5%;
     }
 }

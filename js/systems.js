@@ -1,37 +1,38 @@
-// systems.js - Enhanced Systems with Roguelike Scaling
+// systems.js - Alle Game Systems mit File-based Banned Words System
 
-import { ACHIEVEMENTS, DROP_CONFIG, DropType, DROP_INFO, HIGHSCORE_API, WEAPON_DROPS } from './core/constants.js';
+import { ACHIEVEMENTS, DROP_CONFIG, DropType, DROP_INFO, HIGHSCORE_API } from './core/constants.js';
 import { gameState } from './core/gameState.js';
 import { createScorePopup, drops } from './entities.js';
 import { showAchievementPopup } from './ui-enhancements.js';
 
 // Achievement System
 export function checkAchievements() {
-    // Adjusted for new HP system
-    if (!ACHIEVEMENTS.firstBlood.unlocked && gameState.bossesKilled >= 1) {
+    // First Blood: Statt 1 Boss -> 1000 Bosse
+    if (!ACHIEVEMENTS.firstBlood.unlocked && gameState.bossesKilled >= 1000) {
         unlockAchievement('firstBlood');
     }
     
-    // Untouchable: Complete level without taking damage
+    // Untouchable: Statt 1 Level ohne Schaden -> 100 Level ohne Schaden
     if (!ACHIEVEMENTS.untouchable.unlocked && 
         gameState.levelProgress >= 100 && 
         gameState.damageThisLevel === 0 && 
-        gameState.levelsCompleted >= 1) {
+        gameState.levelsCompleted >= 100) {
         unlockAchievement('untouchable');
     }
     
-    // Sharpshooter: 100 hits in a row
-    if (!ACHIEVEMENTS.sharpshooter.unlocked && gameState.consecutiveHits >= 100) {
+    // Sharpshooter: Statt 50 Treffer -> 10000 Treffer in Folge
+    if (!ACHIEVEMENTS.sharpshooter.unlocked && gameState.consecutiveHits >= 10000) {
         unlockAchievement('sharpshooter');
     }
     
-    // Speed Demon: 10000 points in 30s
+    // Speed Demon: Statt 1000 Punkte in 30s -> 100000 Punkte in 10s
     if (!ACHIEVEMENTS.speedDemon.unlocked && 
-        gameState.scoreIn30Seconds >= 10000 && 
-        (Date.now() - gameState.lastScoreTime) <= 30000) {
+        gameState.scoreIn30Seconds >= 100000 && 
+        (Date.now() - gameState.lastScoreTime) <= 10000) {
         unlockAchievement('speedDemon');
     }
 }
+
 
 export function unlockAchievement(id) {
     ACHIEVEMENTS[id].unlocked = true;
@@ -40,17 +41,16 @@ export function unlockAchievement(id) {
     
     switch(id) {
         case 'firstBlood':
-            // 25% better drop rates
-            gameState.stats.dropBonus += 0.25;
             break;
         case 'untouchable':
-            gameState.stats.damageBonus += 0.15; // +15% damage permanently
+            gameState.shieldCharges = 1;
+            gameState.hasShield = true;
             break;
         case 'sharpshooter':
-            gameState.stats.critChance += 0.10; // +10% crit chance
+            window.gameState.hasPiercingBullets = true;
             break;
         case 'speedDemon':
-            gameState.stats.moveSpeed += 0.20; // +20% move speed
+            window.gameState.speedMultiplier *= 1.1;
             break;
     }
     
@@ -62,21 +62,8 @@ export function loadAchievements() {
         if (localStorage.getItem(`achievement_${id}`) === 'true') {
             ACHIEVEMENTS[id].unlocked = true;
             
-            // Apply achievement bonuses
-            switch(id) {
-                case 'firstBlood':
-                    gameState.stats.dropBonus += 0.25;
-                    break;
-                case 'untouchable':
-                    gameState.stats.damageBonus += 0.15;
-                    break;
-                case 'sharpshooter':
-                    gameState.stats.critChance += 0.10;
-                    break;
-                case 'speedDemon':
-                    gameState.stats.moveSpeed += 0.20;
-                    break;
-            }
+            if (id === 'sharpshooter') window.gameState.hasPiercingBullets = true;
+            if (id === 'speedDemon') window.gameState.speedMultiplier = 1.1;
         }
     });
 }
@@ -86,16 +73,12 @@ window.ACHIEVEMENTS = ACHIEVEMENTS;
 window.loadAchievements = loadAchievements;
 window.loadGlobalHighscores = loadGlobalHighscores;
 
-// Drop System - Enhanced for Roguelike
+// Drop System
 export const activeDropBuffs = {};
-export const activeWeaponDrops = {};
 window.activeDropBuffs = activeDropBuffs;
-window.activeWeaponDrops = activeWeaponDrops;
 
 export function createDrop(x, y, type) {
-    const dropInfo = DROP_INFO[type] || WEAPON_DROPS[type];
-    if (!dropInfo) return;
-    
+    const dropInfo = DROP_INFO[type];
     drops.push({
         x: x,
         y: y,
@@ -105,13 +88,10 @@ export function createDrop(x, y, type) {
         velocityY: -3,
         rotation: 0,
         glowIntensity: 0.5,
-        info: dropInfo,
-        isWeapon: !!WEAPON_DROPS[type]
+        info: dropInfo
     });
     
-    // Enhanced drop particles for weapons
-    const particleCount = WEAPON_DROPS[type] ? 12 : 8;
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < 8; i++) {
         window.dropParticles.push({
             x: x + 12,
             y: y + 12,
@@ -125,52 +105,31 @@ export function createDrop(x, y, type) {
 }
 
 export function rollForDrop(enemyType, x, y) {
-    const dropChanceBonus = gameState.stats.dropBonus;
+    const dropChanceBonus = ACHIEVEMENTS.firstBlood.unlocked ? 0.1 : 0;
     const comboBonus = Math.min(gameState.comboCount * 0.01, 0.2);
     
     let dropConfig;
-    let weaponChance = 0;
-    
     if (enemyType === 'alphaWolf') {
         dropConfig = DROP_CONFIG.boss;
-        weaponChance = 0.30; // 30% weapon drop chance from bosses
         
-        // Boss guaranteed drop at high combo
         if (gameState.comboCount >= 20) {
-            const selectedDrop = selectDropFromItems(dropConfig.items);
+            const items = dropConfig.items;
+            const selectedDrop = selectDropFromItems(items);
             if (selectedDrop) {
                 createDrop(x, y, selectedDrop.type);
-            }
-            
-            // Separate weapon roll for bosses
-            if (Math.random() < weaponChance) {
-                const weaponDrop = selectWeaponDrop();
-                if (weaponDrop) {
-                    createDrop(x + 20, y, weaponDrop);
-                }
             }
             return;
         }
     } else {
         dropConfig = DROP_CONFIG.common;
-        weaponChance = 0.10; // 10% weapon drop chance from common enemies
     }
     
     const finalChance = dropConfig.chance + dropChanceBonus + comboBonus;
     
-    // Regular drop roll
     if (Math.random() < finalChance) {
         const selectedDrop = selectDropFromItems(dropConfig.items);
         if (selectedDrop) {
             createDrop(x, y, selectedDrop.type);
-        }
-    }
-    
-    // Separate weapon drop roll
-    if (Math.random() < weaponChance * (1 + dropChanceBonus)) {
-        const weaponDrop = selectWeaponDrop();
-        if (weaponDrop) {
-            createDrop(x + 15, y, weaponDrop);
         }
     }
 }
@@ -189,71 +148,38 @@ function selectDropFromItems(items) {
     return items[items.length - 1];
 }
 
-function selectWeaponDrop() {
-    const weaponTypes = Object.keys(WEAPON_DROPS);
-    const weights = weaponTypes.map(type => WEAPON_DROPS[type].rarity || 1);
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
-    
-    let random = Math.random() * totalWeight;
-    for (let i = 0; i < weaponTypes.length; i++) {
-        random -= weights[i];
-        if (random <= 0) {
-            return weaponTypes[i];
-        }
-    }
-    
-    return weaponTypes[0];
-}
-
 export function collectDrop(drop) {
     soundManager.pickup();
-    
-    // Check buff limit für temporary buffs und weapons
-    if ((drop.isWeapon || isTemporaryBuff(drop.type)) && !canPickupBuff()) {
-        // Zeige "Inventory Full" Nachricht
-        createScorePopup(drop.x, drop.y, 'BUFF LIMIT (5/5)!');
-        soundManager.hit(); // Fehler-Sound
-        return; // Buff nicht aufnehmen
-    }
-    
-    // Handle weapon drops
-    if (drop.isWeapon) {
-        const weaponInfo = WEAPON_DROPS[drop.type];
-        if (weaponInfo) {
-            activeWeaponDrops[drop.type] = weaponInfo.duration;
-            createScorePopup(drop.x, drop.y, weaponInfo.name + '!');
-            
-            // Clear conflicting weapon types
-            Object.keys(activeWeaponDrops).forEach(weapon => {
-                if (weapon !== drop.type && weaponInfo.conflicts && weaponInfo.conflicts.includes(weapon)) {
-                    delete activeWeaponDrops[weapon];
-                }
-            });
-            
-            soundManager.powerUp();
-            return;
-        }
-    }
-    
-    // Handle regular drops
     const dropConfig = [...DROP_CONFIG.boss.items, ...DROP_CONFIG.common.items].find(item => item.type === drop.type);
     
     switch(drop.type) {
         case DropType.EXTRA_LIFE:
-            // Health ist immer erlaubt (kein Buff-Limit)
-            const healAmount = Math.floor(gameState.maxHealth * 0.5);
-            gameState.currentHealth = Math.min(gameState.currentHealth + healAmount, gameState.maxHealth);
-            createScorePopup(drop.x, drop.y, `+${healAmount} HP`);
+            if (gameState.lives < 5) {
+                gameState.lives++;
+                if (gameState.lives > gameState.maxLives) gameState.maxLives = gameState.lives;
+                createScorePopup(drop.x, drop.y, '+1 Life');
+            } else {
+                gameState.score += 1000 * gameState.scoreMultiplier;
+                createScorePopup(drop.x, drop.y, '+1000 Bonus!');
+            }
             break;
             
         case DropType.MEGA_BULLETS:
-            // Bullets sind immer erlaubt (kein Buff-Limit)
             gameState.bullets += 50;
             createScorePopup(drop.x, drop.y, '+50 Bolts');
             break;
             
+        case DropType.SPEED_BOOST:
+            activeDropBuffs.speedBoost = dropConfig.duration;
+            createScorePopup(drop.x, drop.y, 'Speed Boost!');
+            break;
+            
+        case DropType.JUMP_BOOST:
+            activeDropBuffs.jumpBoost = Math.min((activeDropBuffs.jumpBoost || 0) + dropConfig.duration, 3600);
+            createScorePopup(drop.x, drop.y, 'Jump Boost!');
+            break;
+            
         case DropType.SHIELD:
-            // Shield ist immer erlaubt (kein Buff-Limit)
             if (gameState.shieldCharges < 5) {
                 gameState.shieldCharges++;
                 gameState.hasShield = true;
@@ -262,18 +188,6 @@ export function collectDrop(drop) {
                 gameState.score += 500 * gameState.scoreMultiplier;
                 createScorePopup(drop.x, drop.y, '+500 Shield Bonus!');
             }
-            break;
-            
-        // TEMPORARY BUFFS - unterliegen dem 5-Buff Limit
-        case DropType.SPEED_BOOST:
-            activeDropBuffs.speedBoost = dropConfig.duration;
-            gameState.stats.moveSpeed += 0.5;
-            createScorePopup(drop.x, drop.y, 'Speed Boost!');
-            break;
-            
-        case DropType.JUMP_BOOST:
-            activeDropBuffs.jumpBoost = Math.min((activeDropBuffs.jumpBoost || 0) + dropConfig.duration, 3600);
-            createScorePopup(drop.x, drop.y, 'Jump Boost!');
             break;
             
         case DropType.SCORE_MULTIPLIER:
@@ -294,8 +208,6 @@ export function collectDrop(drop) {
         case DropType.BERSERKER_MODE:
             activeDropBuffs.berserkerMode = Math.min((activeDropBuffs.berserkerMode || 0) + dropConfig.duration, 1800);
             gameState.isBerserker = true;
-            gameState.stats.attackSpeed += 1.0;
-            gameState.stats.damageBonus += 0.5;
             createScorePopup(drop.x, drop.y, 'Berserker!');
             break;
             
@@ -315,60 +227,13 @@ export function collectDrop(drop) {
     soundManager.powerUp();
 }
 
-function isTemporaryBuff(dropType) {
-    const temporaryBuffs = [
-        DropType.SPEED_BOOST,
-        DropType.JUMP_BOOST,
-        DropType.SCORE_MULTIPLIER,
-        DropType.MAGNET_MODE,
-        DropType.BERSERKER_MODE,
-        DropType.GHOST_WALK,
-        DropType.TIME_SLOW
-    ];
-    return temporaryBuffs.includes(dropType);
-}
-
-
-export function getActiveBuffCount() {
-    return Object.keys(activeDropBuffs).length + Object.keys(activeWeaponDrops).length;
-}
-
-export function canPickupBuff() {
-    return getActiveBuffCount() < 5;
-}
-
-
-
-
 export function updateDropBuffs() {
-    const now = Date.now();
-    
-    // Initialisiere Timestamps falls nicht vorhanden
-    if (!window.buffUpdateTimestamps) {
-        window.buffUpdateTimestamps = {};
-    }
-    
-    // Update regular drop buffs
-    Object.keys(activeDropBuffs).forEach(buffKey => {
-        if (!window.buffUpdateTimestamps[buffKey]) {
-            window.buffUpdateTimestamps[buffKey] = now;
-        }
-        
-        const deltaMs = now - window.buffUpdateTimestamps[buffKey];
-        const deltaFrames = deltaMs / 16.67; // Konvertiere zu 60fps frames
-        
-        activeDropBuffs[buffKey] -= deltaFrames;
-        window.buffUpdateTimestamps[buffKey] = now;
-        
-        if (activeDropBuffs[buffKey] <= 0) {
-            delete activeDropBuffs[buffKey];
-            delete window.buffUpdateTimestamps[buffKey];
+    Object.keys(activeDropBuffs).forEach(buff => {
+        activeDropBuffs[buff] -= gameState.deltaTime;
+        if (activeDropBuffs[buff] <= 0) {
+            delete activeDropBuffs[buff];
             
-            // Buff-Effekte entfernen
-            switch(buffKey) {
-                case 'speedBoost':
-                    gameState.stats.moveSpeed -= 0.5;
-                    break;
+            switch(buff) {
                 case 'scoreMultiplier': 
                     gameState.scoreMultiplier = 1; 
                     break;
@@ -376,9 +241,7 @@ export function updateDropBuffs() {
                     gameState.magnetRange = 0; 
                     break;
                 case 'berserkerMode': 
-                    gameState.isBerserker = false;
-                    gameState.stats.attackSpeed -= 1.0;
-                    gameState.stats.damageBonus -= 0.5;
+                    gameState.isBerserker = false; 
                     break;
                 case 'ghostWalk': 
                     gameState.isGhostWalking = false; 
@@ -389,115 +252,444 @@ export function updateDropBuffs() {
             }
         }
     });
-    
-    // Update weapon drops
-    Object.keys(activeWeaponDrops).forEach(weaponKey => {
-        const timestampKey = `weapon_${weaponKey}`;
+}
+
+// ========================================
+// ENHANCED HIGHSCORE VALIDATOR WITH FILE-BASED BANNED WORDS
+// ========================================
+
+class HighscoreValidator {
+    constructor() {
+        this.maxScore = 1000000;
+        this.minScore = 100;
+        this.maxNameLength = 20;
+        this.bannedWords = ['admin', 'test']; // Fallback words
+        this.bannedWordsLoaded = false;
+        this.suspiciousScores = new Set();
         
-        if (!window.buffUpdateTimestamps[timestampKey]) {
-            window.buffUpdateTimestamps[timestampKey] = now;
+        // Load banned words from file
+        this.loadBannedWords();
+    }
+
+    // Load banned words from text file
+    async loadBannedWords() {
+        try {
+            console.log('📚 Loading banned words list...');
+            
+            // Try multiple file locations
+            const possiblePaths = [
+                '../assets/banned-words.txt'
+            ];
+
+            let wordsLoaded = false;
+
+            for (const path of possiblePaths) {
+                try {
+                    const response = await fetch(path);
+                    if (response.ok) {
+                        const text = await response.text();
+                        this.parseBannedWords(text);
+                        console.log(`✅ Banned words loaded from: ${path}`);
+                        console.log(`📊 Total banned words: ${this.bannedWords.length}`);
+                        wordsLoaded = true;
+                        break;
+                    }
+                } catch (error) {
+                    // Continue to next path
+                    continue;
+                }
+            }
+
+            if (!wordsLoaded) {
+                console.warn('⚠️ Could not load banned words file. Using default list.');
+                this.loadDefaultBannedWords();
+            }
+
+            this.bannedWordsLoaded = true;
+
+        } catch (error) {
+            console.error('❌ Error loading banned words:', error);
+            this.loadDefaultBannedWords();
+            this.bannedWordsLoaded = true;
+        }
+    }
+
+    // Parse banned words from text content
+    parseBannedWords(text) {
+        const words = text
+            .split('\n')                    // Split by lines
+            .map(line => line.trim())       // Remove whitespace
+            .filter(line => line.length > 0) // Remove empty lines
+            .filter(line => !line.startsWith('#')) // Remove comments
+            .filter(line => !line.startsWith('//')) // Remove comments
+            .map(word => word.toLowerCase()) // Convert to lowercase
+            .filter(word => word.length > 1) // Remove single characters
+            .filter((word, index, arr) => arr.indexOf(word) === index); // Remove duplicates
+
+        this.bannedWords = words;
+    }
+
+    // Fallback default banned words
+    loadDefaultBannedWords() {
+        this.bannedWords = [
+            'admin', 'administrator', 'root', 'system',
+            'test', 'testing', 'debug', 'dev',
+            'hack', 'hacker', 'cheat', 'cheater',
+            'bot', 'script', 'auto', 'fake',
+            'fuck', 'shit', 'damn', 'ass',
+            'nazi', 'hitler', 'kill', 'die',
+            'nigger', 'nigga', 'faggot', 'retard',
+            'bitch', 'whore', 'slut', 'cunt',
+            'penis', 'vagina', 'sex', 'porn'
+        ];
+        console.log('📝 Using default banned words list');
+    }
+
+    // Enhanced name validation with async support
+    async validateName(name) {
+        // Wait for banned words to load if they haven't yet
+        if (!this.bannedWordsLoaded) {
+            await this.waitForBannedWords();
+        }
+
+        if (!name || typeof name !== 'string') return false;
+        if (name.length === 0 || name.length > this.maxNameLength) return false;
+        if (name.trim() !== name) return false;
+
+        const lowerName = name.toLowerCase();
+
+        // Check against loaded banned words
+        for (const banned of this.bannedWords) {
+            if (lowerName.includes(banned)) {
+                console.warn(`🚫 Name blocked: contains "${banned}"`);
+                return false;
+            }
+        }
+
+        // Additional pattern checks
+        if (/^[0-9]+$/.test(name)) return false; // All numbers
+        if (/(.)\1{4,}/.test(name)) return false; // Too many repeated chars
+        if (/^(admin|mod|owner)/i.test(name)) return false; // Authority claims
+
+        return true;
+    }
+
+    // Wait for banned words to finish loading
+    waitForBannedWords(timeout = 5000) {
+        return new Promise((resolve) => {
+            const startTime = Date.now();
+            const checkLoaded = () => {
+                if (this.bannedWordsLoaded || (Date.now() - startTime > timeout)) {
+                    resolve();
+                } else {
+                    setTimeout(checkLoaded, 100);
+                }
+            };
+            checkLoaded();
+        });
+    }
+
+    // Debug function to show current banned words
+    getBannedWords() {
+        return {
+            loaded: this.bannedWordsLoaded,
+            count: this.bannedWords.length,
+            words: this.bannedWords
+        };
+    }
+
+    // Add word to banned list (runtime)
+    addBannedWord(word) {
+        const cleanWord = word.toLowerCase().trim();
+        if (cleanWord && !this.bannedWords.includes(cleanWord)) {
+            this.bannedWords.push(cleanWord);
+            console.log(`🚫 Added banned word: "${cleanWord}"`);
+            return true;
+        }
+        return false;
+    }
+
+    // Remove word from banned list (runtime)
+    removeBannedWord(word) {
+        const cleanWord = word.toLowerCase().trim();
+        const index = this.bannedWords.indexOf(cleanWord);
+        if (index > -1) {
+            this.bannedWords.splice(index, 1);
+            console.log(`✅ Removed banned word: "${cleanWord}"`);
+            return true;
+        }
+        return false;
+    }
+
+    // Generate a simple hash for score verification
+    generateScoreHash(playerName, score, timestamp) {
+        const data = `${playerName}${score}${timestamp}retro_runner_secret_2024`;
+        let hash = 0;
+        for (let i = 0; i < data.length; i++) {
+            const char = data.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36);
+    }
+
+    // Validate score legitimacy
+    validateScore(score, gameTimeMs, level) {
+        const checks = {
+            valid: true,
+            reasons: []
+        };
+
+        if (score > this.maxScore) {
+            checks.valid = false;
+            checks.reasons.push('Score too high');
+        }
+
+        if (score < 0) {
+            checks.valid = false;
+            checks.reasons.push('Negative score');
+        }
+
+        const minTimeForScore = Math.max(30000, score / 100);
+        if (gameTimeMs < minTimeForScore && score > 10000) {
+            checks.valid = false;
+            checks.reasons.push('Score too high for game time');
+        }
+
+        const expectedMaxScore = level * 5000;
+        if (score > expectedMaxScore * 3) {
+            checks.valid = false;
+            checks.reasons.push('Score inconsistent with level');
+        }
+
+        if (score > 50000 && score % 10000 === 0) {
+            checks.reasons.push('Suspiciously round number');
+            this.suspiciousScores.add(score);
+        }
+
+        return checks;
+    }
+
+    canSubmitScore() {
+        const lastSubmission = localStorage.getItem('lastHighscoreSubmission');
+        const now = Date.now();
+        
+        if (lastSubmission) {
+            const timeDiff = now - parseInt(lastSubmission);
+            if (timeDiff < 60000) {
+                return false;
+            }
         }
         
-        const deltaMs = now - window.buffUpdateTimestamps[timestampKey];
-        const deltaFrames = deltaMs / 16.67;
-        
-        activeWeaponDrops[weaponKey] -= deltaFrames;
-        window.buffUpdateTimestamps[timestampKey] = now;
-        
-        if (activeWeaponDrops[weaponKey] <= 0) {
-            delete activeWeaponDrops[weaponKey];
-            delete window.buffUpdateTimestamps[timestampKey];
+        localStorage.setItem('lastHighscoreSubmission', now.toString());
+        return true;
+    }
+}
+
+// Create validator instance
+const validator = new HighscoreValidator();
+
+// Enhanced save function with async name validation
+export async function saveGlobalHighscoreSecure(playerName, score, gameData = {}) {
+    console.log('🔒 Validating highscore submission...');
+
+    if (!validator.canSubmitScore()) {
+        console.warn('⚠️ Rate limited: Please wait before submitting another score');
+        return false;
+    }
+
+    // Async name validation
+    const nameValid = await validator.validateName(playerName);
+    if (!nameValid) {
+        console.warn('⚠️ Invalid player name');
+        alert('Invalid name. Please choose a different name.');
+        return false;
+    }
+
+    const gameTime = gameData.gameTime || Date.now() - (gameData.startTime || Date.now() - 60000);
+    const level = gameData.level || 1;
+    const validation = validator.validateScore(score, gameTime, level);
+
+    if (!validation.valid) {
+        console.warn('⚠️ Score validation failed:', validation.reasons);
+        console.warn('Score appears to be manipulated. Submission blocked.');
+        return false;
+    }
+
+    const timestamp = Date.now();
+    const hash = validator.generateScoreHash(playerName, score, timestamp);
+
+    const newEntry = {
+        name: playerName.substring(0, 20),
+        score: score,
+        date: new Date(timestamp).toISOString(),
+        hash: hash,
+        level: level,
+        gameTime: Math.floor(gameTime / 1000),
+        isNew: true,
+        version: '1.0'
+    };
+
+    if (validation.reasons.length > 0) {
+        newEntry.suspicious = validation.reasons;
+        console.warn('⚠️ Score marked as suspicious:', validation.reasons);
+    }
+
+    globalHighscores.push(newEntry);
+    globalHighscores.sort((a, b) => b.score - a.score);
+    globalHighscores = globalHighscores.slice(0, 10);
+
+    try {
+        const response = await fetch(HIGHSCORE_API.URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'RetroRunner/1.0'
+            },
+            body: JSON.stringify({ 
+                scores: globalHighscores,
+                lastUpdate: timestamp,
+                version: '1.0'
+            })
+        });
+
+        if (response.ok) {
+            console.log('✅ Secure highscore saved!');
+            displayHighscoresSecure();
+            return true;
+        } else {
+            console.error('❌ Failed to save:', response.status);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Network error:', error);
+        displayHighscoresSecure();
+        return false;
+    }
+}
+
+// Enhanced display with security indicators
+export function displayHighscoresSecure() {
+    const allLists = document.querySelectorAll('#highscoreList');
+    
+    allLists.forEach(list => {
+        if (globalHighscores.length === 0) {
+            list.innerHTML = '<p>No highscores yet - be the first!</p>';
+        } else {
+            const top10 = globalHighscores.slice(0, 10);
+            list.innerHTML = top10.map((entry, index) => {
+                const isNewEntry = entry.isNew === true;
+                const isSuspicious = entry.suspicious && entry.suspicious.length > 0;
+                const isVerified = entry.hash && entry.gameTime;
+                
+                let highlightClass = '';
+                let badges = '';
+                
+                if (isNewEntry) {
+                    highlightClass += 'highscore-new ';
+                    badges += ' <span class="new-badge">NEW!</span>';
+                }
+                
+                if (isSuspicious) {
+                    highlightClass += 'highscore-suspicious ';
+                    badges += ' <span class="suspicious-badge" title="Suspicious score">⚠️</span>';
+                }
+                
+                if (isVerified) {
+                    badges += ' <span class="verified-badge" title="Verified legitimate">✓</span>';
+                }
+                
+                return `
+                    <div class="highscore-entry ${highlightClass}">
+                        <span>${index + 1}. ${entry.name}${badges}</span>
+                        <span>${entry.score.toLocaleString()}</span>
+                    </div>
+                `;
+            }).join('');
         }
     });
+    
+    // Clean up flags after display
+    setTimeout(() => {
+        globalHighscores.forEach(entry => {
+            if (entry.isNew) delete entry.isNew;
+        });
+    }, 5000);
 }
 
-
-// Regeneration System
-let lastHealthRegen = 0;
-let lastBulletRegen = 0;
-
-export function updateRegeneration() {
-    const now = Date.now();
+// Enhanced check function with game data
+export function checkForTop10ScoreSecure(score, gameData = {}) {
+    if (score < validator.minScore) return;
     
-    // Health regeneration
-    if (gameState.stats.healthRegen > 0) {
-        const healthRegenInterval = 3000 / gameState.stats.healthRegen; // Base 3 seconds
-        if (now - lastHealthRegen >= healthRegenInterval) {
-            const regenAmount = Math.max(1, Math.floor(gameState.maxHealth * 0.01)); // 1% of max HP
-            if (gameState.currentHealth < gameState.maxHealth) {
-                gameState.currentHealth = Math.min(gameState.currentHealth + regenAmount, gameState.maxHealth);
-                createScorePopup(gameState.camera.x + 200, 100, `+${regenAmount} HP`);
+    const isTop10 = globalHighscores.length < 10 || 
+                    score > (globalHighscores[9]?.score || 0);
+    
+    if (isTop10) {
+        let position = 1;
+        for (let i = 0; i < Math.min(globalHighscores.length, 10); i++) {
+            if (score <= globalHighscores[i].score) {
+                position = i + 2;
+            } else {
+                break;
             }
-            lastHealthRegen = now;
+        }
+        
+        const playerName = prompt(
+            `🏆 TOP 10 SCORE! Position #${position} with ${score.toLocaleString()} points!\n\nEnter your name:`
+        )?.trim() || 'Anonymous';
+        
+        // Enhanced save with game data
+        saveGlobalHighscoreSecure(playerName, score, gameData).then(success => {
+            if (success) {
+                setTimeout(() => displayHighscoresSecure(), 100);
+            } else {
+                alert('Score validation failed. Please play normally to submit scores.');
+            }
+        });
+    }
+}
+
+// Track game session for validation
+export class GameSessionTracker {
+    constructor() {
+        this.startTime = Date.now();
+        this.events = [];
+        this.maxEvents = 100;
+    }
+
+    recordEvent(type, data = {}) {
+        this.events.push({
+            type,
+            timestamp: Date.now() - this.startTime,
+            data
+        });
+        
+        if (this.events.length > this.maxEvents) {
+            this.events.shift();
         }
     }
-    
-    // Bullet regeneration
-    if (gameState.stats.bulletRegen > 0) {
-        const bulletRegenInterval = 2000 / gameState.stats.bulletRegen; // Base 2 seconds
-        if (now - lastBulletRegen >= bulletRegenInterval) {
-            gameState.bullets += 1;
-            lastBulletRegen = now;
-        }
+
+    getGameData(score, level) {
+        return {
+            startTime: this.startTime,
+            gameTime: Date.now() - this.startTime,
+            level: level,
+            score: score,
+            eventCount: this.events.length,
+            version: '1.0'
+        };
+    }
+
+    isSessionValid() {
+        const gameTime = Date.now() - this.startTime;
+        return gameTime > 30000 && this.events.length > 10;
     }
 }
 
-// Combat System Enhancements
-export function calculateDamage(baseDamage, isCritical = false) {
-    let damage = baseDamage * (1 + gameState.stats.damageBonus);
-    
-    if (isCritical) {
-        damage *= gameState.stats.critDamage;
-    }
-    
-    return Math.floor(damage);
-}
+// Initialize session tracker
+export const sessionTracker = new GameSessionTracker();
 
-export function rollCritical() {
-    return Math.random() < gameState.stats.critChance;
-}
-
-export function applyLifesteal(damage, targetHealth) {
-    if (gameState.stats.lifeSteal > 0) {
-        const healAmount = Math.floor(damage * gameState.stats.lifeSteal);
-        if (healAmount > 0 && gameState.currentHealth < gameState.maxHealth) {
-            gameState.currentHealth = Math.min(gameState.currentHealth + healAmount, gameState.maxHealth);
-            createScorePopup(gameState.camera.x + 250, 120, `+${healAmount} HP`);
-        }
-    }
-}
-
-// Damage player function for new HP system
-export function damagePlayer(damageAmount, damageSource = 'enemy') {
-    // Apply damage reduction or other modifiers here if needed
-    const finalDamage = Math.max(1, damageAmount);
-    
-    gameState.currentHealth -= finalDamage;
-    gameState.damageThisLevel += finalDamage;
-    
-    // Create damage number
-    if (typeof window.createDamageNumber === 'function') {
-        window.createDamageNumber(
-            gameState.player?.x + 20 || gameState.camera.x + 200,
-            gameState.player?.y || 200,
-            finalDamage,
-            false,
-            '#FF4444'
-        );
-    }
-    
-    console.log(`🎯 Player took ${finalDamage} damage from ${damageSource}. HP: ${gameState.currentHealth}/${gameState.maxHealth}`);
-    
-    // Check for death
-    if (gameState.currentHealth <= 0) {
-        gameState.currentHealth = 0;
-        return true; // Player died
-    }
-    
-    return false; // Player survived
-}
-
-// Enhanced Sound Manager with new features
+// Sound Manager
 export class SoundManager {
     constructor() {
         this.audioContext = null;
@@ -597,10 +789,6 @@ export class SoundManager {
         setTimeout(() => this.play(400, 0.05, 'sawtooth'), 50);
     }
     hit() { this.play(150, 0.2, 'triangle'); }
-    criticalHit() {
-        this.play(1200, 0.1, 'sine');
-        this.play(800, 0.15, 'triangle');
-    }
     death() { 
         this.stopBackgroundMusic();
         this.play(100, 0.5, 'sawtooth');
@@ -614,11 +802,6 @@ export class SoundManager {
         this.play(400, 0.3, 'sine'); 
         this.play(600, 0.3, 'sine'); 
         this.play(800, 0.3, 'sine'); 
-    }
-    weaponPickup() {
-        this.play(1000, 0.2, 'sine');
-        this.play(1400, 0.2, 'triangle');
-        this.play(1800, 0.2, 'sawtooth');
     }
 
     toggleMute() {
@@ -651,7 +834,7 @@ export class SoundManager {
 
 export const soundManager = new SoundManager();
 
-// Keep all existing highscore functionality...
+// Highscore System (Original functions for compatibility)
 export let globalHighscores = [];
 
 export async function loadGlobalHighscores() {
@@ -665,16 +848,16 @@ export async function loadGlobalHighscores() {
             console.log('Data received:', data);
             globalHighscores = data.scores || [];
             console.log('Highscores array:', globalHighscores);
-            displayHighscores();
+            displayHighscoresSecure();
         } else if (response.status === 400) {
             console.log('Basket does not exist yet (400)');
             globalHighscores = [];
-            displayHighscores();
+            displayHighscoresSecure();
         }
     } catch (error) {
         console.error('Error loading highscores:', error);
         globalHighscores = [];
-        displayHighscores();
+        displayHighscoresSecure();
     }
 }
 
@@ -701,45 +884,18 @@ export async function saveGlobalHighscore(playerName, score) {
         
         if (response.ok) {
             console.log('Highscore saved!');
-            displayHighscores();
+            displayHighscoresSecure();
         } else {
             console.error('Failed to save:', response.status);
         }
     } catch (error) {
         console.log('Could not save highscore:', error);
-        displayHighscores();
+        displayHighscoresSecure();
     }
 }
 
 export function displayHighscores() {
-    const allLists = document.querySelectorAll('#highscoreList');
-    
-    allLists.forEach(list => {
-        if (globalHighscores.length === 0) {
-            list.innerHTML = '<p>No highscores yet - be the first!</p>';
-        } else {
-            const top10 = globalHighscores.slice(0, 10);
-            list.innerHTML = top10.map((entry, index) => {
-                const isNewEntry = entry.isNew === true;
-                const highlightClass = isNewEntry ? 'highscore-new' : '';
-                const badge = isNewEntry ? ' <span class="new-badge">NEW!</span>' : '';
-                
-                return `
-                    <div class="highscore-entry ${highlightClass}">
-                        <span>${index + 1}. ${entry.name}${badge}</span>
-                        <span>${entry.score.toLocaleString()}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-    });
-    
-    // Clean up flags after display
-    setTimeout(() => {
-        globalHighscores.forEach(entry => {
-            if (entry.isNew) delete entry.isNew;
-        });
-    }, 5000);
+    displayHighscoresSecure();
 }
 
 export function checkForTop10Score(score) {
@@ -764,10 +920,102 @@ export function checkForTop10Score(score) {
         
         saveGlobalHighscore(playerName, score).then(() => {
             setTimeout(() => {
-                displayHighscores();
+                displayHighscoresSecure();
             }, 100);
         });
     }
+}
+
+// Reset functions
+export function resetLocalHighscore() {
+    localStorage.removeItem('dungeonHighScore');
+    gameState.highScore = 0;
+    console.log("🔄 Local highscore reset!");
+    
+    const highscoreElements = document.querySelectorAll('#highscoreValue');
+    highscoreElements.forEach(el => el.textContent = '0');
+    
+    return true;
+}
+
+export async function resetGlobalHighscores(confirm = false) {
+    if (!confirm) {
+        console.warn("⚠️ Use resetGlobalHighscores(true) to confirm deletion of ALL global highscores!");
+        return false;
+    }
+    
+    try {
+        const response = await fetch(HIGHSCORE_API.URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ scores: [] })
+        });
+        
+        if (response.ok) {
+            globalHighscores = [];
+            displayHighscoresSecure();
+            console.log("🔄 Global highscores reset successfully!");
+            return true;
+        } else {
+            console.error("❌ Failed to reset global highscores:", response.status);
+            return false;
+        }
+    } catch (error) {
+        console.error("❌ Error resetting global highscores:", error);
+        return false;
+    }
+}
+
+export async function resetAllHighscores(confirm = false) {
+    if (!confirm) {
+        console.warn("⚠️ Use resetAllHighscores(true) to confirm deletion of ALL highscores!");
+        return false;
+    }
+    
+    resetLocalHighscore();
+    const globalReset = await resetGlobalHighscores(true);
+    
+    if (globalReset) {
+        console.log("🔄 ALL highscores reset successfully!");
+        return true;
+    } else {
+        console.log("🔄 Local highscore reset, but global reset failed.");
+        return false;
+    }
+}
+
+export async function addTestHighscores() {
+    const testScores = [
+        { name: "TestPlayer1", score: 50000, date: new Date().toISOString() },
+        { name: "TestPlayer2", score: 45000, date: new Date().toISOString() },
+        { name: "TestPlayer3", score: 40000, date: new Date().toISOString() },
+        { name: "TestPlayer4", score: 35000, date: new Date().toISOString() },
+        { name: "TestPlayer5", score: 30000, date: new Date().toISOString() }
+    ];
+    
+    globalHighscores = testScores;
+    
+    try {
+        const response = await fetch(HIGHSCORE_API.URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ scores: testScores })
+        });
+        
+        if (response.ok) {
+            displayHighscoresSecure();
+            console.log("🧪 Test highscores added!");
+            return true;
+        }
+    } catch (error) {
+        console.error("❌ Failed to add test highscores:", error);
+    }
+    
+    return false;
 }
 
 export function loadHighScore() {
@@ -778,12 +1026,41 @@ export function saveHighScore(score) {
     localStorage.setItem('dungeonHighScore', score.toString());
 }
 
+// Game Cache
+export class GameCache {
+    constructor() {
+        this.themeCache = null;
+    }
+
+    getTheme() {
+        if (!this.themeCache) {
+            this.themeCache = window.DUNGEON_THEME;
+        }
+        return this.themeCache;
+    }
+
+    invalidate() {
+        this.themeCache = null;
+    }
+}
+
+export const gameCache = new GameCache();
+
 // Make enhanced functions available globally
-window.updateRegeneration = updateRegeneration;
-window.calculateDamage = calculateDamage;
-window.rollCritical = rollCritical;
-window.applyLifesteal = applyLifesteal;
-window.damagePlayer = damagePlayer;
+window.saveGlobalHighscoreSecure = saveGlobalHighscoreSecure;
+window.displayHighscoresSecure = displayHighscoresSecure;
+window.checkForTop10ScoreSecure = checkForTop10ScoreSecure;
+window.sessionTracker = sessionTracker;
+window.validator = validator;
+window.resetLocalHighscore = resetLocalHighscore;
+window.resetGlobalHighscores = resetGlobalHighscores;
+window.resetAllHighscores = resetAllHighscores;
+window.addTestHighscores = addTestHighscores;
+
+// Debug functions for banned words
+window.getBannedWords = () => validator.getBannedWords();
+window.addBannedWord = (word) => validator.addBannedWord(word);
+window.removeBannedWord = (word) => validator.removeBannedWord(word);
 
 // Initialize immediately when module loads
 if (!window.loadAchievements) {
@@ -792,16 +1069,26 @@ if (!window.loadAchievements) {
 }
 
 console.log(`
-🎮 ROGUELIKE SYSTEMS LOADED
+🚫 BANNED WORDS SYSTEM LOADED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚔️  HP-BASED COMBAT SYSTEM
-🎯  DAMAGE SCALING BY LEVEL
-💎  STAT-BASED PROGRESSION
-🔫  WEAPON DROP SYSTEM
-💚  HEALTH/BULLET REGENERATION
-⭐  CRITICAL HIT SYSTEM
-🩸  LIFESTEAL MECHANICS
+📋 DEBUG COMMANDS:
+getBannedWords()           - Show current banned words
+addBannedWord("word")      - Add word to banned list
+removeBannedWord("word")   - Remove word from banned list
+
+📁 FILE LOCATIONS TRIED:
+- assets/banned-words.txt
+- data/banned-words.txt  
+- config/banned-words.txt
+- banned-words.txt
+
+🔒 SECURITY FEATURES:
+- File-based banned words loading
+- Async name validation
+- Score legitimacy checks
+- Rate limiting protection
+- Session tracking
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);

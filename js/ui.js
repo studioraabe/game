@@ -1,9 +1,9 @@
-// ui.js - Enhanced UI with Roguelike Features
+// ui.js - Enhanced UI with Controller Support and Tabbed Options Menu
 
 import { GameState, DUNGEON_THEME } from './core/constants.js';
 import { gameState, resetGame, startGameLoop, stopGameLoop, resumeTransition } from './core/gameState.js';
 import { soundManager, checkAchievements, saveHighScore, checkForTop10Score, displayHighscores } from './systems.js';
-import { activeDropBuffs, activeWeaponDrops } from './systems.js';
+import { activeDropBuffs } from './systems.js';
 import { getControllerInfo } from './core/input.js';
 import { 
     updateEnhancedComboDisplay, 
@@ -160,7 +160,7 @@ function showUniversalCountdown(type = 'resume', callback = null) {
     }, 800);
 }
 
-// Enhanced HUD Updates for Roguelike
+// HUD Updates
 export function updateUI() {
     document.getElementById('score').textContent = gameState.score.toLocaleString();
     document.getElementById('level').textContent = gameState.level;
@@ -168,87 +168,43 @@ export function updateUI() {
     document.getElementById('highscoreValue').textContent = gameState.highScore;
     
     updateHealthBar();
-    updateStatsDisplay();
     
     if (gameState.currentState === GameState.LEVEL_COMPLETE) {
         updateBuffButtons();
     }
 }
 
-// Enhanced Health Bar for HP System
 export function updateHealthBar() {
     const healthContainer = document.getElementById('healthContainer');
     if (!healthContainer) return;
     
-    const healthPercent = (gameState.currentHealth / gameState.maxHealth) * 100;
-    const isLowHealth = healthPercent < 25;
-    const isCriticalHealth = healthPercent < 10;
+    healthContainer.innerHTML = '';
     
-    // Apply visual states
-    healthContainer.className = 'health-bar-container';
-    if (isCriticalHealth) {
+    if (gameState.lives <= 1 && gameState.shieldCharges === 0) {
         healthContainer.classList.add('critical-health');
-    } else if (isLowHealth) {
-        healthContainer.classList.add('low-health');
+    } else {
+        healthContainer.classList.remove('critical-health');
     }
     
     if (gameState.shieldCharges > 0) {
         healthContainer.classList.add('shield-active');
-    }
-    
-    // Create Dead Cells style health bar
-    healthContainer.innerHTML = `
-        <div class="health-bar-wrapper">
-            <div class="health-bar-background"></div>
-            <div class="health-bar-fill" style="width: ${healthPercent}%"></div>
-            <div class="health-bar-text">
-                ${gameState.currentHealth} / ${gameState.maxHealth}
-                ${gameState.shieldCharges > 0 ? ` +${gameState.shieldCharges}🛡️` : ''}
-            </div>
-        </div>
-    `;
-}
-
-// New Stats Display
-export function updateStatsDisplay() {
-    let statsElement = document.getElementById('statsDisplay');
-    if (!statsElement) {
-        statsElement = document.createElement('div');
-        statsElement.id = 'statsDisplay';
-        statsElement.className = 'stats-display';
-        document.getElementById('gameContainer').appendChild(statsElement);
-    }
-    
-    const stats = gameState.stats;
-    const visibleStats = [];
-    
-    if (stats.damageBonus > 0) {
-        visibleStats.push(`⚔️ +${Math.round(stats.damageBonus * 100)}% DMG`);
-    }
-    if (stats.critChance > 0) {
-        visibleStats.push(`💥 ${Math.round(stats.critChance * 100)}% CRIT`);
-    }
-    if (stats.attackSpeed > 1) {
-        visibleStats.push(`⚡ ${stats.attackSpeed.toFixed(1)}x SPEED`);
-    }
-    if (stats.lifeSteal > 0) {
-        visibleStats.push(`🩸 ${Math.round(stats.lifeSteal * 100)}% STEAL`);
-    }
-    if (stats.moveSpeed > 1) {
-        visibleStats.push(`🏃 +${Math.round((stats.moveSpeed - 1) * 100)}% MOVE`);
-    }
-    if (stats.healthRegen > 0) {
-        visibleStats.push(`💚 ${stats.healthRegen.toFixed(1)} HP/s`);
-    }
-    if (stats.bulletRegen > 0) {
-        visibleStats.push(`🔫 ${stats.bulletRegen.toFixed(1)} B/s`);
-    }
-    
-    if (visibleStats.length > 0) {
-        statsElement.innerHTML = visibleStats.slice(0, 4).join('<br>');
-        statsElement.style.display = 'block';
     } else {
-        statsElement.style.display = 'none';
+        healthContainer.classList.remove('shield-active');
+    }
+    
+    for (let i = 0; i < gameState.maxLives; i++) {
+        const segment = document.createElement('div');
+        segment.className = 'health-segment';
+        
+        if (i >= gameState.lives) {
+            segment.classList.add('empty');
+        } else if (gameState.lives <= 1 && gameState.shieldCharges === 0) {
+            segment.classList.add('damage');
+        } else if (gameState.shieldCharges > 0 && i < gameState.shieldCharges) {
+            segment.classList.add('shielded');
+        }
+        
+        healthContainer.appendChild(segment);
     }
 }
 
@@ -265,18 +221,20 @@ export function updateEnhancedDisplays() {
     updateEnhancedComboDisplay();
 }
 
+export function updateActiveBuffsDisplay() {
+    // Handled by updateEnhancedBuffDisplay
+}
+
+export function updateComboDisplay() {
+    // Handled by updateEnhancedComboDisplay
+}
+
 export function updatePauseScreen() {
     document.getElementById('pauseScore').textContent = gameState.score;
     document.getElementById('pauseLevel').textContent = gameState.level;
-    
-    // Update for new HP system
-    const pauseLivesElement = document.getElementById('pauseLives');
-    if (pauseLivesElement) {
-        pauseLivesElement.textContent = `${gameState.currentHealth}/${gameState.maxHealth} HP`;
-    }
+    document.getElementById('pauseLives').textContent = gameState.lives;
 }
 
-// Enhanced Buff Selection for Roguelike
 export function updateBuffButtons() {
     const buffButtonsContainer = document.getElementById('buffButtons');
     if (!buffButtonsContainer) return;
@@ -296,16 +254,8 @@ export function updateBuffButtons() {
         desc.className = 'buff-desc';
         desc.textContent = buff.desc;
         
-        // Add stat changes display
-        const stats = document.createElement('div');
-        stats.className = 'buff-stats';
-        stats.textContent = buff.statChanges || '';
-        
         button.appendChild(title);
         button.appendChild(desc);
-        if (buff.statChanges) {
-            button.appendChild(stats);
-        }
         buffButtonsContainer.appendChild(button);
     });
 }
@@ -407,10 +357,7 @@ export function gameOver() {
     showScreen('gameOver');
 }
 
-// Enhanced Buff Selection with Stats
 export function chooseBuff(buffType) {
-    const stats = gameState.stats;
-    
     switch(buffType) {
         case 'undeadResilience':
             gameState.activeBuffs.undeadResilience = 1;
@@ -421,51 +368,16 @@ export function chooseBuff(buffType) {
         case 'chainLightning':
             gameState.activeBuffs.chainLightning = 1;
             break;
-        
-        // New stat-based buffs
-        case 'vampiricStrikes':
-            stats.lifeSteal += 0.02; // 2% lifesteal
-            gameState.activeBuffs.vampiricStrikes = 1;
-            break;
-        case 'bulletStorm':
-            stats.bulletRegen += 0.5; // 1 bullet every 2 seconds
-            gameState.activeBuffs.bulletStorm = 1;
-            break;
-        case 'berserkerRage':
-            stats.damageBonus += 0.25; // +25% damage
-            stats.attackSpeed += 0.15; // +15% attack speed
-            gameState.activeBuffs.berserkerRage = 1;
-            break;
-        case 'survivalInstinct':
-            stats.healthRegen += 0.33; // 1 HP every 3 seconds
-            gameState.activeBuffs.survivalInstinct = 1;
-            break;
-        case 'criticalFocus':
-            stats.critChance += 0.20; // +20% crit chance
-            stats.critDamage += 1.0; // 2x crit damage (was 1x base)
-            gameState.activeBuffs.criticalFocus = 1;
-            break;
-        case 'swiftDeath':
-            stats.moveSpeed += 0.20; // +20% move speed
-            stats.projectileSpeed += 0.20; // +20% projectile speed
-            gameState.activeBuffs.swiftDeath = 1;
-            break;
     }
     
     gameState.availableBuffs = gameState.availableBuffs.filter(buff => buff.id !== buffType);
     
-    // Level progression
     gameState.level++;
     gameState.levelProgress = 1;
     window.bulletBoxesFound = 0;
     gameState.damageThisLevel = 0;
     gameState.gameSpeed += 0.6;
     gameState.bullets += 12;
-    
-    // Increase player stats with level
-    gameState.maxHealth += 25; // +25 HP per level
-    gameState.currentHealth = gameState.maxHealth; // Full heal on level up
-    gameState.baseDamage += 5; // +5 base damage per level
     
     gameState.postBuffInvulnerability = 120;
     
@@ -488,7 +400,7 @@ export function applyTheme() {
         ['scoreLabel', DUNGEON_THEME.labels.score],
         ['levelLabel', DUNGEON_THEME.labels.level],
         ['bulletsLabel', DUNGEON_THEME.labels.bullets],
-        ['livesLabel', 'Health'], // Changed from Lives to Health
+        ['livesLabel', DUNGEON_THEME.labels.lives],
         ['highscoreLabel', DUNGEON_THEME.labels.highScore],
         ['scoreStatLabel', DUNGEON_THEME.labels.score],
         ['enemiesStatLabel', DUNGEON_THEME.labels.enemies],
@@ -496,7 +408,7 @@ export function applyTheme() {
         ['finalScoreLabel', DUNGEON_THEME.labels.finalScore],
         ['pauseScoreLabel', DUNGEON_THEME.labels.score],
         ['pauseLevelLabel', DUNGEON_THEME.labels.level],
-        ['pauseLivesLabel', 'Health'], // Changed from Lives to Health
+        ['pauseLivesLabel', DUNGEON_THEME.labels.lives],
         ['buffChoiceTitle', '🔮 Choose Your Dark Power:']
     ];
 
@@ -510,7 +422,8 @@ export function applyTheme() {
     updateUI();
 }
 
-// Volume Control Functions (keeping existing functionality)
+// ===== ENHANCED OPTIONS OVERLAY SYSTEM =====
+
 function toggleVolumeOverlay() {
     const overlay = document.getElementById('volumeOverlay');
     const settingsButton = document.getElementById('settingsButton');
@@ -521,8 +434,10 @@ function toggleVolumeOverlay() {
         overlay.classList.add('show');
         settingsButton.classList.add('active');
         
+        // Update options content
         updateOptionsContent();
         
+        // IMPORTANT: Refresh volume display after content is updated
         setTimeout(() => {
             refreshVolumeDisplay();
         }, 50);
@@ -531,6 +446,7 @@ function toggleVolumeOverlay() {
             gameWasPausedByVolumeOverlay = true;
             gameState.gameRunning = false;
             soundManager.pauseBackgroundMusic();
+            console.log("🔊 Options overlay opened - game paused");
         }
         
     } else {
@@ -540,10 +456,10 @@ function toggleVolumeOverlay() {
         if (gameWasPausedByVolumeOverlay && gameState.currentState === GameState.PLAYING) {
             startSmoothResume();
             gameWasPausedByVolumeOverlay = false;
+            console.log("🔊 Options overlay closed - starting smooth resume");
         }
     }
 }
-
 function updateOptionsContent() {
     const overlay = document.getElementById('volumeOverlay');
     if (!overlay) return;
@@ -570,6 +486,7 @@ function updateOptionsContent() {
 function renderSoundOptions() {
     return `
         <div class="options-section">
+            <!-- Music Volume -->
             <div class="volume-control" id="musicControl">
                 <div class="volume-label">
                     <div class="volume-label-text">
@@ -586,6 +503,7 @@ function renderSoundOptions() {
                 </div>
             </div>
             
+            <!-- Sound Effects Volume -->
             <div class="volume-control" id="sfxControl">
                 <div class="volume-label">
                     <div class="volume-label-text">
@@ -602,6 +520,7 @@ function renderSoundOptions() {
                 </div>
             </div>
             
+            <!-- Master Controls -->
             <div class="master-controls">
                 <button class="master-mute-btn ${masterMuted ? 'unmute' : ''}" 
                         id="masterMuteBtn" onclick="toggleMasterMute(event)">
@@ -611,10 +530,10 @@ function renderSoundOptions() {
         </div>
     `;
 }
-
 function renderControlsOptions(controllerInfo) {
     return `
         <div class="options-section">
+            <!-- Controller Status -->
             <div class="controller-status">
                 <div class="status-item">
                     <span class="status-label">🎮 Controller</span>
@@ -625,34 +544,111 @@ function renderControlsOptions(controllerInfo) {
                 ${controllerInfo.connected ? `
                     <div class="controller-info">
                         <div class="controller-name">${controllerInfo.name}</div>
+                        <div class="controller-features">
+                            Vibration: ${controllerInfo.vibrationSupported ? '✅' : '❌'}
+                        </div>
                     </div>
                 ` : ''}
             </div>
             
-            <div class="controls-help">
-                <h4>Controls</h4>
-                <div class="control-mapping">
-                    <div class="control-item">
-                        <span>↑ / W</span>
-                        <span>Jump (hold for higher)</span>
-                    </div>
-                    <div class="control-item">
-                        <span>← → / A D</span>
-                        <span>Move left/right</span>
-                    </div>
-                    <div class="control-item">
-                        <span>SPACE / S</span>
-                        <span>Shoot</span>
-                    </div>
-                    <div class="control-item">
-                        <span>ESC</span>
-                        <span>Pause</span>
-                    </div>
-                    <div class="control-item">
-                        <span>TAB</span>
-                        <span>Show detailed stats</span>
-                    </div>
+            <!-- Input Mode Selection -->
+            <div class="input-mode-selection">
+                <div class="input-mode-label">Input Method</div>
+                <div class="input-mode-buttons">
+                    <button class="input-mode-btn ${controllerInfo.inputMode === 'keyboard' ? 'active' : ''}" 
+                            onclick="switchInputMode('keyboard', event)">
+                        ⌨️ Keyboard
+                    </button>
+                    <button class="input-mode-btn ${controllerInfo.inputMode === 'controller' ? 'active' : ''}" 
+                            onclick="switchInputMode('controller', event)"
+                            ${!controllerInfo.connected ? 'disabled' : ''}>
+                        🎮 Controller
+                    </button>
                 </div>
+            </div>
+            
+            <!-- Controller Settings (only when controller is active) -->
+            ${controllerInfo.connected ? `
+                <div class="controller-settings">
+                    <!-- Deadzone Setting -->
+                    <div class="setting-control">
+                        <div class="setting-label">
+                            <span>Stick Deadzone</span>
+                            <span class="setting-value">${Math.round(controllerInfo.deadzone * 100)}%</span>
+                        </div>
+                        <div class="setting-slider-container">
+                            <input type="range" class="setting-slider" 
+                                   min="0" max="50" value="${controllerInfo.deadzone * 100}" 
+                                   oninput="updateControllerDeadzone(this.value, event)">
+                        </div>
+                    </div>
+                    
+                    <!-- Trigger Threshold -->
+                    <div class="setting-control">
+                        <div class="setting-label">
+                            <span>Trigger Sensitivity</span>
+                            <span class="setting-value">${Math.round(controllerInfo.triggerThreshold * 100)}%</span>
+                        </div>
+                        <div class="setting-slider-container">
+                            <input type="range" class="setting-slider" 
+                                   min="5" max="50" value="${controllerInfo.triggerThreshold * 100}" 
+                                   oninput="updateTriggerThreshold(this.value, event)">
+                        </div>
+                    </div>
+                    
+                    <!-- Vibration Test -->
+                    ${controllerInfo.vibrationSupported ? `
+                        <div class="setting-control">
+                            <button class="test-btn" onclick="event.stopPropagation(); testControllerVibration()">
+                                🎮 Test Vibration
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            ` : ''}
+            
+            <!-- Controls Help -->
+            <div class="controls-help">
+                <h4>${controllerInfo.inputMode === 'controller' ? 'Controller' : 'Keyboard'} Controls</h4>
+                ${controllerInfo.inputMode === 'controller' ? `
+                    <div class="control-mapping">
+                        <div class="control-item">
+                            <span>🎮 Left Stick</span>
+                            <span>Move left/right</span>
+                        </div>
+                        <div class="control-item">
+                            <span>🅰️ A Button (Xbox) / ❌ X (PlayStation)</span>
+                            <span>Jump (hold for higher)</span>
+                        </div>
+                        <div class="control-item">
+                            <span>🅱️ B Button / 🔴 Circle + Right Trigger</span>
+                            <span>Shoot</span>
+                        </div>
+                        <div class="control-item">
+                            <span>☰ Menu Button</span>
+                            <span>Pause</span>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="control-mapping">
+                        <div class="control-item">
+                            <span>↑ / W</span>
+                            <span>Jump (hold for higher)</span>
+                        </div>
+                        <div class="control-item">
+                            <span>← → / A D</span>
+                            <span>Move left/right</span>
+                        </div>
+                        <div class="control-item">
+                            <span>SPACE / S</span>
+                            <span>Shoot</span>
+                        </div>
+                        <div class="control-item">
+                            <span>ESC</span>
+                            <span>Pause</span>
+                        </div>
+                    </div>
+                `}
             </div>
         </div>
     `;
@@ -665,7 +661,10 @@ function startSmoothResume() {
     });
 }
 
+// ===== OPTIONS MANAGEMENT FUNCTIONS =====
+
 function switchOptionsTab(tab, event) {
+    // Prevent event bubbling to avoid closing the menu
     if (event) {
         event.stopPropagation();
         event.preventDefault();
@@ -675,13 +674,53 @@ function switchOptionsTab(tab, event) {
     updateOptionsContent();
 }
 
+function switchInputMode(mode, event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    if (window.setInputMode && window.setInputMode(mode)) {
+        updateOptionsContent();
+    }
+}
+
+function updateControllerDeadzone(value, event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    if (window.setControllerDeadzone) {
+        window.setControllerDeadzone(value / 100);
+        updateOptionsContent();
+    }
+}
+
+function updateTriggerThreshold(value, event) {
+    // Prevent event bubbling
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    if (window.setTriggerThreshold) {
+        window.setTriggerThreshold(value / 100);
+        updateOptionsContent();
+    }
+}
+
+// ===== VOLUME CONTROL FUNCTIONS =====
+
 function updateVolume(type, value, event) {
+    // Prevent event bubbling
     if (event) {
         event.stopPropagation();
     }
     
     volumes[type] = parseInt(value);
     
+    // Update display elements
     const valueElement = document.getElementById(`${type}Value`);
     const fillElement = document.getElementById(`${type}Fill`);
     const controlElement = document.getElementById(`${type}Control`);
@@ -689,6 +728,7 @@ function updateVolume(type, value, event) {
     if (valueElement) valueElement.textContent = `${value}%`;
     if (fillElement) fillElement.style.width = `${value}%`;
     
+    // Update control visual state
     if (controlElement) {
         if (value == 0) {
             controlElement.classList.add('muted');
@@ -700,9 +740,11 @@ function updateVolume(type, value, event) {
         }
     }
     
+    // Update master mute state and apply audio changes
     updateMasterMuteState();
     updateMuteIcon();
     
+    // Apply volume changes to sound manager
     if (type === 'music') {
         soundManager.setMusicVolume(value / 100);
     } else if (type === 'sfx') {
@@ -711,6 +753,7 @@ function updateVolume(type, value, event) {
 }
 
 function toggleMasterMute(event) {
+    // Prevent event bubbling
     if (event) {
         event.stopPropagation();
         event.preventDefault();
@@ -729,52 +772,67 @@ function toggleMasterMute(event) {
     masterMuted = !masterMuted;
     
     if (masterMuted) {
+        // Save current volumes before muting
         savedVolumes = { ...volumes };
         
+        // Mute everything
         volumes.music = 0;
         volumes.sfx = 0;
         
+        // Update sliders
         if (musicSlider) musicSlider.value = 0;
         if (sfxSlider) sfxSlider.value = 0;
         
+        // Update fill bars
         if (musicFill) musicFill.style.width = '0%';
         if (sfxFill) sfxFill.style.width = '0%';
         
+        // Update value displays
         if (musicValue) musicValue.textContent = '0%';
         if (sfxValue) sfxValue.textContent = '0%';
         
+        // Update visual states
         if (musicControl) musicControl.classList.add('muted');
         if (sfxControl) sfxControl.classList.add('muted');
         
+        // Update button
         if (btn) {
             btn.textContent = 'Unmute All';
             btn.classList.add('unmute');
         }
         
+        // Apply audio changes
         soundManager.setMusicVolume(0);
         soundManager.setSfxVolume(0);
         
     } else {
+        // Restore saved volumes
         volumes.music = savedVolumes.music;
         volumes.sfx = savedVolumes.sfx;
         
+        // Update sliders
         if (musicSlider) musicSlider.value = savedVolumes.music;
         if (sfxSlider) sfxSlider.value = savedVolumes.sfx;
         
+        // Update fill bars
         if (musicFill) musicFill.style.width = `${savedVolumes.music}%`;
         if (sfxFill) sfxFill.style.width = `${savedVolumes.sfx}%`;
         
+        // Update value displays
         if (musicValue) musicValue.textContent = `${savedVolumes.music}%`;
         if (sfxValue) sfxValue.textContent = `${savedVolumes.sfx}%`;
         
+        // Update visual states
         if (musicControl) musicControl.classList.remove('muted');
         if (sfxControl) sfxControl.classList.remove('muted');
         
+        // Update button
         if (btn) {
             btn.textContent = 'Mute All';
             btn.classList.remove('unmute');
         }
         
+        // Apply audio changes
         soundManager.setMusicVolume(savedVolumes.music / 100);
         soundManager.setSfxVolume(savedVolumes.sfx / 100);
     }
@@ -787,12 +845,14 @@ function updateMasterMuteState() {
     const btn = document.getElementById('masterMuteBtn');
     
     if (allMuted && !masterMuted) {
+        // User manually muted both sliders
         masterMuted = true;
         if (btn) {
             btn.textContent = 'Unmute All';
             btn.classList.add('unmute');
         }
     } else if (!allMuted && masterMuted) {
+        // User manually unmuted at least one slider
         masterMuted = false;
         if (btn) {
             btn.textContent = 'Mute All';
@@ -811,11 +871,26 @@ function updateMuteIcon() {
         } else if (totalVolume < 100) {
             icon.textContent = '🔉';
         } else {
-            icon.textContent = '⚙️';
+            icon.textContent = '⚙️'; // Keep settings icon for consistency
         }
     }
 }
 
+// Initialize volumes properly when the page loads
+function initializeVolumeControls() {
+    // Set default volumes if not already set
+    if (!volumes.music) volumes.music = 70;
+    if (!volumes.sfx) volumes.sfx = 85;
+    
+    // Update all UI elements to match current volumes
+    updateVolume('music', volumes.music);
+    updateVolume('sfx', volumes.sfx);
+    
+    // Ensure master mute state is correct
+    updateMasterMuteState();
+}
+
+// Call this when the options overlay is opened
 function refreshVolumeDisplay() {
     const musicSlider = document.getElementById('musicSlider');
     const sfxSlider = document.getElementById('sfxSlider');
@@ -825,6 +900,7 @@ function refreshVolumeDisplay() {
     const sfxValue = document.getElementById('sfxValue');
     const btn = document.getElementById('masterMuteBtn');
     
+    // Update all elements to current state
     if (musicSlider) musicSlider.value = volumes.music;
     if (sfxSlider) sfxSlider.value = volumes.sfx;
     if (musicFill) musicFill.style.width = `${volumes.music}%`;
@@ -832,6 +908,7 @@ function refreshVolumeDisplay() {
     if (musicValue) musicValue.textContent = `${volumes.music}%`;
     if (sfxValue) sfxValue.textContent = `${volumes.sfx}%`;
     
+    // Update button state
     if (btn) {
         btn.textContent = masterMuted ? 'Unmute All' : 'Mute All';
         if (masterMuted) {
@@ -841,6 +918,7 @@ function refreshVolumeDisplay() {
         }
     }
     
+    // Update control states
     const musicControl = document.getElementById('musicControl');
     const sfxControl = document.getElementById('sfxControl');
     
@@ -860,8 +938,8 @@ function refreshVolumeDisplay() {
         }
     }
 }
+// ===== EVENT LISTENERS =====
 
-// Event Listeners
 document.addEventListener('click', (e) => {
     const overlay = document.getElementById('volumeOverlay');
     const settingsButton = document.getElementById('settingsButton');
@@ -880,7 +958,8 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Global Functions
+// ===== GLOBAL FUNCTIONS =====
+
 window.startGame = startGame;
 window.pauseGame = pauseGame;
 window.resumeGame = resumeGame;
@@ -891,13 +970,17 @@ window.showScreen = showScreen;
 window.hideAllScreens = hideAllScreens;
 window.updateUI = updateUI;
 window.updateEnhancedDisplays = updateEnhancedDisplays;
-window.updateStatsDisplay = updateStatsDisplay;
+
 
 window.toggleVolumeOverlay = toggleVolumeOverlay;
-window.updateVolume = updateVolume;
-window.toggleMasterMute = toggleMasterMute;
+window.updateVolume = updateVolume;                    // Keep this one
+window.toggleMasterMute = toggleMasterMute;            // Keep this one
 window.switchOptionsTab = switchOptionsTab;
+window.switchInputMode = switchInputMode;
+window.updateControllerDeadzone = updateControllerDeadzone;
+window.updateTriggerThreshold = updateTriggerThreshold;
 window.refreshVolumeDisplay = refreshVolumeDisplay;
+window.initializeVolumeControls = initializeVolumeControls;
 
 window.toggleInfoOverlay = function() {
     const infoOverlay = document.getElementById('infoOverlay');
