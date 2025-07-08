@@ -833,8 +833,8 @@ function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = '10px Rajdhani';
     ctx.textAlign = 'center';
-    ctx.fillText(`(${health}/${maxHealth})`, 
-                 x + width/2, y - 4);
+    ctx.fillText(`${health}/${maxHealth}`, 
+                 x + width/2, y - 2);
 }
     
 
