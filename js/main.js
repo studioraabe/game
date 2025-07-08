@@ -129,7 +129,7 @@ window.updateExplosions = updateExplosions;
 window.updateEnvironmentElements = () => updateEnvironmentElements(gameState.gameSpeed, gameState.timeSlowFactor);
 window.updateDrops = () => updateDrops(gameState.gameSpeed, gameState.magnetRange, gameState);
 window.updateEffects = () => updateEffects(gameState.timeSlowFactor, gameState);
-window.updateBatProjectiles = () => updateBatProjectiles(gameState);
+window.updateBatProjectiles = () => {return updateBatProjectiles(gameState);};
 window.checkCollisions = () => checkCollisions(gameState);
 window.shoot = () => shoot(gameState);
 window.render = () => render(ctx);

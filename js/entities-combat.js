@@ -43,6 +43,7 @@ function createBatProjectile(startX, startY, targetX, targetY) {
     });
 }
 
+
 export function updateBatProjectiles(gameStateParam) {
     for (let i = batProjectiles.length - 1; i >= 0; i--) {
         const projectile = batProjectiles[i];
@@ -74,43 +75,48 @@ export function updateBatProjectiles(gameStateParam) {
         }
         
         // Check collision with player
-          if (!isPlayerInvulnerable(gameStateParam) &&
-            projectile.x < player.x + player.width &&
-            projectile.x + projectile.size > player.x &&
-            projectile.y < player.y + player.height &&
-            projectile.y + projectile.size > player.y) {
+ if (!isPlayerInvulnerable(gameStateParam) &&
+    projectile.x < player.x + player.width &&
+    projectile.x + projectile.size > player.x &&
+    projectile.y < player.y + player.height &&
+    projectile.y + projectile.size > player.y) {
+    
+    // CORRUPTION EFFECT
+    gameStateParam.isCorrupted = true;
+    gameStateParam.corruptionTimer = 180;
+    
+    // Calculate corruption damage
+    const corruptionDamage = Math.max(8, Math.floor(gameStateParam.maxHP * 0.08));
+    
+    // FIXED: Use handlePlayerDamageWithAmount for direct damage values
+    // This ensures shields are properly checked and consumed
+    const playerDied = handlePlayerDamageWithAmount(gameStateParam, corruptionDamage, 'Bat Blood Curse', 'corruption');
+    
+    // Visual effects
+    createDamageNumber(player.x + player.width/2, player.y - 10, corruptionDamage);
+    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
+    createScorePopup(player.x + player.width/2, player.y, 'BLOOD CURSED!');
+    
+    // Corruption damage effects
+    triggerDamageEffects(gameStateParam, 'corruption');
             
-            // CORRUPTION EFFECT + DAMAGE
-            gameStateParam.isCorrupted = true;
-            gameStateParam.corruptionTimer = 180;
-            gameStateParam.postDamageInvulnerability = 30;
-            
-            // Deal corruption damage
-            const corruptionDamage = Math.max(8, Math.floor(gameStateParam.maxHP * 0.08));
-            const playerDied = takeDamage(corruptionDamage);
-            
-            createDamageNumber(player.x + player.width/2, player.y - 10, corruptionDamage);
-            createBloodParticles(player.x + player.width/2, player.y + player.height/2);
-            createScorePopup(player.x + player.width/2, player.y, 'BLOOD CURSED!');
-            
-            // NEW: Corruption damage effects
-            triggerDamageEffects(gameStateParam, 'corruption');
-                    
-            // Impact particles
-            for (let p = 0; p < 12; p++) {
-                createBloodParticles(
-                    projectile.x + (Math.random() - 0.5) * 20,
-                    projectile.y + (Math.random() - 0.5) * 20
-                );
-            }
-            
-            batProjectiles.splice(i, 1);
-            soundManager.hit();
-         if (playerDied) {
-                return true; // Signal game over
-            }
-            continue;
-        }
+    // Impact particles
+    for (let p = 0; p < 12; p++) {
+        createBloodParticles(
+            projectile.x + (Math.random() - 0.5) * 20,
+            projectile.y + (Math.random() - 0.5) * 20
+        );
+    }
+    
+    batProjectiles.splice(i, 1);
+    soundManager.hit();
+    
+    // Return game over status
+    if (playerDied) {
+        return true; // Signal game over to the caller
+    }
+    continue;
+}
         
         // Ground collision
         if (projectile.y + projectile.size >= CANVAS.groundY && !projectile.hasHitGround) {
@@ -136,9 +142,7 @@ export function updateBatProjectiles(gameStateParam) {
             batProjectiles.splice(i, 1);
         }
     }
-	 return false;
 }
-
 // ... keep all existing SHOOTING SYSTEM code ...
 
 export function shoot(gameStateParam) {
@@ -760,6 +764,69 @@ function updateBatAI(obstacle, gameStateParam) {
 // ========================================
 // COLLISION SYSTEM - FIXED FOR ONE-WAY DAMAGE
 // ========================================
+
+
+
+function handlePlayerDamageWithAmount(gameStateParam, damageAmount, damageSource = 'unknown', damageCategory = 'enemy') {
+    console.log(`🎯 Player takes ${damageAmount} damage from ${damageSource} (${damageCategory})`);
+    
+    // Shield check first
+    if (gameStateParam.shieldCharges > 0) {
+        const wasLastShield = gameStateParam.shieldCharges === 1;
+        gameStateParam.shieldCharges--;
+        
+        if (gameStateParam.shieldCharges <= 0) {
+            gameStateParam.hasShield = false;
+            gameStateParam.shieldCharges = 0;
+            createScorePopup(player.x + player.width/2, player.y, 'Shield Broken!');
+            triggerDamageEffects(gameStateParam, 'shield');
+        } else {
+            createScorePopup(player.x + player.width/2, player.y, 
+                `Shield: ${gameStateParam.shieldCharges} left`);
+            triggerDamageEffects(gameStateParam, 'shield');
+        }
+        
+        // Set invulnerability but don't remove enemy (for bat projectiles, they're already removed)
+        gameStateParam.postDamageInvulnerability = 60;
+        player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+        
+        if (!wasLastShield) {
+            soundManager.hit();
+        }
+        
+        return false; // Player didn't die, shield absorbed damage
+    }
+    
+    // HP damage to player
+    const playerDied = takeDamage(damageAmount);
+    
+    // Show damage number
+    createDamageNumber(
+        player.x + player.width/2, 
+        player.y - 10, 
+        damageAmount, 
+        damageAmount >= gameStateParam.maxHP * 0.25 // Critical if 25%+ of max HP
+    );
+    
+    createBloodParticles(player.x + player.width/2, player.y + player.height/2);
+    
+    gameStateParam.postDamageInvulnerability = 120;
+    player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
+    
+    // Reset combo on damage
+    gameStateParam.bulletsHit = 0;
+    gameStateParam.comboCount = 0;
+    gameStateParam.comboTimer = 0;
+    gameStateParam.consecutiveHits = 0;
+    
+    soundManager.hit();
+    
+    return playerDied;
+}
+
+
+
+
 
 // NEW: Player-only damage function (enemies unaffected)
 function handlePlayerDamage(gameStateParam, damageSource, damageCategory = 'enemy') {

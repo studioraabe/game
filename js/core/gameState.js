@@ -174,24 +174,25 @@ export function updatePlayerStatsForLevel(level) {
     const hpIncrease = gameState.maxHP - oldMaxHP;
     gameState.currentHP = Math.min(gameState.currentHP + hpIncrease, gameState.maxHP);
 }
+
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
     
-    // NEUE: Stabilere FPS-Normalisierung
+    // FPS normalization
     const now = performance.now();
     if (!gameState.lastFrameTime) gameState.lastFrameTime = now;
     
     const frameTime = now - gameState.lastFrameTime;
     gameState.lastFrameTime = now;
     
-    // Clamp delta time um extreme Sprünge zu vermeiden
+    // Clamp delta time to avoid extreme jumps
     const clampedFrameTime = Math.min(frameTime, 33.33); // Max 30 FPS minimum
-    gameState.deltaTime = clampedFrameTime / 16.67; // Normalisiert auf 60 FPS
+    gameState.deltaTime = clampedFrameTime / 16.67; // Normalized to 60 FPS
     
-    // Stabilere Animation Time für Sprites
-    gameState.animationTime = now * 0.001; // Konsistente Zeit basierend auf performance.now()
+    // Consistent animation time for sprites
+    gameState.animationTime = now * 0.001;
     
-    // Rest der update() Funktion...
+    // Update all game systems
     window.updatePlayer();
     window.spawnObstacle();
     window.updateObstacles();
@@ -200,13 +201,22 @@ export function update() {
     window.updateEnvironmentElements();
     window.updateDrops();
     window.updateEffects();
-    window.updateBatProjectiles();
-    updateDropBuffs();
-	
-	updateDamageEffects();
     
+    // FIXED: Check bat projectiles for player death BEFORE other collision checks
+    const batKilledPlayer = window.updateBatProjectiles();
+    if (batKilledPlayer) {
+        console.log("🦇 Player killed by bat projectile!");
+        window.gameOver();
+        return;
+    }
+    
+    updateDropBuffs();
+    updateDamageEffects();
+    
+    // FIXED: Only check regular collisions if player wasn't killed by bat
     const gameOver = window.checkCollisions();
     if (gameOver) {
+        console.log("💀 Player killed by regular collision!");
         window.gameOver();
         return;
     }
