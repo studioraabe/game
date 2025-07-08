@@ -320,8 +320,8 @@ export function updateDropBuffs() {
                         const actualHeal = healPlayer(boostedAmount);
                         if (actualHeal > 0) {
                             createScorePopup(
-                                gameState.player?.x + 20 || 100, 
-                                gameState.player?.y - 30 || 100, 
+                                player.x + 20, 
+                                player.y - 30, 
                                 `+${actualHeal}`
                             );
                         }
@@ -352,15 +352,15 @@ export function updateDropBuffs() {
                     break;
                 case 'healingBoost':
                     createScorePopup(
-                        gameState.player?.x || 100, 
-                        gameState.player?.y - 50 || 100, 
+                        player.x, 
+                        player.y - 50, 
                         'Healing Boost Ended'
                     );
                     break;
                 case 'regeneration':
                     createScorePopup(
-                        gameState.player?.x || 100, 
-                        gameState.player?.y - 50 || 100, 
+                        player.x, 
+                        player.y - 50, 
                         'Regeneration Ended'
                     );
                     break;
@@ -368,7 +368,6 @@ export function updateDropBuffs() {
         }
     });
 }
-
 // Enhanced heal function with buff support
 export function enhancedHealPlayer(baseAmount) {
     let finalAmount = baseAmount;

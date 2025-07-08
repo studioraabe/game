@@ -13,51 +13,6 @@ import {
 
 
 
-const STAT_BUFFS = [
-    // Original buffs
-    { 
-        id: 'undeadResilience', 
-        title: '🧟 Undead Vigor', 
-        desc: 'Gain extra life every 10 bullet hits (was 15)' 
-    },
-    { 
-        id: 'shadowLeap', 
-        title: '🌙 Shadow Leap', 
-        desc: 'Unlock double jump with ethereal shadow form' 
-    },
-    
-    // New stat-based buffs
-    {
-        id: 'vampiricStrikes',
-        title: '🩸 Vampiric Strikes',
-        desc: 'Gain 2% life steal, healing on enemy kills'
-    },
-    {
-        id: 'bulletStorm',
-        title: '🔥 Bullet Storm',
-        desc: 'Regenerate 1 bullet every 2 seconds'
-    },
-    {
-        id: 'berserkerRage',
-        title: '💢 Berserker Rage',
-        desc: 'Gain +25% damage and +15% attack speed'
-    },
-    {
-        id: 'survivalInstinct',
-        title: '💚 Survival Instinct',
-        desc: 'Regenerate 1 HP every 3 seconds'
-    },
-    {
-        id: 'criticalFocus',
-        title: '🎯 Critical Focus',
-        desc: '20% chance for critical hits (2x damage)'
-    },
-    {
-        id: 'swiftDeath',
-        title: '⚡ Swift Death',
-        desc: '+20% movement and projectile speed'
-    }
-];
 
 
 // Volume Control Variables
@@ -595,37 +550,7 @@ export function gameOver() {
     showScreen('gameOver');
 }
 
-export function chooseBuff(buffType) {
-    switch(buffType) {
-        case 'undeadResilience':
-            gameState.activeBuffs.undeadResilience = 1;
-            break;
-        case 'shadowLeap':
-            gameState.activeBuffs.shadowLeap = 1;
-            break;
-        case 'chainLightning':
-            gameState.activeBuffs.chainLightning = 1;
-            break;
-    }
-    
-    gameState.availableBuffs = gameState.availableBuffs.filter(buff => buff.id !== buffType);
-    
-    gameState.level++;
-    gameState.levelProgress = 1;
-    window.bulletBoxesFound = 0;
-    gameState.damageThisLevel = 0;
-    gameState.gameSpeed += 0.6;
-    gameState.bullets += 12;
-    
-    gameState.postBuffInvulnerability = 120;
-    
-    hideAllScreens();
-    showUniversalCountdown('resume', () => {
-        gameState.currentState = GameState.PLAYING;
-        gameState.gameRunning = true;
-        updateUI();
-    });
-}
+
 
 // Theme Application
 export function applyTheme() {

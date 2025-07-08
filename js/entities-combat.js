@@ -1,6 +1,7 @@
 // entities-combat.js - Fixed healing system integration
 
-import { GAME_CONSTANTS, CANVAS, ENEMY_BASE_STATS, calculateEnemyDamage } from './core/constants.js';
+import { GAME_CONSTANTS, CANVAS, ENEMY_BASE_STATS, calculateEnemyDamage, calculateEnemyHP, calculatePlayerDamage } from './core/constants.js';
+
 import { camera } from './core/camera.js';
 import { player } from './core/player.js';
 import { gameState, takeDamage, healPlayer } from './core/gameState.js'; // FIXED: Added healPlayer import
@@ -183,15 +184,11 @@ export function shoot(gameStateParam) {
     soundManager.shoot();
 }
 
+
+
 export function updateBullets(gameStateParam) {
     let anyBulletHit = false;
     
-	 if (shootCooldown > 0) {
-        shootCooldown -= gameState.deltaTime;
-    }
-
-	
-	
     for (let i = bulletsFired.length - 1; i >= 0; i--) {
         const bullet = bulletsFired[i];
         
@@ -223,8 +220,6 @@ export function updateBullets(gameStateParam) {
         }
         
         let bulletHitSomething = false;
-		
-		
         
         for (let j = obstacles.length - 1; j >= 0; j--) {
             const obstacle = obstacles[j];
@@ -286,30 +281,6 @@ export function updateBullets(gameStateParam) {
                 }
             }
         }
-		
-			  let damage = baseDamage;
-    let isCritical = false;
-    
-    // Apply damage bonus from stats
-    damage *= (1 + gameStateParam.playerStats.damageBonus / 100);
-    
-    // Roll for critical hit
-    if (Math.random() * 100 < gameStateParam.playerStats.critChance) {
-        damage *= gameStateParam.playerStats.critDamage;
-        isCritical = true;
-    }
-    
-    damage = Math.floor(damage);
-    obstacle.health -= damage;
-    
-    // Show damage number with critical indication
-    createDamageNumber(
-        obstacle.x + obstacle.width/2, 
-        obstacle.y + obstacle.height/4, 
-        damage, 
-        isCritical
-    );
-
         
         // Clean up off-screen bullets
         if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100)) {
@@ -319,9 +290,6 @@ export function updateBullets(gameStateParam) {
             bulletsFired.splice(i, 1);
         }
     }
-
-
-
 }
 
 
@@ -344,6 +312,8 @@ function applyLifesteal(damage, gameStateParam) {
     
     return 0;
 }
+
+
 
 function handleEnemyDeath(obstacle, index, gameStateParam) {
     const config = window.ENEMY_CONFIG?.[obstacle.type] || { points: 10 };
@@ -376,23 +346,10 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
     if (gameStateParam.comboCount >= 2) {
         gameStateParam.comboTimer = 300;
     }
-
-
-	  if (gameStateParam.playerStats.lifeSteal > 0) {
-        const lifeStealAmount = applyLifesteal(damage || 20, gameStateParam);
-        if (lifeStealAmount > 0) {
-            createScorePopup(
-                player.x + player.width/2, 
-                player.y - 15, 
-                `+${lifeStealAmount} 🩸`,
-                true
-            );
-        }
-    }
     
+    // FIXED: Enhanced healing with buff support
     const bulletsNeeded = gameStateParam.activeBuffs.undeadResilience > 0 ? 10 : 15;
     if (gameStateParam.bulletsHit >= bulletsNeeded) {
-        // ENHANCED: Use enhanced healing system with buff support
         const baseHealAmount = Math.floor(gameStateParam.maxHP * 0.25);
         const actualHeal = enhancedHealPlayer(baseHealAmount);
         

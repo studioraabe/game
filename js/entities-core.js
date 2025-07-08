@@ -145,8 +145,6 @@ function calculateSpawnTimer(baseTimer, minTimer, level) {
 }
 
 
-
-
 function createObstacle(type, x, y, width, height) {
     const obstacle = {
         x: x,
@@ -194,7 +192,6 @@ function createObstacle(type, x, y, width, height) {
     
     return obstacle;
 }
-
 export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
     obstacleTimer -= gameState.deltaTime * timeSlowFactor;
     

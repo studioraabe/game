@@ -1,6 +1,7 @@
 // core/gameState.js - Game State Management - FPS KORRIGIERT
 
-import { GameState, GAME_CONSTANTS, DUNGEON_THEME, calculatePlayerMaxHP, calculatePlayerDamage } from './constants.js';
+import { GameState, GAME_CONSTANTS, DUNGEON_THEME, calculatePlayerMaxHP, calculatePlayerDamage, calculateEnemyHP } from './constants.js';
+
 import { resetCamera } from './camera.js';
 import { resetPlayer } from './player.js';
 import { resetBulletBoxesFound } from '../entities.js';
@@ -24,7 +25,7 @@ export const gameState = {
     gameLoop: null,
     needsRedraw: true,
     shieldCharges: 0,
-	gameState.playerStats = {
+	playerStats: {
     damageBonus: 0,       // Percentage bonus to base damage
     attackSpeed: 0,       // Percentage increase to attack rate
     moveSpeed: 0,         // Percentage increase to movement speed
@@ -35,7 +36,7 @@ export const gameState = {
     critChance: 0,        // Percentage chance to land a critical hit
     critDamage: 1.5,      // Multiplier for critical hit damage (starts at 50% bonus)
     selectedBuffs: []     // Track selected buffs
-};
+	},
     
     isCorrupted: false,
     corruptionTimer: 0,

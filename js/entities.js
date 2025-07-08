@@ -63,59 +63,6 @@ export {
 
 
 
-let shootCooldown = 0;
-const BASE_SHOOT_COOLDOWN = 15; // frames at 60fps - 4 shots per second
-
-export function shoot(gameStateParam) {
-    if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
-    
-    // Apply attack speed calculation
-    const attackSpeedMultiplier = 1 + (gameStateParam.playerStats.attackSpeed / 100);
-    const finalCooldown = BASE_SHOOT_COOLDOWN / attackSpeedMultiplier;
-    
-    // Check if we can shoot based on cooldown
-    if (shootCooldown > 0) {
-        return;
-    }
-    
-    // Reset cooldown
-    shootCooldown = finalCooldown;
-    
-    // Apply projectile speed multiplier
-    const projectileSpeedMultiplier = 1 + (gameStateParam.playerStats.projectileSpeed / 100);
-    
-    // Single bullet shooting (Chain Lightning removed)
-    const baseX = player.facingDirection === 1 ? player.x + player.width : player.x;
-    const startX = baseX + (24 * player.facingDirection);
-    
-    const bulletSpeed = GAME_CONSTANTS.BULLET_SPEED * 
-                        player.facingDirection * 
-                        GAME_CONSTANTS.BULLET_SPEED_MULTIPLIER *
-                        projectileSpeedMultiplier;
-    
-    bulletsFired.push({
-        x: startX,
-        y: player.y + player.height / 1.00,
-        speed: bulletSpeed,
-        enhanced: false,
-        direction: player.facingDirection,
-        piercing: gameStateParam.hasPiercingBullets,
-        // Stretch effect properties
-        age: 0,
-        tailX: startX,
-        baseLength: 30,
-        currentLength: 4,
-        maxStretch: 60,
-        hit: false,
-        hitTime: 0
-    });
-    
-    if (!gameStateParam.isBerserker) {
-        gameStateParam.bullets -= 1;
-    }
-    soundManager.shoot();
-}
-
 
 
 
