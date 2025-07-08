@@ -715,23 +715,36 @@ export function drawEnemy(obstacle, ctx, gameState) {
     const screenX = getScreenX(obstacle.x);
     const animTime = obstacle.animationTime || 0;
     
+    // FIXED: Always ensure health is properly initialized
+    if (!obstacle.maxHealth || obstacle.maxHealth <= 0) {
+        const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf'];
+        if (enemyTypes.includes(obstacle.type)) {
+            obstacle.maxHealth = calculateEnemyHP(obstacle.type, gameState.level);
+            if (!obstacle.health || obstacle.health <= 0) {
+                obstacle.health = obstacle.maxHealth;
+            }
+            console.log(`🔧 Fixed health for ${obstacle.type}: ${obstacle.health}/${obstacle.maxHealth}`);
+        }
+    }
+    
     // TRY SPRITE RENDERING FIRST FOR SKELETON
     if (obstacle.type === 'skeleton') {
         if (spriteManager.loaded) {
             const success = drawSkeletonSprite(ctx, obstacle, gameState, screenX);
             if (success) {
-                // Successfully rendered with sprites, draw health bar if needed
+                // FIXED: Always show health bar for multi-health enemies
                 if (obstacle.maxHealth > 1) {
-                    drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, obstacle.health, obstacle.maxHealth, obstacle.type);
+                    drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, 
+                                 obstacle.health, obstacle.maxHealth, obstacle.type);
                 }
-                return; // Skip canvas rendering
+                return;
             }
         }
         // Fallback to canvas rendering
         drawSkeleton(ctx, screenX, obstacle.y, animTime);
     }
     else {
-        // Handle other enemy types as before
+        // Handle other enemy types
         switch(obstacle.type) {
             case 'bat': 
                 drawBat(ctx, screenX, obstacle.y, obstacle); 
@@ -766,16 +779,14 @@ export function drawEnemy(obstacle, ctx, gameState) {
         }
     }
     
-    // Health Bar for multi-health enemies (except skeleton which is handled above)
-if (obstacle.type === 'skeleton' || obstacle.type === 'vampire' || 
-    obstacle.type === 'spider' || obstacle.type === 'wolf' || 
-    obstacle.type === 'alphaWolf' || obstacle.type === 'bat') { // ADD BAT HERE
+    // FIXED: Enhanced health bar display logic
+    const enemyTypesWithHealth = ['skeleton', 'vampire', 'spider', 'wolf', 'alphaWolf', 'bat'];
     
-    if (obstacle.maxHealth > 1) {
-        drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, obstacle.health, obstacle.maxHealth, obstacle.type);
+    if (enemyTypesWithHealth.includes(obstacle.type) && obstacle.maxHealth > 1) {
+        console.log(`🎯 Rendering health bar for ${obstacle.type}: ${obstacle.health}/${obstacle.maxHealth}`);
+        drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, 
+                     obstacle.health, obstacle.maxHealth, obstacle.type);
     }
-}
-
 }
 
 
@@ -786,76 +797,48 @@ if (obstacle.type === 'skeleton' || obstacle.type === 'vampire' ||
 
 
 function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
-    // Keep the existing safety check
-    if (maxHealth <= 1 || type === 'boltBox' || type === 'rock' || 
-        type === 'teslaCoil' || type === 'frankensteinTable' || type === 'sarcophagus') {
+    // Skip non-enemies
+    if (maxHealth <= 1 || 
+        ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'].includes(type)) {
         return;
     }
     
+    const barHeight = 6;
+    const healthPercent = Math.max(0, health / maxHealth);
+    const fillWidth = width * healthPercent;
     
-    const barHeight = 8;
-    const segmentWidth = width / maxHealth;
+    // Background (dark)
+    ctx.fillStyle = '#222222';
+    ctx.fillRect(x, y, width, barHeight);
     
-    // Draw each segment individually
-    for (let i = 0; i < maxHealth; i++) {
-        const segmentX = x + i * segmentWidth;
-        
-        // Segment background (dark gray for lost HP)
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2);
-        
-        // REPLACE THIS SECTION - Current health (different colors per enemy)
-        if (i < health) {
-            let healthColor;
-            
-            // BRIGHT COLORS FOR TESTING
-            switch(type) {
-                case 'alphaWolf':
-                    healthColor = '#00FF00'; // Bright green - very visible
-                    break;
-                case 'bat':
-                    healthColor = '#FF00FF'; // Bright magenta - very visible
-                    break;
-                case 'vampire':
-                    healthColor = '#00FFFF'; // Bright cyan - very visible
-                    break;
-                case 'spider':
-                    healthColor = '#FFFF00'; // Bright yellow - very visible
-                    break;
-                case 'wolf':
-                    healthColor = '#FF8000'; // Bright orange - very visible
-                    break;
-                case 'skeleton':
-                    healthColor = '#8000FF'; // Bright purple - very visible
-                    break;
-                default:
-                    healthColor = '#FF0000'; // Bright red fallback
-            }
-            
-            console.log(`Using color ${healthColor} for ${type}`); // ADD THIS LINE
-            
-            ctx.fillStyle = healthColor;
-            ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2);
-        }
-    }
+    // Health fill (bright colors)
+    const colors = {
+        'alphaWolf': '#8B0000',  // Orange
+        'bat': '#8B0000',        // Hot pink
+        'vampire': '#8B0000',    // Red
+        'spider': '#8B0000',     // Green
+        'wolf': '#8B0000',       // Yellow
+        'skeleton': '#8B0000'    // Cyan
+    };
     
-    // Keep the rest of the function unchanged...
-    // Frame around the entire health bar
+    ctx.fillStyle = colors[type] || '#FFFFFF';
+    ctx.fillRect(x + 1, y + 1, fillWidth - 2, barHeight - 2);
+    
+    // Border
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, barHeight);
-    
-    // Separator lines between segments
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1;
-    for (let i = 1; i < maxHealth; i++) {
-        const lineX = x + i * segmentWidth;
-        ctx.beginPath();
-        ctx.moveTo(lineX, y + 1);
-        ctx.lineTo(lineX, y + barHeight - 1);
-        ctx.stroke();
-    }
+	
+	    // ENHANCED: Enemy type indicator above health bar
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = '10px Rajdhani';
+    ctx.textAlign = 'center';
+    ctx.fillText(`(${health}/${maxHealth})`, 
+                 x + width/2, y - 4);
 }
+    
+
+
 
 
 

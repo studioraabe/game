@@ -193,23 +193,19 @@ export function updateBullets(gameStateParam) {
         bullet.age++;
         
         if (!bullet.hit) {
-            // Move bullet
             bullet.x += bullet.speed * gameState.deltaTime;
             
-            // Update stretch effect
             if (bullet.age < 10) {
                 bullet.currentLength = bullet.baseLength + (bullet.maxStretch * (bullet.age / 10));
             } else {
                 bullet.currentLength = bullet.baseLength + bullet.maxStretch;
             }
             
-            // Update tail position with delay for stretch effect
             const tailDelay = bullet.currentLength / Math.abs(bullet.speed);
             if (bullet.age > tailDelay) {
                 bullet.tailX += bullet.speed * gameState.deltaTime;
             }
         } else {
-            // Contract on hit
             bullet.hitTime++;
             
             if (bullet.hitTime < 8) {
@@ -231,7 +227,6 @@ export function updateBullets(gameStateParam) {
                 obstacle.type !== 'boltBox' && 
                 !(obstacle.type === 'skeleton' && obstacle.isDead)) {
                 
-                // Collision detection
                 if (bullet.x < obstacle.x + obstacle.width &&
                     bullet.x + 8 > obstacle.x &&
                     bullet.y < obstacle.y + obstacle.height &&
@@ -240,19 +235,29 @@ export function updateBullets(gameStateParam) {
                     bullet.hit = true;
                     bullet.hitTime = 0;
                     
-                   const baseDamage = gameStateParam.baseDamage || calculatePlayerDamage(gameStateParam.level);
-const damage = bullet.enhanced ? baseDamage * 3 : baseDamage; // Chain lightning does 3x damage
-obstacle.health -= damage;
+                    // FIXED: Enhanced damage calculation with proper scaling
+                    const baseDamage = gameStateParam.baseDamage || calculatePlayerDamage(gameStateParam.level);
+                    const damage = bullet.enhanced ? baseDamage * 3 : baseDamage;
                     
-                    // Skeleton-specific damage effects
+                    // FIXED: Ensure obstacle has proper health before damage
+                    if (!obstacle.maxHealth || obstacle.maxHealth <= 0) {
+                        const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf'];
+                        if (enemyTypes.includes(obstacle.type)) {
+                            obstacle.maxHealth = calculateEnemyHP(obstacle.type, gameStateParam.level);
+                            obstacle.health = obstacle.maxHealth;
+                        }
+                    }
+                    
+                    obstacle.health -= damage;
+                    
+                    console.log(`💥 ${obstacle.type} hit for ${damage} damage. Health: ${obstacle.health}/${obstacle.maxHealth}`);
+                    
                     if (obstacle.type === 'skeleton') {
                         obstacle.damageResistance = 30;
                         
                         if (obstacle.health <= 0) {
                             obstacle.isDead = true;
                             obstacle.deathTimer = 0;
-                            
-                            // Award points and handle death
                             handleEnemyDeath(obstacle, j, gameStateParam);
                         }
                     }
@@ -295,11 +300,16 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
     gameStateParam.score += points;
     createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
 
-    // ✅ FIXED: Direct function call instead of window check
+    // FIXED: Enhanced drop rolling
     rollForDrop(obstacle.type, obstacle.x + obstacle.width/2, obstacle.y);
     
     if (obstacle.type === 'alphaWolf') {
         gameStateParam.bossesKilled++;
+    }
+    
+    // FIXED: Proper cleanup before removal
+    if (obstacle.id && window.spriteManager) {
+        window.spriteManager.cleanupEntity(obstacle.type, obstacle.id);
     }
     
     obstacles.splice(index, 1);
@@ -315,9 +325,13 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
     
     const bulletsNeeded = gameStateParam.activeBuffs.undeadResilience > 0 ? 10 : 15;
     if (gameStateParam.bulletsHit >= bulletsNeeded) {
-        if (gameStateParam.lives < 5) {
-            gameStateParam.lives++;
-            if (gameState.lives > gameStateParam.maxLives) gameStateParam.maxLives = gameStateParam.lives;
+        // FIXED: Use new healing system instead of lives
+        const healAmount = Math.floor(gameStateParam.maxHP * 0.25);
+        const actualHeal = Math.min(healAmount, gameStateParam.maxHP - gameStateParam.currentHP);
+        
+        if (actualHeal > 0) {
+            gameStateParam.currentHP += actualHeal;
+            createScorePopup(player.x + player.width/2, player.y, `+${actualHeal} HP`);
         } else {
             gameStateParam.score += 500 * gameStateParam.scoreMultiplier;
             createScorePopup(player.x + player.width/2, player.y, '+500 Bonus!');
@@ -757,6 +771,8 @@ function updateBatAI(obstacle, gameStateParam) {
 // ========================================
 
 
+// CLEAN SOLUTION: Use isStationary check in checkCollisions function
+
 export function checkCollisions(gameStateParam) {
     if (isPlayerInvulnerable(gameStateParam)) {
         return false;
@@ -765,7 +781,12 @@ export function checkCollisions(gameStateParam) {
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
         
-        // Tesla Coil collision
+        // Check if obstacle is stationary environmental object
+        const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
+                            obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' ||
+                            obstacle.type === 'sarcophagus';
+        
+        // Tesla Coil collision (special case - active zapping)
         if (obstacle.type === 'teslaCoil') {
             if (obstacle.state === 'zapping' && obstacle.zapActive) {
                 const zapX = obstacle.x + obstacle.width/2 - 8;
@@ -784,7 +805,7 @@ export function checkCollisions(gameStateParam) {
             continue;
         }
         
-        // Frankenstein Table collision
+        // Frankenstein Table collision (special case - active zapping)
         if (obstacle.type === 'frankensteinTable') {
             if (obstacle.state === 'zapping' && obstacle.zapActive) {
                 const zapX = obstacle.x + obstacle.width/2 - 12;
@@ -795,7 +816,7 @@ export function checkCollisions(gameStateParam) {
                 if (player.x < zapX + zapWidth &&
                     player.x + player.width > zapX &&
                     player.y < zapY + zapHeight &&
-                    player.y + player.height > zapY) {
+                    player.y + player.height > zipY) {
                     
                     return handleDamage(gameStateParam, 'frankensteinTable', i);
                 }
@@ -803,7 +824,7 @@ export function checkCollisions(gameStateParam) {
             continue;
         }
         
-        // Normal enemy collision
+        // Normal collision detection
         const hitbox = getObstacleHitbox(obstacle);
         
         if (player.x < hitbox.x + hitbox.width &&
@@ -812,17 +833,26 @@ export function checkCollisions(gameStateParam) {
             player.y + player.height > hitbox.y) {
             
             if (obstacle.type === 'boltBox') {
+                // Bolt boxes give ammo
                 gameStateParam.bullets += 20;
                 createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, '+20 Bolts');
                 obstacles.splice(i, 1);
                 continue;
             }
             
-            if (obstacle.type === 'sarcophagus') {
-                // Sarcophagus blocks movement but doesn't deal damage
+            if (isStationary) {
+                // Environmental obstacles (rock, sarcophagus) - block movement, no damage
+                if (player.velocityX > 0) {
+                    player.x = hitbox.x - player.width;
+                } else if (player.velocityX < 0) {
+                    player.x = hitbox.x + hitbox.width;
+                }
+                player.velocityX = 0;
+                // NO DAMAGE - just blocking
                 continue;
             }
             
+            // All non-stationary obstacles (enemies) cause damage
             return handleDamage(gameStateParam, obstacle.type, i);
         }
     }

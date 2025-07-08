@@ -146,6 +146,7 @@ function calculateSpawnTimer(baseTimer, minTimer, level) {
 
 
 
+
 function createObstacle(type, x, y, width, height) {
     const obstacle = {
         x: x,
@@ -154,20 +155,24 @@ function createObstacle(type, x, y, width, height) {
         height: height,
         type: type,
         passed: false,
-        health: 1,        // Start with 1, will be updated below
-        maxHealth: 1,     // Start with 1, will be updated below
+        health: 1,        
+        maxHealth: 1,     
         animationTime: Math.random() * 1000,
         id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
     
-    // FIXED: Set proper health for ALL enemies that should have multi-health
-    if (type !== 'boltBox' && type !== 'rock' && type !== 'teslaCoil' && 
-        type !== 'frankensteinTable' && type !== 'sarcophagus') {
-        
+    // FIXED: Comprehensive health assignment for ALL enemy types
+    const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf'];
+    
+    if (enemyTypes.includes(type)) {
         obstacle.maxHealth = calculateEnemyHP(type, gameState.level);
         obstacle.health = obstacle.maxHealth;
         
-        console.log(`Created ${type} with ${obstacle.health}/${obstacle.maxHealth} HP`); // Debug log
+        console.log(`✅ Created ${type} with ${obstacle.health}/${obstacle.maxHealth} HP at level ${gameState.level}`);
+    } else {
+        // Non-enemy objects (boltBox, rock, etc.) keep health = 1
+        obstacle.health = 1;
+        obstacle.maxHealth = 1;
     }
     
     // Add type-specific properties
