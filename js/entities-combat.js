@@ -240,8 +240,9 @@ export function updateBullets(gameStateParam) {
                     bullet.hit = true;
                     bullet.hitTime = 0;
                     
-                    const damage = bullet.enhanced ? 1 : 1;
-                    obstacle.health -= damage;
+                   const baseDamage = gameStateParam.baseDamage || calculatePlayerDamage(gameStateParam.level);
+const damage = bullet.enhanced ? baseDamage * 3 : baseDamage; // Chain lightning does 3x damage
+obstacle.health -= damage;
                     
                     // Skeleton-specific damage effects
                     if (obstacle.type === 'skeleton') {

@@ -767,48 +767,85 @@ export function drawEnemy(obstacle, ctx, gameState) {
     }
     
     // Health Bar for multi-health enemies (except skeleton which is handled above)
-    if (obstacle.type === 'skeleton' ||  
-        (obstacle.type === 'vampire' || 
-         obstacle.type === 'spider' || 
-         obstacle.type === 'wolf' || 
-         obstacle.type === 'alphaWolf')) {
+if (obstacle.type === 'skeleton' || obstacle.type === 'vampire' || 
+    obstacle.type === 'spider' || obstacle.type === 'wolf' || 
+    obstacle.type === 'alphaWolf' || obstacle.type === 'bat') { // ADD BAT HERE
+    
+    if (obstacle.maxHealth > 1) {
         drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, obstacle.health, obstacle.maxHealth, obstacle.type);
     }
 }
 
+}
+
+
+
+// FIXED: drawHealthBar function in js/rendering/enemies.js
+// Replace the existing drawHealthBar function with this corrected version
+
+
 
 function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
-    // Zusätzliche Sicherheitsprüfung
-    if (maxHealth <= 1 || type === 'boltBox' || type === 'bat') {
-        return; // Zeichne nichts für diese Typen
+    // Keep the existing safety check
+    if (maxHealth <= 1 || type === 'boltBox' || type === 'rock' || 
+        type === 'teslaCoil' || type === 'frankensteinTable' || type === 'sarcophagus') {
+        return;
     }
-	
     
-    const barHeight = 8; // Größere Gesamthöhe für bessere Sichtbarkeit
-    const segmentWidth = width / maxHealth; // Breite pro Gesundheitspunkt
     
-    // Zeichne jedes Segment einzeln
+    const barHeight = 8;
+    const segmentWidth = width / maxHealth;
+    
+    // Draw each segment individually
     for (let i = 0; i < maxHealth; i++) {
         const segmentX = x + i * segmentWidth;
         
-        // Segment-Hintergrund (dunkelgrau für verlorene HP)
+        // Segment background (dark gray for lost HP)
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2); // Platz für Rahmen lassen
+        ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2);
         
-        // Aktuelle Gesundheit (rot für vorhandene HP)
+        // REPLACE THIS SECTION - Current health (different colors per enemy)
         if (i < health) {
-            const healthColor = (type === 'alphaWolf') ? '#FF4500' : '#8B0000'; // Orange für Alpha, DarkRed für andere
+            let healthColor;
+            
+            // BRIGHT COLORS FOR TESTING
+            switch(type) {
+                case 'alphaWolf':
+                    healthColor = '#00FF00'; // Bright green - very visible
+                    break;
+                case 'bat':
+                    healthColor = '#FF00FF'; // Bright magenta - very visible
+                    break;
+                case 'vampire':
+                    healthColor = '#00FFFF'; // Bright cyan - very visible
+                    break;
+                case 'spider':
+                    healthColor = '#FFFF00'; // Bright yellow - very visible
+                    break;
+                case 'wolf':
+                    healthColor = '#FF8000'; // Bright orange - very visible
+                    break;
+                case 'skeleton':
+                    healthColor = '#8000FF'; // Bright purple - very visible
+                    break;
+                default:
+                    healthColor = '#FF0000'; // Bright red fallback
+            }
+            
+            console.log(`Using color ${healthColor} for ${type}`); // ADD THIS LINE
+            
             ctx.fillStyle = healthColor;
-            ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2); // Vollständig rote Füllung
+            ctx.fillRect(segmentX + 1, y + 1, segmentWidth - 2, barHeight - 2);
         }
     }
     
-    // Rahmen um die gesamte Health Bar (außen)
+    // Keep the rest of the function unchanged...
+    // Frame around the entire health bar
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, barHeight);
     
-    // Trennlinien zwischen den Segmenten
+    // Separator lines between segments
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
     for (let i = 1; i < maxHealth; i++) {
@@ -819,6 +856,9 @@ function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
         ctx.stroke();
     }
 }
+
+
+
 function drawSkeleton(ctx, x, y, animTime = 0) {
     const scale = 1.3;
     const timeScale = animTime * 0.001;

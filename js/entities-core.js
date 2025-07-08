@@ -144,6 +144,8 @@ function calculateSpawnTimer(baseTimer, minTimer, level) {
     return Math.max(finalTimer, effectiveMinTimer);
 }
 
+
+
 function createObstacle(type, x, y, width, height) {
     const obstacle = {
         x: x,
@@ -152,20 +154,23 @@ function createObstacle(type, x, y, width, height) {
         height: height,
         type: type,
         passed: false,
-        health: 1,
-        maxHealth: 1,
+        health: 1,        // Start with 1, will be updated below
+        maxHealth: 1,     // Start with 1, will be updated below
         animationTime: Math.random() * 1000,
         id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
     
-    // Add type-specific properties
-	
-	 if (type !== 'boltBox') { // Bolt boxes remain 1 HP
+    // FIXED: Set proper health for ALL enemies that should have multi-health
+    if (type !== 'boltBox' && type !== 'rock' && type !== 'teslaCoil' && 
+        type !== 'frankensteinTable' && type !== 'sarcophagus') {
+        
         obstacle.maxHealth = calculateEnemyHP(type, gameState.level);
         obstacle.health = obstacle.maxHealth;
+        
+        console.log(`Created ${type} with ${obstacle.health}/${obstacle.maxHealth} HP`); // Debug log
     }
-	
-	
+    
+    // Add type-specific properties
     if (type === 'skeleton') {
         obstacle.velocityX = 0;
         obstacle.lastAnimation = 'idle';
