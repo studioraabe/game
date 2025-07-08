@@ -1,7 +1,7 @@
 // ui.js - Enhanced UI with Controller Support and Tabbed Options Menu
 
-import { GameState, STAT_BUFFS } from './core/constants.js';
-import { gameState, resetGame, startGameLoop, stopGameLoop, resumeTransition } from './core/gameState.js';
+import { GameState, DUNGEON_THEME } from './core/constants.js';
+import { gameState, resetGame, startGameLoop, stopGameLoop, resumeTransition, updatePlayerStatsForLevel } from './core/gameState.js';
 import { soundManager, checkAchievements, saveHighScore, checkForTop10Score, displayHighscores } from './systems.js';
 import { activeDropBuffs } from './systems.js';
 import { getControllerInfo } from './core/input.js';
@@ -10,6 +10,8 @@ import {
     updateEnhancedBuffDisplay,
     initEnhancedContainers
 } from './ui-enhancements.js';
+import { STAT_BUFFS, replenishBuffSelection } from './roguelike-stats.js';
+
 
 
 
@@ -557,21 +559,22 @@ export function applyTheme() {
     const container = document.getElementById('gameContainer');
     container.className = 'dungeon-theme';
     
+    // Update all UI labels with theme text
     const updates = [
-        ['gameTitle', STAT_BUFFS.title],
-        ['startButton', STAT_BUFFS.startButton],
-        ['scoreLabel', STAT_BUFFS.labels.score],
-        ['levelLabel', STAT_BUFFS.labels.level],
-        ['bulletsLabel', STAT_BUFFS.labels.bullets],
-        ['livesLabel', STAT_BUFFS.labels.lives],
-        ['highscoreLabel', STAT_BUFFS.labels.highScore],
-        ['scoreStatLabel', STAT_BUFFS.labels.score],
-        ['enemiesStatLabel', STAT_BUFFS.labels.enemies],
-        ['gameOverTitle', STAT_BUFFS.labels.gameOver],
-        ['finalScoreLabel', STAT_BUFFS.labels.finalScore],
-        ['pauseScoreLabel', STAT_BUFFS.labels.score],
-        ['pauseLevelLabel', STAT_BUFFS.labels.level],
-        ['pauseLivesLabel', STAT_BUFFS.labels.lives],
+        ['gameTitle', DUNGEON_THEME.title],
+        ['startButton', DUNGEON_THEME.startButton],
+        ['scoreLabel', DUNGEON_THEME.labels.score],
+        ['levelLabel', DUNGEON_THEME.labels.level],
+        ['bulletsLabel', DUNGEON_THEME.labels.bullets],
+        ['livesLabel', DUNGEON_THEME.labels.lives],
+        ['highscoreLabel', DUNGEON_THEME.labels.highScore],
+        ['scoreStatLabel', DUNGEON_THEME.labels.score],
+        ['enemiesStatLabel', DUNGEON_THEME.labels.enemies],
+        ['gameOverTitle', DUNGEON_THEME.labels.gameOver],
+        ['finalScoreLabel', DUNGEON_THEME.labels.finalScore],
+        ['pauseScoreLabel', DUNGEON_THEME.labels.score],
+        ['pauseLevelLabel', DUNGEON_THEME.labels.level],
+        ['pauseLivesLabel', DUNGEON_THEME.labels.lives],
         ['buffChoiceTitle', '🔮 Choose Your Dark Power:']
     ];
 
@@ -580,8 +583,9 @@ export function applyTheme() {
         if (element) element.textContent = text;
     });
 
+    // Initialize buffs from STAT_BUFFS (from roguelike-stats.js)
     gameState.activeBuffs = {};
-    gameState.availableBuffs = [...STAT_BUFFS.buffs];
+    gameState.availableBuffs = [...STAT_BUFFS];  // Use STAT_BUFFS array directly
     updateUI();
 }
 

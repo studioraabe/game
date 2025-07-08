@@ -33,7 +33,7 @@ export const playerStats = {
 
 // New buff definitions with stats effects
 export const STAT_BUFFS = [
-    // Original buffs - keeping only these two from DUNGEON_THEME
+    // Original buffs from DUNGEON_THEME
     { 
         id: 'undeadResilience', 
         title: '🧟 Undead Vigor', 
@@ -53,7 +53,7 @@ export const STAT_BUFFS = [
         }
     },
     
-    // New stat-based buffs - include all 6 required ones
+    // New stat-based buffs
     {
         id: 'vampiricStrikes',
         title: '🩸 Vampiric Strikes',
@@ -68,7 +68,7 @@ export const STAT_BUFFS = [
         title: '🔥 Bullet Storm',
         desc: 'Regenerate 1 bullet every 2 seconds',
         effect: () => {
-            playerStats.bulletRegen += 0.5; // 0.5 per second = 1 per 2 seconds
+            playerStats.bulletRegen += 0.5;
             playerStats.selectedBuffs.push('bulletStorm');
         }
     },
@@ -87,7 +87,7 @@ export const STAT_BUFFS = [
         title: '💚 Survival Instinct',
         desc: 'Regenerate 1 HP every 3 seconds',
         effect: () => {
-            playerStats.healthRegen += 0.33; // 0.33 per second = 1 per 3 seconds
+            playerStats.healthRegen += 0.33;
             playerStats.selectedBuffs.push('survivalInstinct');
         }
     },
@@ -97,7 +97,7 @@ export const STAT_BUFFS = [
         desc: '20% chance for critical hits (2x damage)',
         effect: () => {
             playerStats.critChance += 20;
-            playerStats.critDamage += 0.5; // +50% crit damage
+            playerStats.critDamage += 0.5;
             playerStats.selectedBuffs.push('criticalFocus');
         }
     },
@@ -344,6 +344,8 @@ export function initRoguelikeSystem() {
     
     console.log('🎮 Roguelike Stats System Ready');
 }
+
+export { replenishBuffSelection };
 
 // Expose to global for debugging and UI access
 window.playerStats = playerStats;

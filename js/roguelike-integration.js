@@ -209,8 +209,8 @@ export function createStatDisplay() {
     container.className = 'stat-display';
     container.style.cssText = `
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 80px;
+        left: -200px;
         background: rgba(0, 0, 0, 0.7);
         padding: 10px;
         border-radius: 5px;
@@ -232,7 +232,7 @@ export function createStatDisplay() {
     toggleBtn.style.cssText = `
         position: absolute;
         top: 10px;
-        right: 10px;
+        right: -160px;
         background: #00ff88;
         border: none;
         border-radius: 5px;
@@ -251,7 +251,7 @@ export function updateStatDisplay() {
     if (!container) return;
     
     container.innerHTML = `
-        <h3 style="margin-top: 0;">Player Stats</h3>
+     
         <div class="stat-row">
             <span>Damage:</span>
             <span>+${playerStats.damageBonus}%</span>

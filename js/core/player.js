@@ -1,9 +1,9 @@
-// core/player.js - KORRIGIERTE CORRUPTION BLOCKIERUNG
+// core/player.js - CORRECTED IMPORTS
 
 import { GAME_CONSTANTS, CANVAS } from './constants.js';
 import { updateCamera } from './camera.js';
 import { soundManager, activeDropBuffs } from '../systems.js';
-import { createDoubleJumpParticles, createScorePopup } from '../entities.js';
+import { createDoubleJumpParticles, createScorePopup, shoot } from '../entities.js';  // Combined into one import
 
 export const player = {
     x: 120,
@@ -42,7 +42,7 @@ export function resetPlayer() {
 }
 
 export function updatePlayer(keys, gameState) {
-     const statSpeedBonus = 1 + (gameState.playerStats.moveSpeed / 100);
+    const statSpeedBonus = 1 + ((gameState.playerStats?.moveSpeed || 0) / 100);
     const moveSpeed = GAME_CONSTANTS.PLAYER_MOVE_SPEED * gameState.speedMultiplier * statSpeedBonus;
     // VERSTÄRKTE CORRUPTION CHECKS - WICHTIG!
     const isCorrupted = gameState.isCorrupted || false;
@@ -86,15 +86,15 @@ export function updatePlayer(keys, gameState) {
     
     // CORRUPTION FEEDBACK beim Versuch zu handeln
     if (isCorrupted) {
-        if (keys.Space && !player.wasSpacePressed) {
+        if (keys.space && !player.wasSpacePressed) {
             // BLOCKIERE SCHUSS + Feedback
             createScorePopup(player.x + player.width/2, player.y - 30, 'WEAKENED!');
             console.log("🚫 Shooting blocked - player is corrupted!");
-            // WICHTIG: Kein window.shoot() Call!
+            // WICHTIG: Kein shoot() Call!
             return; // Früh beenden um sicherzustellen dass nicht geschossen wird
         }
         
-        if (keys.ArrowUp && !player.wasUpPressed) {
+        if (keys.space && !player.wasUpPressed) {
             // BLOCKIERE SPRUNG + Feedback
             createScorePopup(player.x + player.width/2, player.y - 30, 'CAN\'T JUMP!');
             console.log("🚫 Jumping blocked - player is corrupted!");
@@ -102,14 +102,14 @@ export function updatePlayer(keys, gameState) {
     }
     
     // Shooting - NUR wenn nicht corrupted UND keys gedrückt
-    if (canShoot && keys.Space && !player.wasSpacePressed && !isCorrupted) {
+    if (canShoot && (keys.s || keys.Space) && !player.wasSpacePressed && !isCorrupted) {
         console.log("✅ Shooting allowed - player not corrupted");
-        window.shoot();
+        shoot(gameState);  // Use imported shoot function with gameState parameter
         gameState.playerIdleTime = 0;
     }
     
     // Jump logic - NUR wenn nicht corrupted
-    if (canJump && keys.ArrowUp && !player.wasUpPressed && !isCorrupted) {
+    if (canJump && (keys.space || keys.ArrowUp) && !player.wasUpPressed && !isCorrupted) {
         console.log("✅ Jumping allowed - player not corrupted");
         startJump(gameState);
     }
@@ -151,8 +151,8 @@ export function updatePlayer(keys, gameState) {
     }
     
     // Store previous key states
-    player.wasUpPressed = keys.ArrowUp;
-    player.wasSpacePressed = keys.Space;
+    player.wasUpPressed = keys.space || keys.ArrowUp;
+    player.wasSpacePressed = keys.s || keys.Space;
 }
 
 export function startJump(gameState) {

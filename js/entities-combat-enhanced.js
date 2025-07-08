@@ -7,6 +7,7 @@ import { gameState, takeDamage, healPlayer } from './core/gameState.js';
 import { soundManager, rollForDrop, enhancedHealPlayer } from './systems.js';
 import { triggerDamageEffects } from './enhanced-damage-system.js';
 import { createDamageNumber } from './ui-enhancements.js';
+import { playerStats, calculateDamage, applyLifesteal } from './roguelike-stats.js';
 import { 
     obstacles, 
     bulletsFired, 
@@ -17,8 +18,10 @@ import {
     getObstacleHitbox 
 } from './entities-core.js';
 
+
+
 // Import the new stats system
-import { playerStats, calculateDamage, applyLifesteal } from './roguelike-stats.js';
+
 
 // Attack speed variables
 let shootCooldown = 0;

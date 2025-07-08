@@ -74,12 +74,8 @@ export const gameState = {
     levelsCompleted: 0,
     
     // Active buffs
-    activeBuffs: {
-        chainLightning: 0,
-        undeadResilience: 0,
-        shadowLeap: 0
-    },
-    availableBuffs: [...DUNGEON_THEME.buffs],
+    activeBuffs: {},
+    availableBuffs: [],
     
     // Power-up states
     hasShield: false,
@@ -152,12 +148,8 @@ export function resetGame() {
     gameState.enemySlowFactor = 1;
     gameState.isBerserker = false;
     
-    gameState.activeBuffs = {
-        chainLightning: 0,
-        undeadResilience: 0,
-        shadowLeap: 0
-    };
-    gameState.availableBuffs = [...DUNGEON_THEME.buffs];
+	gameState.activeBuffs = {};  // Empty object, will be populated by buff effects
+    gameState.availableBuffs = [];  // Empty array, will be populated by roguelike-integration
     
     Object.keys(activeDropBuffs).forEach(key => delete activeDropBuffs[key]);
     

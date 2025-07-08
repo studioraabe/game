@@ -227,23 +227,7 @@ export const DUNGEON_THEME = {
         gameOver: '💀 Final Death! 💀',
         finalScore: 'Final Score'
     },
-    buffs: [
-        { 
-            id: 'chainLightning', 
-            title: '⚡ Chain Lightning', 
-            desc: 'Unleash 3 bolts at once that arc between enemies' 
-        },
-        { 
-            id: 'undeadResilience', 
-            title: '🧟 Undead Vigor', 
-            desc: 'Gain extra life every 10 (15) bullet hits' 
-        },
-        { 
-            id: 'shadowLeap', 
-            title: '🌙 Shadow Leap', 
-            desc: 'Unlock double jump with ethereal shadow form' 
-        }
-    ],
+   
     enemies: ['bat', 'vampire', 'spider', 'alphaWolf', 'skeleton', 'boltBox', 'rock', 'wolf', 'teslaCoil', 'frankensteinTable'],
     groundColor: '#2F2F2F',
     floorDetailColor: '#1A1A1A',

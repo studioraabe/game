@@ -241,11 +241,11 @@ position: absolute;
     top: 50%;
     left: 36px;
     transform: translate(-50%, -50%);
-    color: #ffffff;
+    color: #000000;
     font-family: 'Rajdhani', monospace;
     font-size: 14px;
     font-weight: 700;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+ 
     pointer-events: none;
     z-index: 4;
     letter-spacing: 0.5px;
@@ -260,11 +260,11 @@ position: absolute;
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #ffffff;
+    color: #000000;
     font-family: 'Rajdhani', monospace;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    
     z-index: 4;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -477,7 +477,7 @@ position: absolute;
     transform: translateX(-50%);
     display: flex
 ;
-    gap: 40px;
+    gap: 0px;
     padding: 10px 0px;
     align-items: center;
     height: 48px;
@@ -489,7 +489,7 @@ position: absolute;
     align-items: center;
     gap: 0px;
     color: var(--text-secondary);
-    min-width: 110px;
+    min-width: 100px;
 	padding-right:4px;
 }
 
