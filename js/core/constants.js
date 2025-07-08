@@ -42,6 +42,20 @@ export const ENEMY_BASE_STATS = {
     boltBox: { hp: 1, damage: 0 }
 };
 
+
+GAME_CONSTANTS.PLAYER_BASE_STAT_BONUSES = {
+    damageBonus: 0,       // Percentage bonus to base damage
+    attackSpeed: 0,       // Percentage increase to attack rate
+    moveSpeed: 0,         // Percentage increase to movement speed
+    projectileSpeed: 0,   // Percentage increase to bullet speed
+    healthRegen: 0,       // HP regen per second
+    bulletRegen: 0,       // Bullet regen per second
+    lifeSteal: 0,         // Percentage of damage dealt returned as healing
+    critChance: 0,        // Percentage chance to land a critical hit
+    critDamage: 1.5       // Multiplier for critical hit damage (starts at 50% bonus)
+};
+
+
 // NEW: HP CALCULATION HELPER FUNCTIONS
 export function calculatePlayerMaxHP(level) {
     return GAME_CONSTANTS.PLAYER_BASE_HP + (level - 1) * GAME_CONSTANTS.PLAYER_HP_PER_LEVEL;

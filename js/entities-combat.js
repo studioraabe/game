@@ -186,6 +186,12 @@ export function shoot(gameStateParam) {
 export function updateBullets(gameStateParam) {
     let anyBulletHit = false;
     
+	 if (shootCooldown > 0) {
+        shootCooldown -= gameState.deltaTime;
+    }
+
+	
+	
     for (let i = bulletsFired.length - 1; i >= 0; i--) {
         const bullet = bulletsFired[i];
         
@@ -217,6 +223,8 @@ export function updateBullets(gameStateParam) {
         }
         
         let bulletHitSomething = false;
+		
+		
         
         for (let j = obstacles.length - 1; j >= 0; j--) {
             const obstacle = obstacles[j];
@@ -278,6 +286,30 @@ export function updateBullets(gameStateParam) {
                 }
             }
         }
+		
+			  let damage = baseDamage;
+    let isCritical = false;
+    
+    // Apply damage bonus from stats
+    damage *= (1 + gameStateParam.playerStats.damageBonus / 100);
+    
+    // Roll for critical hit
+    if (Math.random() * 100 < gameStateParam.playerStats.critChance) {
+        damage *= gameStateParam.playerStats.critDamage;
+        isCritical = true;
+    }
+    
+    damage = Math.floor(damage);
+    obstacle.health -= damage;
+    
+    // Show damage number with critical indication
+    createDamageNumber(
+        obstacle.x + obstacle.width/2, 
+        obstacle.y + obstacle.height/4, 
+        damage, 
+        isCritical
+    );
+
         
         // Clean up off-screen bullets
         if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100)) {
@@ -287,6 +319,30 @@ export function updateBullets(gameStateParam) {
             bulletsFired.splice(i, 1);
         }
     }
+
+
+
+}
+
+
+
+// Add lifesteal function
+function applyLifesteal(damage, gameStateParam) {
+    if (gameStateParam.playerStats.lifeSteal <= 0) return 0;
+    
+    // Calculate healing from lifesteal
+    const healAmount = Math.max(1, Math.floor(damage * (gameStateParam.playerStats.lifeSteal / 100)));
+    
+    // Apply healing if not at max health
+    if (gameStateParam.currentHP < gameStateParam.maxHP) {
+        const oldHP = gameStateParam.currentHP;
+        gameStateParam.currentHP = Math.min(gameStateParam.maxHP, gameStateParam.currentHP + healAmount);
+        
+        // Return the amount healed
+        return gameStateParam.currentHP - oldHP;
+    }
+    
+    return 0;
 }
 
 function handleEnemyDeath(obstacle, index, gameStateParam) {
@@ -319,6 +375,19 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
     gameStateParam.comboCount++;
     if (gameStateParam.comboCount >= 2) {
         gameStateParam.comboTimer = 300;
+    }
+
+
+	  if (gameStateParam.playerStats.lifeSteal > 0) {
+        const lifeStealAmount = applyLifesteal(damage || 20, gameStateParam);
+        if (lifeStealAmount > 0) {
+            createScorePopup(
+                player.x + player.width/2, 
+                player.y - 15, 
+                `+${lifeStealAmount} 🩸`,
+                true
+            );
+        }
     }
     
     const bulletsNeeded = gameStateParam.activeBuffs.undeadResilience > 0 ? 10 : 15;

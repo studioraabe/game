@@ -24,6 +24,18 @@ export const gameState = {
     gameLoop: null,
     needsRedraw: true,
     shieldCharges: 0,
+	gameState.playerStats = {
+    damageBonus: 0,       // Percentage bonus to base damage
+    attackSpeed: 0,       // Percentage increase to attack rate
+    moveSpeed: 0,         // Percentage increase to movement speed
+    projectileSpeed: 0,   // Percentage increase to bullet speed
+    healthRegen: 0,       // HP regen per second
+    bulletRegen: 0,       // Bullet regen per second
+    lifeSteal: 0,         // Percentage of damage dealt returned as healing
+    critChance: 0,        // Percentage chance to land a critical hit
+    critDamage: 1.5,      // Multiplier for critical hit damage (starts at 50% bonus)
+    selectedBuffs: []     // Track selected buffs
+};
     
     isCorrupted: false,
     corruptionTimer: 0,
@@ -111,6 +123,19 @@ export function resetGame() {
     gameState.isCorrupted = false;
     gameState.corruptionTimer = 0;
     
+	    gameState.playerStats = {
+        damageBonus: 0,
+        attackSpeed: 0,
+        moveSpeed: 0,
+        projectileSpeed: 0,
+        healthRegen: 0,
+        bulletRegen: 0,
+        lifeSteal: 0,
+        critChance: 0,
+        critDamage: 1.5,
+        selectedBuffs: []
+    };
+	
     gameState.comboCount = 0;
     gameState.comboTimer = 0;
     gameState.lastScoreTime = Date.now();
@@ -201,6 +226,60 @@ export function update() {
     window.updateEnvironmentElements();
     window.updateDrops();
     window.updateEffects();
+	
+	
+	 // Handle health regeneration
+    if (gameState.playerStats.healthRegen > 0) {
+        gameState.healthRegenTimer = (gameState.healthRegenTimer || 0) + gameState.deltaTime;
+        const regenInterval = 60; // 1 second at 60 FPS
+        
+        if (gameState.healthRegenTimer >= regenInterval) {
+            gameState.healthRegenTimer -= regenInterval;
+            
+            // Calculate healing amount
+            const healAmount = Math.max(1, Math.floor(gameState.playerStats.healthRegen));
+            
+            // Apply healing if not at max health
+            if (gameState.currentHP < gameState.maxHP) {
+                const oldHP = gameState.currentHP;
+                gameState.currentHP = Math.min(gameState.maxHP, gameState.currentHP + healAmount);
+                
+                // Show healing popup if health actually increased
+                if (gameState.currentHP > oldHP) {
+                    createScorePopup(
+                        player.x + player.width/2, 
+                        player.y - 30, 
+                        `+${gameState.currentHP - oldHP} HP`
+                    );
+                }
+            }
+        }
+    }
+    
+    // Handle bullet regeneration
+    if (gameState.playerStats.bulletRegen > 0) {
+        gameState.bulletRegenTimer = (gameState.bulletRegenTimer || 0) + gameState.deltaTime;
+        const regenInterval = 60; // 1 second at 60 FPS
+        
+        if (gameState.bulletRegenTimer >= regenInterval) {
+            gameState.bulletRegenTimer -= regenInterval;
+            
+            // Calculate bullet regen amount
+            const bulletAmount = Math.max(1, Math.floor(gameState.playerStats.bulletRegen));
+            
+            // Add bullets
+            gameState.bullets += bulletAmount;
+            
+            // Show bullet regen popup every 5 bullets
+            if (Math.random() < 0.2) {
+                createScorePopup(
+                    player.x + player.width/2, 
+                    player.y - 30, 
+                    `+${bulletAmount} Bolt`
+                );
+            }
+        }
+    }
     
     // FIXED: Check bat projectiles for player death BEFORE other collision checks
     const batKilledPlayer = window.updateBatProjectiles();

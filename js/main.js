@@ -12,6 +12,8 @@ import {
     updateEnhancedBuffDisplay
 } from './ui-enhancements.js';
 import { spriteManager } from './rendering/sprite-system.js';
+import { initRoguelikeIntegration, createStatDisplay, startStatsUpdateLoop } from './roguelike-integration.js';
+
 
 import { 
     soundManager, 
@@ -183,6 +185,9 @@ async function init() {
     // Initialize enhanced UI
     initEnhancements();
     
+    // IMPORTANT: Add Roguelike System Integration
+    initRoguelikeIntegration();
+    
     // Load sprite system
     console.log('🎨 Loading sprite system...');
     try {
@@ -198,6 +203,10 @@ async function init() {
         initEnhancedContainers();
         enhancedDisplaysInitialized = true;
         window.updateEnhancedDisplays();
+        
+        // Create stats display
+        createStatDisplay();
+        startStatsUpdateLoop();
     }, 100);
     
     // Set initial state
@@ -223,6 +232,90 @@ async function init() {
     console.log('🖼️ Sprite System: Active');
     console.log('✨ Game initialization complete!');
 }
+
+		
+function createSimpleStatsDisplay() {
+    // Check if it already exists
+    if (document.getElementById('simple-stats-display')) return;
+    
+    const container = document.createElement('div');
+    container.id = 'simple-stats-display';
+    container.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 12px;
+        z-index: 100;
+        max-width: 150px;
+        display: none;
+    `;
+    
+    // Add a toggle button
+    const toggleButton = document.createElement('button');
+    toggleButton.textContent = 'Stats';
+    toggleButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #00ff88;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: 'Rajdhani', sans-serif;
+        z-index: 101;
+    `;
+    toggleButton.onclick = () => {
+        const display = document.getElementById('simple-stats-display');
+        if (display) {
+            display.style.display = display.style.display === 'none' ? 'block' : 'none';
+        }
+    };
+    
+    document.getElementById('gameContainer').appendChild(container);
+    document.getElementById('gameContainer').appendChild(toggleButton);
+    
+    // Start update interval
+    setInterval(updateSimpleStatsDisplay, 1000);
+}
+
+
+function updateSimpleStatsDisplay() {
+    const container = document.getElementById('simple-stats-display');
+    if (!container) return;
+    
+    // Get stats or default to empty object
+    const stats = gameState.playerStats || {};
+    
+    container.innerHTML = `
+        <h3 style="margin-top: 0; margin-bottom: 5px;">Stats</h3>
+        <div>Damage: +${stats.damageBonus || 0}%</div>
+        <div>Attack Speed: +${stats.attackSpeed || 0}%</div>
+        <div>Move Speed: +${stats.moveSpeed || 0}%</div>
+        <div>Bullet Speed: +${stats.projectileSpeed || 0}%</div>
+        <div>HP Regen: ${stats.healthRegen ? stats.healthRegen.toFixed(2) : 0}/s</div>
+        <div>Bullet Regen: ${stats.bulletRegen ? stats.bulletRegen.toFixed(2) : 0}/s</div>
+        <div>Life Steal: ${stats.lifeSteal || 0}%</div>
+        <div>Crit Chance: ${stats.critChance || 0}%</div>
+        <div>Crit Damage: x${stats.critDamage ? stats.critDamage.toFixed(1) : 1.5}</div>
+    `;
+}
+
+// Create the stats display after page load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(createSimpleStatsDisplay, 1000);
+});
+
+// Add to global for direct access
+window.createSimpleStatsDisplay = createSimpleStatsDisplay;
+window.updateSimpleStatsDisplay = updateSimpleStatsDisplay;
+		
+		
 
 // Window events
 window.addEventListener('beforeunload', function() {

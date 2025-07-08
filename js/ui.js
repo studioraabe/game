@@ -1,6 +1,6 @@
 // ui.js - Enhanced UI with Controller Support and Tabbed Options Menu
 
-import { GameState, DUNGEON_THEME } from './core/constants.js';
+import { GameState, STAT_BUFFS } from './core/constants.js';
 import { gameState, resetGame, startGameLoop, stopGameLoop, resumeTransition } from './core/gameState.js';
 import { soundManager, checkAchievements, saveHighScore, checkForTop10Score, displayHighscores } from './systems.js';
 import { activeDropBuffs } from './systems.js';
@@ -10,6 +10,55 @@ import {
     updateEnhancedBuffDisplay,
     initEnhancedContainers
 } from './ui-enhancements.js';
+
+
+
+const STAT_BUFFS = [
+    // Original buffs
+    { 
+        id: 'undeadResilience', 
+        title: '🧟 Undead Vigor', 
+        desc: 'Gain extra life every 10 bullet hits (was 15)' 
+    },
+    { 
+        id: 'shadowLeap', 
+        title: '🌙 Shadow Leap', 
+        desc: 'Unlock double jump with ethereal shadow form' 
+    },
+    
+    // New stat-based buffs
+    {
+        id: 'vampiricStrikes',
+        title: '🩸 Vampiric Strikes',
+        desc: 'Gain 2% life steal, healing on enemy kills'
+    },
+    {
+        id: 'bulletStorm',
+        title: '🔥 Bullet Storm',
+        desc: 'Regenerate 1 bullet every 2 seconds'
+    },
+    {
+        id: 'berserkerRage',
+        title: '💢 Berserker Rage',
+        desc: 'Gain +25% damage and +15% attack speed'
+    },
+    {
+        id: 'survivalInstinct',
+        title: '💚 Survival Instinct',
+        desc: 'Regenerate 1 HP every 3 seconds'
+    },
+    {
+        id: 'criticalFocus',
+        title: '🎯 Critical Focus',
+        desc: '20% chance for critical hits (2x damage)'
+    },
+    {
+        id: 'swiftDeath',
+        title: '⚡ Swift Death',
+        desc: '+20% movement and projectile speed'
+    }
+];
+
 
 // Volume Control Variables
 let volumeOverlayVisible = false;
@@ -287,6 +336,56 @@ export function updateBuffButtons() {
     
     buffButtonsContainer.innerHTML = '';
     
+    // Add styling if not already added
+    if (!document.getElementById('enhanced-buff-styles')) {
+        const style = document.createElement('style');
+        style.id = 'enhanced-buff-styles';
+        style.textContent = `
+            .buff-card {
+                position: relative;
+                overflow: hidden;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            
+            .buff-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            }
+            
+            .buff-icon {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                font-size: 24px;
+                opacity: 0.7;
+            }
+            
+            .buff-info {
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                font-size: 12px;
+                background: rgba(0, 0, 0, 0.6);
+                padding: 3px 8px;
+                border-radius: 10px;
+                color: #fff;
+            }
+            
+            .buff-title {
+                font-size: 18px;
+                margin-bottom: 10px;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            }
+            
+            .buff-desc {
+                font-size: 14px;
+                line-height: 1.4;
+                margin-bottom: 30px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
     gameState.availableBuffs.forEach(buff => {
         const button = document.createElement('div');
         button.className = 'buff-card';
@@ -300,12 +399,105 @@ export function updateBuffButtons() {
         desc.className = 'buff-desc';
         desc.textContent = buff.desc;
         
+        // Add buff icon/category visual
+        const category = getBufCategory(buff.id);
+        const icon = document.createElement('div');
+        icon.className = 'buff-icon';
+        icon.textContent = getCategoryIcon(category);
+        
+        const info = document.createElement('div');
+        info.className = 'buff-info';
+        info.textContent = category;
+        
         button.appendChild(title);
         button.appendChild(desc);
+        button.appendChild(icon);
+        button.appendChild(info);
         buffButtonsContainer.appendChild(button);
     });
 }
 
+
+function getBufCategory(buffId) {
+    if (['berserkerRage', 'criticalFocus'].includes(buffId)) {
+        return 'Damage';
+    }
+    if (['bulletStorm', 'vampiricStrikes', 'survivalInstinct', 'undeadResilience'].includes(buffId)) {
+        return 'Survival';
+    }
+    if (['shadowLeap', 'swiftDeath'].includes(buffId)) {
+        return 'Mobility';
+    }
+    return 'Special';
+}
+
+function getCategoryIcon(category) {
+    switch (category) {
+        case 'Damage': return '💥';
+        case 'Survival': return '💖';
+        case 'Mobility': return '🌀';
+        default: return '✨';
+    }
+}
+
+// REPLACE chooseBuff function
+export function chooseBuff(buffId) {
+    switch(buffId) {
+        case 'undeadResilience':
+            gameState.activeBuffs.undeadResilience = 1;
+            break;
+        case 'shadowLeap':
+            gameState.activeBuffs.shadowLeap = 1;
+            break;
+        // New stat-based buffs
+        case 'vampiricStrikes':
+            gameState.playerStats.lifeSteal += 2;
+            break;
+        case 'bulletStorm':
+            gameState.playerStats.bulletRegen += 0.5; // 0.5 per second = 1 per 2 seconds
+            break;
+        case 'berserkerRage':
+            gameState.playerStats.damageBonus += 25;
+            gameState.playerStats.attackSpeed += 15;
+            break;
+        case 'survivalInstinct':
+            gameState.playerStats.healthRegen += 0.33; // 0.33 per second = 1 per 3 seconds
+            break;
+        case 'criticalFocus':
+            gameState.playerStats.critChance += 20;
+            gameState.playerStats.critDamage += 0.5; // +50% crit damage
+            break;
+        case 'swiftDeath':
+            gameState.playerStats.moveSpeed += 20;
+            gameState.playerStats.projectileSpeed += 20;
+            break;
+    }
+    
+    // Track selected buff
+    gameState.playerStats.selectedBuffs = gameState.playerStats.selectedBuffs || [];
+    gameState.playerStats.selectedBuffs.push(buffId);
+    
+    // Remove the selected buff from available buffs
+    gameState.availableBuffs = gameState.availableBuffs.filter(buff => buff.id !== buffId);
+    
+    // Standard level up procedure
+    gameState.level++;
+    gameState.levelProgress = 1;
+    window.bulletBoxesFound = 0;
+    gameState.damageThisLevel = 0;
+    gameState.gameSpeed += 0.6;
+    gameState.bullets += 12;
+    
+    gameState.postBuffInvulnerability = 120;
+    
+    // Hide all screens and resume with countdown
+    hideAllScreens();
+    showUniversalCountdown('resume', () => {
+        gameState.currentState = GameState.PLAYING;
+        gameState.gameRunning = true;
+        updateUI();
+    });
+}
 export function updateHighScore() {
     if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;
@@ -441,20 +633,20 @@ export function applyTheme() {
     container.className = 'dungeon-theme';
     
     const updates = [
-        ['gameTitle', DUNGEON_THEME.title],
-        ['startButton', DUNGEON_THEME.startButton],
-        ['scoreLabel', DUNGEON_THEME.labels.score],
-        ['levelLabel', DUNGEON_THEME.labels.level],
-        ['bulletsLabel', DUNGEON_THEME.labels.bullets],
-        ['livesLabel', DUNGEON_THEME.labels.lives],
-        ['highscoreLabel', DUNGEON_THEME.labels.highScore],
-        ['scoreStatLabel', DUNGEON_THEME.labels.score],
-        ['enemiesStatLabel', DUNGEON_THEME.labels.enemies],
-        ['gameOverTitle', DUNGEON_THEME.labels.gameOver],
-        ['finalScoreLabel', DUNGEON_THEME.labels.finalScore],
-        ['pauseScoreLabel', DUNGEON_THEME.labels.score],
-        ['pauseLevelLabel', DUNGEON_THEME.labels.level],
-        ['pauseLivesLabel', DUNGEON_THEME.labels.lives],
+        ['gameTitle', STAT_BUFFS.title],
+        ['startButton', STAT_BUFFS.startButton],
+        ['scoreLabel', STAT_BUFFS.labels.score],
+        ['levelLabel', STAT_BUFFS.labels.level],
+        ['bulletsLabel', STAT_BUFFS.labels.bullets],
+        ['livesLabel', STAT_BUFFS.labels.lives],
+        ['highscoreLabel', STAT_BUFFS.labels.highScore],
+        ['scoreStatLabel', STAT_BUFFS.labels.score],
+        ['enemiesStatLabel', STAT_BUFFS.labels.enemies],
+        ['gameOverTitle', STAT_BUFFS.labels.gameOver],
+        ['finalScoreLabel', STAT_BUFFS.labels.finalScore],
+        ['pauseScoreLabel', STAT_BUFFS.labels.score],
+        ['pauseLevelLabel', STAT_BUFFS.labels.level],
+        ['pauseLivesLabel', STAT_BUFFS.labels.lives],
         ['buffChoiceTitle', '🔮 Choose Your Dark Power:']
     ];
 
@@ -464,7 +656,7 @@ export function applyTheme() {
     });
 
     gameState.activeBuffs = {};
-    gameState.availableBuffs = [...DUNGEON_THEME.buffs];
+    gameState.availableBuffs = [...STAT_BUFFS.buffs];
     updateUI();
 }
 

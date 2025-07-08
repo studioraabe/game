@@ -1,50 +1,19 @@
-// core/player.js - KORRIGIERTE CORRUPTION BLOCKIERUNG
+// js/enhanced-player.js - Enhanced Player Movement with Speed Scaling
 
-import { GAME_CONSTANTS, CANVAS } from './constants.js';
-import { updateCamera } from './camera.js';
-import { soundManager, activeDropBuffs } from '../systems.js';
-import { createDoubleJumpParticles, createScorePopup } from '../entities.js';
+import { GAME_CONSTANTS, CANVAS } from './core/constants.js';
+import { updateCamera } from './core/camera.js';
+import { soundManager, activeDropBuffs } from './systems.js';
+import { createDoubleJumpParticles, createScorePopup } from './entities.js';
+import { playerStats } from './roguelike-stats.js';
 
-export const player = {
-    x: 120,
-    y: -80,
-    width: 40,
-    height: 40,
-    velocityY: 0,
-    velocityX: 0,
-    jumping: false,
-    grounded: true,
-    jumpHoldTime: 0,
-    isHoldingJump: false,
-    doubleJumpUsed: false,
-    tripleJumpUsed: false,
-    damageResistance: 0,
-    facingDirection: 1,
-    wasUpPressed: false,
-    wasSpacePressed: false
-};
-
-export function resetPlayer() {
-    player.x = 120;
-    player.y = 73;
-    player.velocityY = 0;
-    player.velocityX = 0;
-    player.jumping = false;
-    player.grounded = true;
-    player.jumpHoldTime = 0;
-    player.isHoldingJump = false;
-    player.doubleJumpUsed = false;
-    player.tripleJumpUsed = false;
-    player.damageResistance = 0;
-    player.facingDirection = 1;
-    player.wasUpPressed = false;
-    player.wasSpacePressed = false;
-}
-
-export function updatePlayer(keys, gameState) {
-     const statSpeedBonus = 1 + (gameState.playerStats.moveSpeed / 100);
-    const moveSpeed = GAME_CONSTANTS.PLAYER_MOVE_SPEED * gameState.speedMultiplier * statSpeedBonus;
-    // VERSTÄRKTE CORRUPTION CHECKS - WICHTIG!
+// Enhanced player update function with movement speed scaling
+export function enhancedUpdatePlayer(keys, gameState) {
+    // Calculate movement speed with stats bonus
+    const statSpeedBonus = 1 + (playerStats.moveSpeed / 100);
+    const baseSpeed = GAME_CONSTANTS.PLAYER_MOVE_SPEED * gameState.speedMultiplier;
+    const moveSpeed = baseSpeed * statSpeedBonus;
+    
+    // CORRUPTION CHECKS
     const isCorrupted = gameState.isCorrupted || false;
     
     const canJump = !isCorrupted && 
@@ -54,8 +23,8 @@ export function updatePlayer(keys, gameState) {
     const canShoot = !isCorrupted && 
                     (gameState.bullets > 0 || gameState.isBerserker);
     
-    // CORRUPTION BEWEGUNGS-VERLANGSAMUNG
-    const corruptionSlowdown = isCorrupted ? 0.6 : 1.0; // 40% langsamer
+    // CORRUPTION MOVEMENT SLOWDOWN
+    const corruptionSlowdown = isCorrupted ? 0.6 : 1.0; // 40% slower
     const effectiveMoveSpeed = moveSpeed * corruptionSlowdown;
     
     // Update corruption timer
@@ -68,7 +37,7 @@ export function updatePlayer(keys, gameState) {
         }
     }
     
-    // Horizontal movement mit Corruption-Verlangsamung
+    // Horizontal movement with enhanced speed
     if (keys.left && player.x > gameState.camera.x) {
         player.velocityX = -effectiveMoveSpeed;
         player.facingDirection = -1;
@@ -84,37 +53,37 @@ export function updatePlayer(keys, gameState) {
     
     updateCamera(player);
     
-    // CORRUPTION FEEDBACK beim Versuch zu handeln
+    // CORRUPTION FEEDBACK when trying to act
     if (isCorrupted) {
         if (keys.Space && !player.wasSpacePressed) {
-            // BLOCKIERE SCHUSS + Feedback
+            // BLOCK SHOOTING + feedback
             createScorePopup(player.x + player.width/2, player.y - 30, 'WEAKENED!');
             console.log("🚫 Shooting blocked - player is corrupted!");
-            // WICHTIG: Kein window.shoot() Call!
-            return; // Früh beenden um sicherzustellen dass nicht geschossen wird
+            return; // End early to ensure no shooting
         }
         
         if (keys.ArrowUp && !player.wasUpPressed) {
-            // BLOCKIERE SPRUNG + Feedback
+            // BLOCK JUMPING + feedback
             createScorePopup(player.x + player.width/2, player.y - 30, 'CAN\'T JUMP!');
             console.log("🚫 Jumping blocked - player is corrupted!");
         }
     }
     
-    // Shooting - NUR wenn nicht corrupted UND keys gedrückt
+    // Shooting - only if not corrupted AND keys pressed
     if (canShoot && keys.Space && !player.wasSpacePressed && !isCorrupted) {
         console.log("✅ Shooting allowed - player not corrupted");
-        window.shoot();
+        // Use enhanced shoot with stats
+        window.enhancedShoot();
         gameState.playerIdleTime = 0;
     }
     
-    // Jump logic - NUR wenn nicht corrupted
+    // Jump logic - only if not corrupted
     if (canJump && keys.ArrowUp && !player.wasUpPressed && !isCorrupted) {
         console.log("✅ Jumping allowed - player not corrupted");
         startJump(gameState);
     }
     
-    // Jump hold mechanics - NUR wenn nicht corrupted
+    // Jump hold mechanics - only if not corrupted
     if (!isCorrupted && player.isHoldingJump && 
         player.jumpHoldTime < GAME_CONSTANTS.MAX_JUMP_HOLD_TIME && player.velocityY < 0) {
         const holdStrength = 1 - (player.jumpHoldTime / GAME_CONSTANTS.MAX_JUMP_HOLD_TIME);
@@ -155,8 +124,9 @@ export function updatePlayer(keys, gameState) {
     player.wasSpacePressed = keys.Space;
 }
 
+// Jump function (unchanged, kept for completeness)
 export function startJump(gameState) {
-    // Diese Funktion wird nur aufgerufen wenn canJump = true (nicht corrupted)
+    // This function is only called when canJump = true (not corrupted)
     if (player.grounded) {
         player.velocityY = GAME_CONSTANTS.JUMP_STRENGTH;
         player.jumping = true;
