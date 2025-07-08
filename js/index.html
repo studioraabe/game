@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Runner V.078</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/enhanced-ui.css"> 
+</head>
+<body>
+	
+    <wrap id="wrap">   
+        <div id="gameContainer">
+       
+
+            <!-- Health Bar - Links Oben -->
+            <div id="healthBar" class="ui-panel">
+                <div class="health-container" id="healthContainer">
+                    <div class="health-segment"></div>
+                    <div class="health-segment"></div>
+                    <div class="health-segment"></div>
+                    <div class="health-segment"></div>
+                    <div class="health-segment"></div>
+                </div>
+            </div>
+
+            <!-- Bullet Count - Rechts Oben -->
+            <div id="bulletCount" class="ui-panel">
+                <span class="bulletcountValue" id="bullets">0</span>
+                <span class="ui-label" id="bulletsLabel" style="font-size: 24px; margin-top: -10px; color:#00d4ff">🗲</span>
+            </div>
+
+            <!-- Score/Level Panel - Oben Mitte -->
+            <div id="scorePanel" class="ui-panel">
+                <div class="score-item">
+                    <span class="ui-label" id="levelLabel">Level</span>
+                    <span class="ui-value" id="level">1</span>
+                </div>
+                <div class="score-item">
+                    <span class="ui-label" id="scoreLabel">Score</span>
+                    <span class="ui-value" id="score">0</span>
+                </div>
+            </div>
+
+            <!-- Combo Display - Unten Mitte -->
+            <div id="comboDisplay" class="combo-display-enhanced" style="display: none;"></div>
+
+            <!-- Enhanced Buffs - Links Unten -->
+            <div id="enhancedBuffs" class="enhanced-buffs-container" style="display: none;"></div>
+            
+            <!-- Mute Button - Rechts Unten -->
+            <div id="settingsButton" onclick="toggleVolumeOverlay()">
+    <span id="settingsIcon">⚙️</span>
+</div>
+            
+            <!-- Info Button - Rechts Unten (neben Mute) 
+            <div id="infoButton" onclick="toggleInfoOverlay()">
+                <span>ℹ️</span>
+            </div>-->
+            
+            <!-- Highscore (hidden by default) -->
+            <div id="highscore" class="ui-panel">
+                <div class="ui-label"  id="highscoreLabel" style="font-size: 14px;">High Score</div>
+                <div class="ui-value" id="highscoreValue">0</div>
+            </div>
+            
+            <canvas id="gameCanvas" width="888" height="488"></canvas>
+            
+            <!-- Theme Selection removed - direct to Dungeon -->
+            
+            <div id="startScreen" class="screen">
+				<div class="startScreenTitle" style="display: flex; justify-content: center;"> <h1 class="logo pulse">NEO FRANK</h1></div>
+
+                <!-- Local Stats -->
+
+                <button id="startButton" class="btn" onclick="startGame()">Begin Nightmare</button>
+               
+                <!-- Global Highscore Box -->
+                <div class="info-card">
+                    <h3>🏆 Global Top 10 🏆</h3>
+                    <div id="highscoreList" class="control-item" style="gap: 20px; flex-direction: row; flex-wrap: wrap;">Loading...</div>
+                </div>
+
+                <!-- Controls Info -->
+                <div class="info-card">
+                    <div class="controls-grid">
+                        <div class="control-item">
+                            <span class="key">↑</span> / <span class="key">W</span>
+                            <span>Jump (hold for higher)</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">←</span><span class="key">→</span> / <span class="key">A</span><span class="key">D</span>
+                            <span>Move left/right</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">SPACE</span> / <span class="key">S</span>
+                            <span>Shoot</span>
+                        </div>
+                        
+                        <div class="control-item">
+                            <span class="key">ESC</span>
+                            <span>Pause</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Level Complete Screen -->
+            <div id="levelComplete" class="screen dark-bg">
+                <div>
+                    <h3 id="buffChoiceTitle">🔮 Choose Your Dark Power:</h3>
+                    <div id="buffButtons"></div>
+                </div>
+            </div>
+            
+            <!-- Pause Screen -->
+            <div id="pauseScreen" class="screen dark-bg">
+                <div>
+                    <p>Game is paused. Press <span class="key">ESC</span> to resume.</p>
+                    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin: 16px 0;">
+                        <div class="stat-card">
+                            <div class="stat-label" id="pauseScoreLabel">Souls</div>
+                            <div class="stat-value" id="pauseScore">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label" id="pauseLevelLabel">Floor</div>
+                            <div class="stat-value" id="pauseLevel">1</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label" id="pauseLivesLabel">Lives</div>
+                            <div class="stat-value" id="pauseLives">3</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn" onclick="resumeGame()">Resume Game</button>
+                <button class="btn btn-danger" onclick="restartGame()">Restart</button>
+            </div>
+            
+            <!-- Game Over Screen -->
+            <div id="gameOver" class="screen dark-bg">
+                <h2 id="gameOverTitle">💀 Final Death! 💀</h2>
+                <button class="btn" onclick="restartGame()">Play Again</button>
+                <p style="margin-top: 8px; margin-bottom:20px; font-size: 12px;">Press <span class="key">W</span> or <span class="key">↑</span> to restart</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label" id="finalScoreLabel">Final Souls</div>
+                        <div class="stat-value" id="finalScore">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Floors Completed</div>
+                        <div class="stat-value" id="levelsCompleted">0</div>
+                    </div>
+                </div>
+             
+                <div class="info-card">
+                    <h3>🏆 Global Top 10 🏆</h3>
+                    <div id="highscoreList" class="control-item" style="gap: 20px; flex-direction: row; flex-wrap: wrap;">Loading...</div>
+                </div>
+
+                <div id="newHighScore" style="display: none;">
+                    <h3 class="highlight pulse">🎉 NEW HIGH SCORE! 🎉</h3>
+                </div>
+            </div>
+            
+            <!-- Info Overlay -->
+           <!-- Info Overlay - VOLLSTÄNDIG KORRIGIERT -->
+<div id="infoOverlay" class="screen dark-bg">
+    <h2>🎮 How to Play</h2>
+    <div>
+
+        <h3>🎯 Goal</h3>
+        <p>Survive as long as possible by avoiding obstacles and shooting enemies. Defeat bosses to collect powerful drops and choose permanent buffs every 2 floors!</p>
+        
+        <h3>🕹️ Controls</h3>
+        <div class="controls-grid">
+            <div class="control-item">
+                <span class="key">W</span> / <span class="key">↑</span>
+                <span>Jump (hold for higher jumps)</span>
+            </div>
+            <div class="control-item">
+                <span class="key">A</span><span class="key">D</span> / <span class="key">←</span><span class="key">→</span>
+                <span>Move left/right</span>
+            </div>
+            <div class="control-item">
+                <span class="key">SPACE</span> / <span class="key">S</span>
+                <span>Shoot lightning bolts</span>
+            </div>
+            <div class="control-item">
+                <span class="key">ESC</span>
+                <span>Pause game</span>
+            </div>
+        </div>
+        
+        <h3>⚔️ Permanent Buffs</h3>
+        <p><strong>Every 2 floors you can choose a permanent buff:</strong></p>
+        <ul style="text-align: left;">
+            <li><strong>⚡ Chain Lightning:</strong> Unleash 3 bolts at once that arc between enemies</li>
+            <li><strong>🧟 Undead Vigor:</strong> Gain extra life every 10 (15 with buff) bolt hits</li>
+            <li><strong>🌙 Shadow Leap:</strong> Unlock double jump with ethereal shadow form</li>
+        </ul>
+        <p>These buffs remain active for the entire game and stack with temporary drops!</p>
+        
+        <h3>💎 Drop System</h3>
+        <p><strong>Alpha Wolf Drops (50% chance):</strong></p>
+        <ul style="text-align: left;">
+            <li>❤️ Extra Life - Gain an additional life</li>
+            <li>📦 Mega Bolts - +50 bolts instantly</li>
+            <li>⚡ Speed Boost - 25% faster movement for 10 seconds</li>
+            <li>🚀 Jump Boost - Gain an extra jump for 30 seconds</li>
+        </ul>
+        <p><strong>Rare Drops (1% base chance, increases with combos):</strong></p>
+        <ul style="text-align: left;">
+            <li>🛡️ Shield - Blocks one hit, stacks up to 5 charges</li>
+            <li>💰 Score Multiplier - 2x points for 20 seconds</li>
+            <li>🌟 Magnet Mode - Attracts drops and bolt boxes for 15 seconds</li>
+            <li>🔥 Berserker - Unlimited ammo for 10 seconds</li>
+            <li>👻 Ghost Walk - Phase through enemies for 5 seconds</li>
+            <li>⏰ Enemy Slow - Enemies move 60% slower for 5 seconds</li>
+        </ul>
+        <p><strong>💡 Stacking:</strong> Collect the same power-up multiple times to extend its duration! Each buff has a maximum stack limit to maintain game balance.</p>
+        
+        <h3>⚠️ Environmental Hazards</h3>
+        <p><strong>Deadly obstacles that require strategy:</strong></p>
+        <ul style="text-align: left;">
+            <li><strong>⚡ Tesla Coils:</strong> Hang from ceiling, charge up and fire deadly lightning beams to the ground</li>
+            <li><strong>🧟 Frankenstein Tables:</strong> Laboratory tables that shoot electrical bolts from above</li>
+            <li><strong>🗿 Sarcophagus:</strong> Immovable stone obstacles that block your path</li>
+            <li><strong>🩸 Bat Corruption:</strong> Vampire bats spit blood projectiles that temporarily weaken your abilities</li>
+        </ul>
+        <p><strong>⚡ Tip:</strong> Tesla Coils and Frankenstein Tables show warning signs before attacking. Watch for the charging glow!</p>
+        
+        <h3>🐺 Enemy Types & Abilities</h3>
+        <p><strong>Know your foes:</strong></p>
+        <ul style="text-align: left;">
+            <li><strong>🦇 Vampire Bats:</strong> Follow you and spit corruption projectiles from any direction</li>
+            <li><strong>🐺 Alpha Wolf (Boss):</strong> Jumps around normally, but enters FURY MODE when wounded - leaps directly at you!</li>
+            <li><strong>🕷️ Spider:</strong> Fast ground enemy with moderate health</li>
+            <li><strong>🧟 Vampire:</strong> Tough humanoid with multiple hit points</li>
+            <li><strong>💀 Skeleton:</strong> Basic undead enemy, single hit to destroy</li>
+            <li><strong>🐺 Wolf:</strong> Quick ground predator</li>
+        </ul>
+        
+        <h3>🛡️ Health & Shield System</h3>
+        <p><strong>Understanding your protection:</strong></p>
+        <ul style="text-align: left;">
+            <li><strong>Health Segments:</strong> Each green segment = 1 life (up to 5 maximum)</li>
+            <li><strong>Shield Charges:</strong> Blue segments show active shield charges (1-5 stacks)</li>
+            <li><strong>Shield Priority:</strong> Shields absorb damage before health is lost</li>
+            <li><strong>Damage Invulnerability:</strong> Brief protection after taking any damage</li>
+            <li><strong>Corruption Weakness:</strong> Red corruption bar shows remaining weakness duration</li>
+        </ul>
+        
+        <h3>🏆 Achievements & Rewards</h3>
+        <ul style="text-align: left;">
+            <li><strong>First Blood:</strong> Defeat your first boss → +10% higher drop rates permanently</li>
+            <li><strong>Untouchable:</strong> Complete floor without damage → Start future games with 1 shield charge</li>
+            <li><strong>Sharpshooter:</strong> 50 hits in a row → Piercing bolts for rest of game</li>
+            <li><strong>Speed Demon:</strong> 1000 points in 30 seconds → +10% permanent movement speed</li>
+        </ul>
+        
+        <h3>🔥 Combo System</h3>
+        <p><strong>Master the combo for maximum rewards:</strong></p>
+        <ul style="text-align: left;">
+            <li><strong>Build Combo:</strong> Kill enemies and avoid obstacles without taking damage</li>
+            <li><strong>Combo Breaks:</strong> Any damage (including corruption) resets your combo to 0</li>
+            <li><strong>Combo Benefits:</strong> Higher combos = dramatically better drop chances</li>
+            <li><strong>20x Combo:</strong> Guaranteed drop from Alpha Wolf!</li>
+            <li><strong>Visual Indicator:</strong> Combo counter appears in bottom center when active</li>
+        </ul>
+        
+        <h3>💡 Pro Tips</h3>
+        <ul style="text-align: left;">
+            <li><strong>Movement:</strong> Can't move backwards - keep pushing forward!</li>
+            <li><strong>Priorities:</strong> Alpha Wolf has highest drop rates - focus on them!</li>
+            <li><strong>Hazard Strategy:</strong> Tesla Coils and Frankenstein Tables are destructible - shoot them!</li>
+            <li><strong>Corruption Defense:</strong> When corrupted, you can't jump or shoot - keep moving!</li>
+            <li><strong>Combo Protection:</strong> Maintain combos for better drops, but don't risk your life</li>
+            <li><strong>Magnet Power:</strong> Magnet mode also attracts bolt boxes, not just drops!</li>
+            <li><strong>Buff Synergy:</strong> Combine permanent buffs with temporary drops for maximum power</li>
+            <li><strong>Alpha Wolf Fury:</strong> When Alpha Wolf glows and charges, it's preparing a devastating leap attack!</li>
+            <li><strong>Resource Management:</strong> Berserker mode = unlimited ammo, perfect for Alpha Wolf fights</li>
+            <li><strong>Safe Zones:</strong> Use Ghost Walk to collect drops safely during intense moments</li>
+        </ul>
+        
+        <h3>🎮 UI Elements Guide</h3>
+        <p><strong>Understanding your interface:</strong></p>
+        <ul style="text-align: left;">
+            <li><strong>Health Bar (Top Left):</strong> Green = health, Blue = shield charges, Red = critical health</li>
+            <li><strong>Bolt Counter (Top Right):</strong> Lightning symbol shows remaining ammunition</li>
+            <li><strong>Score/Level (Top Center):</strong> Current floor and soul count</li>
+            <li><strong>Combo Display (Bottom Center):</strong> Shows when you have 2+ combo multiplier</li>
+            <li><strong>Active Buffs (Bottom Left):</strong> Displays all temporary power-ups with timers</li>
+            <li><strong>Corruption Bar:</strong> Red bar under health shows weakness duration</li>
+        </ul>
+        
+        <h3>🎯 Advanced Strategies</h3>
+        <ul style="text-align: left;">
+            <li><strong>Buff Timing:</strong> Save powerful buffs like Berserker for Alpha Wolf encounters</li>
+            <li><strong>Positioning:</strong> Stay mobile to avoid Tesla Coil beam patterns</li>
+            <li><strong>Resource Conservation:</strong> Collect bolt boxes before they despawn</li>
+            <li><strong>Risk vs Reward:</strong> High combos give better drops but are harder to maintain</li>
+            <li><strong>Permanent Choices:</strong> Chain Lightning for crowd control, Shadow Leap for mobility, Undead Vigor for sustainability</li>
+        </ul>
+        
+    </div>
+    <button class="btn" onclick="toggleInfoOverlay()">Got it!</button>
+</div>
+             
+            <!-- Volume Overlay -->
+            <div id="volumeOverlay">
+                <div class="volume-header">
+                    <h3>Audio Settings</h3>
+                </div>
+                
+                <!-- Music Volume -->
+                <div class="volume-control" id="musicControl">
+                    <div class="volume-label">
+                        <div class="volume-label-text">
+                            <span class="volume-label-icon">🎵</span>
+                            <span>Music</span>
+                        </div>
+                        <span class="volume-value" id="musicValue">70%</span>
+                    </div>
+                    <div class="volume-slider-container">
+                        <div class="volume-slider-fill" id="musicFill" style="width: 70%"></div>
+                        <input type="range" class="volume-slider" id="musicSlider" 
+                               min="0" max="100" value="70" 
+                               oninput="updateVolume('music', this.value)">
+                    </div>
+                </div>
+                
+                <!-- Sound Effects Volume -->
+                <div class="volume-control" id="sfxControl">
+                    <div class="volume-label">
+                        <div class="volume-label-text">
+                            <span class="volume-label-icon">🔫</span>
+                            <span>Sound Effects</span>
+                        </div>
+                        <span class="volume-value" id="sfxValue">85%</span>
+                    </div>
+                    <div class="volume-slider-container">
+                        <div class="volume-slider-fill" id="sfxFill" style="width: 85%"></div>
+                        <input type="range" class="volume-slider" id="sfxSlider" 
+                               min="0" max="100" value="85" 
+                               oninput="updateVolume('sfx', this.value)">
+                    </div>
+                </div>
+                
+                <!-- Master Controls -->
+                <div class="master-controls">
+                    <button class="master-mute-btn" id="masterMuteBtn" onclick="toggleMasterMute()">
+                        Mute All
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </wrap>
+    
+    <!-- Load JavaScript as ES6 Module -->
+    <script type="module">
+        // Import and start the game
+        import './js/main.js';
+    </script>
+    
+</body>
+</html>
