@@ -33,7 +33,6 @@ export function checkAchievements() {
     }
 }
 
-
 export function unlockAchievement(id) {
     ACHIEVEMENTS[id].unlocked = true;
     showAchievementPopup(ACHIEVEMENTS[id]);
@@ -73,9 +72,19 @@ window.ACHIEVEMENTS = ACHIEVEMENTS;
 window.loadAchievements = loadAchievements;
 window.loadGlobalHighscores = loadGlobalHighscores;
 
-// Drop System
+// Drop System - WITH 5 BUFF LIMIT
 export const activeDropBuffs = {};
 window.activeDropBuffs = activeDropBuffs;
+
+// Helper function to count active temporary buffs
+export function getActiveBuffCount() {
+    return Object.keys(activeDropBuffs).filter(key => activeDropBuffs[key] > 0).length;
+}
+
+// Helper function to check if player can pick up more buffs
+export function canPickupMoreBuffs() {
+    return getActiveBuffCount() < 5;
+}
 
 export function createDrop(x, y, type) {
     const dropInfo = DROP_INFO[type];
@@ -170,16 +179,28 @@ export function collectDrop(drop) {
             break;
             
         case DropType.SPEED_BOOST:
+            // Check buff limit for temporary buffs
+            if (!canPickupMoreBuffs()) {
+                createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                gameState.score += 500 * gameState.scoreMultiplier;
+                break;
+            }
             activeDropBuffs.speedBoost = dropConfig.duration;
             createScorePopup(drop.x, drop.y, 'Speed Boost!');
             break;
             
         case DropType.JUMP_BOOST:
+            if (!canPickupMoreBuffs() && !activeDropBuffs.jumpBoost) {
+                createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                gameState.score += 500 * gameState.scoreMultiplier;
+                break;
+            }
             activeDropBuffs.jumpBoost = Math.min((activeDropBuffs.jumpBoost || 0) + dropConfig.duration, 3600);
             createScorePopup(drop.x, drop.y, 'Jump Boost!');
             break;
             
         case DropType.SHIELD:
+            // Shield is permanent, not affected by buff limit
             if (gameState.shieldCharges < 5) {
                 gameState.shieldCharges++;
                 gameState.hasShield = true;
@@ -191,6 +212,11 @@ export function collectDrop(drop) {
             break;
             
         case DropType.SCORE_MULTIPLIER:
+            if (!canPickupMoreBuffs() && !activeDropBuffs.scoreMultiplier) {
+                createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                gameState.score += 1000 * gameState.scoreMultiplier;
+                break;
+            }
             activeDropBuffs.scoreMultiplier = Math.min(
                 (activeDropBuffs.scoreMultiplier || 0) + dropConfig.duration,
                 3600
@@ -200,24 +226,44 @@ export function collectDrop(drop) {
             break;
             
         case DropType.MAGNET_MODE:
+            if (!canPickupMoreBuffs()) {
+                createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                gameState.score += 500 * gameState.scoreMultiplier;
+                break;
+            }
             activeDropBuffs.magnetMode = dropConfig.duration;
             gameState.magnetRange = 200;
             createScorePopup(drop.x, drop.y, 'Magnet!');
             break;
             
         case DropType.BERSERKER_MODE:
+            if (!canPickupMoreBuffs() && !activeDropBuffs.berserkerMode) {
+                createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                gameState.score += 750 * gameState.scoreMultiplier;
+                break;
+            }
             activeDropBuffs.berserkerMode = Math.min((activeDropBuffs.berserkerMode || 0) + dropConfig.duration, 1800);
             gameState.isBerserker = true;
             createScorePopup(drop.x, drop.y, 'Berserker!');
             break;
             
         case DropType.GHOST_WALK:
+            if (!canPickupMoreBuffs() && !activeDropBuffs.ghostWalk) {
+                createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                gameState.score += 750 * gameState.scoreMultiplier;
+                break;
+            }
             activeDropBuffs.ghostWalk = Math.min((activeDropBuffs.ghostWalk || 0) + dropConfig.duration, 1200);
             gameState.isGhostWalking = true;
             createScorePopup(drop.x, drop.y, 'Ghost Walk!');
             break;
             
         case DropType.TIME_SLOW:
+            if (!canPickupMoreBuffs()) {
+                createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                gameState.score += 500 * gameState.scoreMultiplier;
+                break;
+            }
             activeDropBuffs.timeSlow = dropConfig.duration;
             gameState.enemySlowFactor = 0.4;
             createScorePopup(drop.x, drop.y, 'Enemy Slow!');
@@ -253,6 +299,10 @@ export function updateDropBuffs() {
         }
     });
 }
+
+// Make new functions available globally
+window.getActiveBuffCount = getActiveBuffCount;
+window.canPickupMoreBuffs = canPickupMoreBuffs;
 
 // ========================================
 // ENHANCED HIGHSCORE VALIDATOR WITH FILE-BASED BANNED WORDS

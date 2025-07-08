@@ -1,11 +1,10 @@
-// ui-enhancements.js - Enhanced UI Visualizations - SYNTAX KORRIGIERT
+// ui-enhancements.js - Enhanced UI Visualizations - SHIELD REMOVED & 5 BUFF LIMIT
 
 import { gameState } from './core/gameState.js';
 import { activeDropBuffs } from './systems.js';
 import { DROP_INFO, DROP_CONFIG, CANVAS } from './core/constants.js';
 import { camera } from './core/camera.js';
 import { setComboGlow, clearComboGlow } from './enhanced-damage-system.js';
-
 
 // Initialize enhanced UI containers
 export function initEnhancedContainers() {
@@ -48,7 +47,7 @@ let lastComboCount = 0;
 let lastComboTimer = 0;
 let displayWasVisible = false;
 
-// Helper function für RGBA conversion - MUSS VOR der Funktion stehen!
+// Helper function für RGBA conversion
 function hexToRgba(hex, alpha = 1) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -124,34 +123,18 @@ export function updateEnhancedComboDisplay() {
             </div>
         `;
         
-        // Canvas glow effect - FIXED VERSION
-        const canvas = document.getElementById('gameCanvas');
-        const container = document.getElementById('gameContainer');
-
-           if (canvas && gameState.comboCount >= 20) {
-        const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 10);
-        const comboColor = getComboColor(gameState.comboCount);
-        
-        // NEW: Use enhanced glow system
-        setComboGlow(glowIntensity, comboColor);
-        
-        // REMOVE these old lines:
-        // container.style.boxShadow = ... // DELETE
-        // canvas.style.boxShadow = ... // DELETE
-        
-    } else {
-        // Clear combo glow when no combo
-        clearComboGlow();
-        
-        // REMOVE these old lines:
-        // if (canvas) canvas.style.boxShadow = ''; // DELETE  
-        // if (container) container.style.boxShadow = ''; // DELETE
-    }
-
+        // Canvas glow effect using enhanced glow system
+        if (gameState.comboCount >= 20) {
+            const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 10);
+            const comboColor = getComboColor(gameState.comboCount);
+            setComboGlow(glowIntensity, comboColor);
+        } else {
+            clearComboGlow();
+        }
     }
 }
 
-// Enhanced Buff Display
+// Enhanced Buff Display - SHIELD REMOVED & 5 BUFF LIMIT ADDED
 let previousBuffs = new Set();
 
 export function updateEnhancedBuffDisplay() {
@@ -179,26 +162,17 @@ export function updateEnhancedBuffDisplay() {
     const activeBuffsHTML = [];
     const currentBuffs = new Set();
     
-    // SHIELD FIRST - Always on top of the list
-    if (gameState.shieldCharges > 0) {
-        const isNew = !previousBuffs.has('shield');
-        const chargeText = gameState.shieldCharges === 1 ? '1x Charge' : `${gameState.shieldCharges}x Charges`;
-        
-        activeBuffsHTML.push(`
-            <div class="buff-item buff-shield ${isNew ? 'buff-new' : ''}">
-                <div class="buff-icon">🛡️</div>
-                <div class="buff-info">
-                    <div class="buff-name">Shield</div>
-                    <div class="buff-status">${chargeText}</div>
-                </div>
-            </div>
-        `);
-        currentBuffs.add('shield');
-    }
+    // SHIELD REMOVED - No longer shown here since it's permanent
     
-    // THEN temporary buffs with timers (below shield)
+    // ONLY temporary buffs with timers (max 5)
     if (activeDropBuffs && typeof activeDropBuffs === 'object') {
-        Object.keys(activeDropBuffs).forEach(buffKey => {
+        const buffKeys = Object.keys(activeDropBuffs);
+        const activeTempBuffs = buffKeys.filter(key => activeDropBuffs[key] > 0);
+        
+        // Limit to 5 buffs maximum
+        const displayBuffs = activeTempBuffs.slice(0, 5);
+        
+        displayBuffs.forEach(buffKey => {
             const remaining = activeDropBuffs[buffKey];
             if (remaining <= 0) return;
             
@@ -224,6 +198,20 @@ export function updateEnhancedBuffDisplay() {
             `);
             currentBuffs.add(buffKey);
         });
+        
+        // Add overflow indicator if more than 5 buffs
+        if (activeTempBuffs.length > 5) {
+            const overflowCount = activeTempBuffs.length - 5;
+            activeBuffsHTML.push(`
+                <div class="buff-item buff-overflow">
+                    <div class="buff-icon">⋯</div>
+                    <div class="buff-info">
+                        <div class="buff-name">+${overflowCount} more</div>
+                        <div class="buff-timer">Hidden</div>
+                    </div>
+                </div>
+            `);
+        }
     }
     
     // Update container
@@ -264,6 +252,9 @@ export function updateStatsOverlay() {
     const achievements = window.ACHIEVEMENTS || {};
     const unlockedCount = Object.values(achievements).filter(a => a.unlocked).length;
     const totalAchievements = Object.keys(achievements).length;
+    
+    // Count current temporary buffs
+    const currentTempBuffs = activeDropBuffs ? Object.keys(activeDropBuffs).filter(key => activeDropBuffs[key] > 0).length : 0;
     
     overlay.innerHTML = `
         <div class="stats-overlay-content">
@@ -308,8 +299,16 @@ export function updateStatsOverlay() {
                     <span class="stat-value">${gameState.lives}/${gameState.maxLives}</span>
                 </div>
                 <div class="stat-row">
+                    <span>Shield Charges:</span>
+                    <span class="stat-value">${gameState.shieldCharges}</span>
+                </div>
+                <div class="stat-row">
                     <span>Bolts:</span>
                     <span class="stat-value">${gameState.isBerserker ? '∞' : gameState.bullets}</span>
+                </div>
+                <div class="stat-row">
+                    <span>Active Buffs:</span>
+                    <span class="stat-value">${currentTempBuffs}/5</span>
                 </div>
                 <div class="stat-row">
                     <span>Achievements:</span>
