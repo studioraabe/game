@@ -90,7 +90,10 @@ export const DropType = {
     MAGNET_MODE: 'magnetMode',
     BERSERKER_MODE: 'berserkerMode',
     GHOST_WALK: 'ghostWalk',
-    TIME_SLOW: 'timeSlow'
+    TIME_SLOW: 'timeSlow',
+    // NEW: Health-related buffs
+    HEALING_BOOST: 'healingBoost',
+    REGENERATION: 'regeneration'
 };
 
 export const DROP_CONFIG = {
@@ -326,7 +329,7 @@ export const ENEMY_CONFIG = {
 
 // Drop visual configurations
 export const DROP_INFO = {
-    [DropType.EXTRA_LIFE]: { icon: '❤️', color: '#FF0000', name: 'Extra Life' },
+    [DropType.EXTRA_LIFE]: { icon: '❤️', color: '#FF0000', name: 'Smart Heal' },
     [DropType.MEGA_BULLETS]: { icon: '📦', color: '#FFD700', name: 'Mega Bolts' },
     [DropType.SPEED_BOOST]: { icon: '⚡', color: '#00FFFF', name: 'Speed Boost' },
     [DropType.JUMP_BOOST]: { icon: '🚀', color: '#FF4500', name: 'Jump Boost' },
@@ -335,7 +338,10 @@ export const DROP_INFO = {
     [DropType.MAGNET_MODE]: { icon: '🌟', color: '#FF69B4', name: 'Magnet' },
     [DropType.BERSERKER_MODE]: { icon: '🔥', color: '#FF0000', name: 'Berserker' },
     [DropType.GHOST_WALK]: { icon: '👻', color: '#9370DB', name: 'Ghost Walk' },
-    [DropType.TIME_SLOW]: { icon: '⏰', color: '#00CED1', name: 'Time Slow' }
+    [DropType.TIME_SLOW]: { icon: '⏰', color: '#00CED1', name: 'Time Slow' },
+    // NEW: Health-related buffs
+    [DropType.HEALING_BOOST]: { icon: '💚', color: '#00ff88', name: 'Healing Boost' },
+    [DropType.REGENERATION]: { icon: '💖', color: '#ff69b4', name: 'Regeneration' }
 };
 
 export function formatNumber(num) {

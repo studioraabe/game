@@ -1,10 +1,10 @@
-// entities-combat.js - Combat Systems, Enemy AI, and Advanced Behaviors
+// entities-combat.js - Fixed healing system integration
 
 import { GAME_CONSTANTS, CANVAS, ENEMY_BASE_STATS, calculateEnemyDamage } from './core/constants.js';
 import { camera } from './core/camera.js';
 import { player } from './core/player.js';
-import { gameState, takeDamage } from './core/gameState.js';
-import { soundManager, rollForDrop } from './systems.js';
+import { gameState, takeDamage, healPlayer } from './core/gameState.js'; // FIXED: Added healPlayer import
+import { soundManager, rollForDrop, enhancedHealPlayer } from './systems.js'; // FIXED: Added enhancedHealPlayer import
 import { triggerDamageEffects } from './enhanced-damage-system.js';
 import { createDamageNumber } from './ui-enhancements.js';
 import { 
@@ -17,10 +17,7 @@ import {
     getObstacleHitbox 
 } from './entities-core.js';
 
-
-// ========================================
-// BAT PROJECTILE SYSTEM
-// ========================================
+// ... keep all existing BAT PROJECTILE SYSTEM code ...
 
 function createBatProjectile(startX, startY, targetX, targetY) {
     const dx = targetX - startX;
@@ -142,9 +139,7 @@ export function updateBatProjectiles(gameStateParam) {
 	 return false;
 }
 
-// ========================================
-// SHOOTING SYSTEM
-// ========================================
+// ... keep all existing SHOOTING SYSTEM code ...
 
 export function shoot(gameStateParam) {
     if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
@@ -290,7 +285,6 @@ export function updateBullets(gameStateParam) {
     }
 }
 
-
 function handleEnemyDeath(obstacle, index, gameStateParam) {
     const config = window.ENEMY_CONFIG?.[obstacle.type] || { points: 10 };
     const basePoints = config.points || 10;
@@ -325,12 +319,11 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
     
     const bulletsNeeded = gameStateParam.activeBuffs.undeadResilience > 0 ? 10 : 15;
     if (gameStateParam.bulletsHit >= bulletsNeeded) {
-        // FIXED: Use new healing system instead of lives
-        const healAmount = Math.floor(gameStateParam.maxHP * 0.25);
-        const actualHeal = Math.min(healAmount, gameStateParam.maxHP - gameStateParam.currentHP);
+        // ENHANCED: Use enhanced healing system with buff support
+        const baseHealAmount = Math.floor(gameStateParam.maxHP * 0.25);
+        const actualHeal = enhancedHealPlayer(baseHealAmount);
         
         if (actualHeal > 0) {
-            gameStateParam.currentHP += actualHeal;
             createScorePopup(player.x + player.width/2, player.y, `+${actualHeal} HP`);
         } else {
             gameStateParam.score += 500 * gameStateParam.scoreMultiplier;
@@ -340,9 +333,7 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
     }
 }
 
-// ========================================
-// ENEMY UPDATE SYSTEMS
-// ========================================
+// ... keep all existing ENEMY UPDATE SYSTEMS code ...
 
 export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, gameStateParam) {
     const speed = gameSpeed * enemySlowFactor * 0.7;

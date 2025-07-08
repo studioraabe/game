@@ -1,7 +1,7 @@
-// systems.js - Alle Game Systems mit File-based Banned Words System
+// systems.js - Fixed healPlayer import and Enhanced Health System Buffs
 
 import { ACHIEVEMENTS, DROP_CONFIG, DropType, DROP_INFO, HIGHSCORE_API } from './core/constants.js';
-import { gameState } from './core/gameState.js';
+import { gameState, healPlayer } from './core/gameState.js'; // FIXED: Added healPlayer import
 import { createScorePopup, drops } from './entities.js';
 import { showAchievementPopup } from './ui-enhancements.js';
 
@@ -72,7 +72,7 @@ window.ACHIEVEMENTS = ACHIEVEMENTS;
 window.loadAchievements = loadAchievements;
 window.loadGlobalHighscores = loadGlobalHighscores;
 
-// Drop System - WITH 5 BUFF LIMIT
+// Drop System - WITH 5 BUFF LIMIT AND ENHANCED HEALTH BUFFS
 export const activeDropBuffs = {};
 window.activeDropBuffs = activeDropBuffs;
 
@@ -163,19 +163,44 @@ export function collectDrop(drop) {
     
     switch(drop.type) {
         case DropType.EXTRA_LIFE:
-            // CHANGE: Heal instead of adding lives
-            const healAmount = Math.floor(gameState.maxHP * 0.25); // 25% of max HP
-            const actualHeal = Math.min(healAmount, gameState.maxHP - gameState.currentHP);
+            // ENHANCED: Smart healing system
+            const currentHPPercent = gameState.currentHP / gameState.maxHP;
             
-            if (actualHeal > 0) {
-                healPlayer(actualHeal);
+            if (currentHPPercent >= 0.9) {
+                // Near full HP - give healing buff instead
+                if (!canPickupMoreBuffs() && !activeDropBuffs.healingBoost) {
+                    createScorePopup(drop.x, drop.y, 'Buff Limit!');
+                    gameState.score += 1000 * gameState.scoreMultiplier;
+                    break;
+                }
+                
+                activeDropBuffs.healingBoost = 1800; // 30 seconds of +20% healing from all sources
+                createScorePopup(drop.x, drop.y, '+20% Healing!');
+                
+            } else if (currentHPPercent >= 0.7) {
+                // Medium HP - give moderate heal
+                const healAmount = Math.floor(gameState.maxHP * 0.3); // 30% of max HP
+                const actualHeal = healPlayer(healAmount);
                 createScorePopup(drop.x, drop.y, `+${actualHeal} HP`);
+                
+            } else if (currentHPPercent >= 0.4) {
+                // Low HP - give big heal
+                const healAmount = Math.floor(gameState.maxHP * 0.5); // 50% of max HP
+                const actualHeal = healPlayer(healAmount);
+                createScorePopup(drop.x, drop.y, `+${actualHeal} HP!`);
+                
             } else {
-                // Full HP - give score bonus instead
-                gameState.score += 1000 * gameState.scoreMultiplier;
-                createScorePopup(drop.x, drop.y, '+1000 Bonus!');
+                // Critical HP - give massive heal + temporary regen
+                const healAmount = Math.floor(gameState.maxHP * 0.6); // 60% of max HP
+                const actualHeal = healPlayer(healAmount);
+                createScorePopup(drop.x, drop.y, `+${actualHeal} HP!!`);
+                
+                // Add regeneration buff if space available
+                if (canPickupMoreBuffs() && !activeDropBuffs.regeneration) {
+                    activeDropBuffs.regeneration = 600; // 10 seconds of healing over time
+                    createScorePopup(drop.x + 20, drop.y - 20, 'Regen!');
+                }
             }
-       
             break;
             
         case DropType.MEGA_BULLETS:
@@ -281,6 +306,31 @@ export function collectDrop(drop) {
 export function updateDropBuffs() {
     Object.keys(activeDropBuffs).forEach(buff => {
         activeDropBuffs[buff] -= gameState.deltaTime;
+        
+        // Handle special buff effects during duration
+        if (activeDropBuffs[buff] > 0) {
+            switch(buff) {
+                case 'regeneration':
+                    // Heal 1% of max HP every 60 frames (1 second at 60fps)
+                    if (Math.floor(activeDropBuffs[buff]) % 60 === 0) {
+                        const regenAmount = Math.max(1, Math.floor(gameState.maxHP * 0.01));
+                        const boostedAmount = activeDropBuffs.healingBoost > 0 ? 
+                            Math.floor(regenAmount * 1.2) : regenAmount;
+                        
+                        const actualHeal = healPlayer(boostedAmount);
+                        if (actualHeal > 0) {
+                            createScorePopup(
+                                gameState.player?.x + 20 || 100, 
+                                gameState.player?.y - 30 || 100, 
+                                `+${actualHeal}`
+                            );
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        // Remove expired buffs
         if (activeDropBuffs[buff] <= 0) {
             delete activeDropBuffs[buff];
             
@@ -300,14 +350,41 @@ export function updateDropBuffs() {
                 case 'timeSlow': 
                     gameState.enemySlowFactor = 1; 
                     break;
+                case 'healingBoost':
+                    createScorePopup(
+                        gameState.player?.x || 100, 
+                        gameState.player?.y - 50 || 100, 
+                        'Healing Boost Ended'
+                    );
+                    break;
+                case 'regeneration':
+                    createScorePopup(
+                        gameState.player?.x || 100, 
+                        gameState.player?.y - 50 || 100, 
+                        'Regeneration Ended'
+                    );
+                    break;
             }
         }
     });
 }
 
+// Enhanced heal function with buff support
+export function enhancedHealPlayer(baseAmount) {
+    let finalAmount = baseAmount;
+    
+    // Apply healing boost if active
+    if (activeDropBuffs.healingBoost > 0) {
+        finalAmount = Math.floor(baseAmount * 1.2); // +20% healing
+    }
+    
+    return healPlayer(finalAmount);
+}
+
 // Make new functions available globally
 window.getActiveBuffCount = getActiveBuffCount;
 window.canPickupMoreBuffs = canPickupMoreBuffs;
+window.enhancedHealPlayer = enhancedHealPlayer;
 
 // ========================================
 // ENHANCED HIGHSCORE VALIDATOR WITH FILE-BASED BANNED WORDS

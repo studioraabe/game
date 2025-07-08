@@ -1,4 +1,4 @@
-// ui-enhancements.js - Enhanced UI Visualizations - SHIELD REMOVED & 5 BUFF LIMIT
+// ui-enhancements.js - Enhanced UI Visualizations - ADDED HEALTH BUFF SUPPORT
 
 import { gameState } from './core/gameState.js';
 import { activeDropBuffs } from './systems.js';
@@ -134,7 +134,7 @@ export function updateEnhancedComboDisplay() {
     }
 }
 
-// Enhanced Buff Display - SHIELD REMOVED & 5 BUFF LIMIT ADDED
+// Enhanced Buff Display - ADDED HEALTH BUFF SUPPORT
 let previousBuffs = new Set();
 
 export function updateEnhancedBuffDisplay() {
@@ -161,8 +161,6 @@ export function updateEnhancedBuffDisplay() {
     
     const activeBuffsHTML = [];
     const currentBuffs = new Set();
-    
-    // SHIELD REMOVED - No longer shown here since it's permanent
     
     // ONLY temporary buffs with timers (max 5)
     if (activeDropBuffs && typeof activeDropBuffs === 'object') {
@@ -256,6 +254,9 @@ export function updateStatsOverlay() {
     // Count current temporary buffs
     const currentTempBuffs = activeDropBuffs ? Object.keys(activeDropBuffs).filter(key => activeDropBuffs[key] > 0).length : 0;
     
+    // Calculate HP percentage
+    const hpPercent = Math.round((gameState.currentHP / gameState.maxHP) * 100);
+    
     overlay.innerHTML = `
         <div class="stats-overlay-content">
             <h3>📊 GAME STATISTICS</h3>
@@ -295,8 +296,8 @@ export function updateStatsOverlay() {
                     <span class="stat-value">${gameState.bossesKilled}</span>
                 </div>
                 <div class="stat-row">
-                    <span>Lives:</span>
-                    <span class="stat-value">${gameState.lives}/${gameState.maxLives}</span>
+                    <span>Health:</span>
+                    <span class="stat-value">${gameState.currentHP}/${gameState.maxHP} (${hpPercent}%)</span>
                 </div>
                 <div class="stat-row">
                     <span>Shield Charges:</span>
@@ -333,6 +334,14 @@ export function updateStatsOverlay() {
                 <div class="stat-row">
                     <span>Achievement Drop Bonus:</span>
                     <span class="stat-value">${achievements.firstBlood?.unlocked ? '+10%' : '0%'}</span>
+                </div>
+                <div class="stat-row">
+                    <span>Healing Boost:</span>
+                    <span class="stat-value">${activeDropBuffs.healingBoost > 0 ? '+20%' : 'None'}</span>
+                </div>
+                <div class="stat-row">
+                    <span>Regeneration:</span>
+                    <span class="stat-value">${activeDropBuffs.regeneration > 0 ? 'Active' : 'None'}</span>
                 </div>
             </div>
             
@@ -395,7 +404,7 @@ export function createDamageNumber(x, y, damage, critical = false) {
     setTimeout(() => damageNum.remove(), 1000);
 }
 
-// Helper functions
+// Helper functions - ENHANCED WITH HEALTH BUFF SUPPORT
 function getDropInfoByKey(key) {
     const keyToType = {
         'speedBoost': 'speedBoost',
@@ -404,24 +413,59 @@ function getDropInfoByKey(key) {
         'magnetMode': 'magnetMode',
         'berserkerMode': 'berserkerMode',
         'ghostWalk': 'ghostWalk',
-        'timeSlow': 'timeSlow'
+        'timeSlow': 'timeSlow',
+        // NEW: Health-related buffs
+        'healingBoost': 'healingBoost',
+        'regeneration': 'regeneration'
     };
     
     const dropType = keyToType[key];
-    const dropInfo = DROP_INFO[dropType];
     
-    // Fallback if not found
+    // Check if it's in the standard DROP_INFO
+    let dropInfo = DROP_INFO[dropType];
+    
+    // NEW: Handle health-specific buffs that might not be in DROP_INFO
     if (!dropInfo) {
-        return {
-            icon: '⭐',
-            name: key.charAt(0).toUpperCase() + key.slice(1)
-        };
+        switch(key) {
+            case 'healingBoost':
+                dropInfo = {
+                    icon: '💚',
+                    color: '#00ff88',
+                    name: 'Healing Boost'
+                };
+                break;
+            case 'regeneration':
+                dropInfo = {
+                    icon: '💖',
+                    color: '#ff69b4',
+                    name: 'Regeneration'
+                };
+                break;
+            default:
+                // Fallback if not found
+                dropInfo = {
+                    icon: '⭐',
+                    color: '#ffd700',
+                    name: key.charAt(0).toUpperCase() + key.slice(1)
+                };
+        }
     }
     
     return dropInfo;
 }
 
 function getOriginalDuration(buffKey) {
+    // NEW: Health buff durations
+    const healthBuffDurations = {
+        'healingBoost': 1800,  // 30 seconds
+        'regeneration': 600    // 10 seconds
+    };
+    
+    if (healthBuffDurations[buffKey]) {
+        return healthBuffDurations[buffKey];
+    }
+    
+    // Standard buff durations
     const allItems = [...DROP_CONFIG.boss.items, ...DROP_CONFIG.common.items];
     const config = allItems.find(item => {
         const keyMap = {
