@@ -287,11 +287,27 @@ export function updatePauseScreen() {
     document.getElementById('pauseLives').textContent = `${gameState.currentHP}/${gameState.maxHP} HP`;
 }
 
+
+
+
+
 export function updateBuffButtons() {
     const buffButtonsContainer = document.getElementById('buffButtons');
-    if (!buffButtonsContainer) return;
+    if (!buffButtonsContainer) {
+        console.error("❌ buffButtons container not found!");
+        return;
+    }
+    
+    console.log(`🔮 Updating buff buttons... Available buffs: ${gameState.availableBuffs ? gameState.availableBuffs.length : 0}`);
     
     buffButtonsContainer.innerHTML = '';
+    
+    // Check if we have buffs available
+    if (!gameState.availableBuffs || gameState.availableBuffs.length === 0) {
+        console.error("❌ No available buffs to display!");
+        buffButtonsContainer.innerHTML = '<p style="color: #ff1744; text-align: center; padding: 20px;">No buffs available!</p>';
+        return;
+    }
     
     // Add styling if not already added
     if (!document.getElementById('enhanced-buff-styles')) {
@@ -344,9 +360,14 @@ export function updateBuffButtons() {
     }
     
     gameState.availableBuffs.forEach(buff => {
+        console.log(`🔮 Creating buff card for: ${buff.id} - ${buff.title}`);
+        
         const button = document.createElement('div');
         button.className = 'buff-card';
-        button.onclick = () => chooseBuff(buff.id);
+        button.onclick = () => {
+            console.log(`🔮 Buff clicked: ${buff.id}`);
+            chooseBuff(buff.id);
+        };
         
         const title = document.createElement('div');
         title.className = 'buff-title';
@@ -372,6 +393,8 @@ export function updateBuffButtons() {
         button.appendChild(info);
         buffButtonsContainer.appendChild(button);
     });
+    
+    console.log(`✅ Created ${buffButtonsContainer.children.length} buff cards`);
 }
 
 

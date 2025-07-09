@@ -227,22 +227,9 @@ export function createStatDisplay() {
     document.getElementById('gameContainer').appendChild(container);
     
     // Add toggle button
-    const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = 'Stats';
-    toggleBtn.style.cssText = `
-        position: absolute;
-        top: 10px;
-        right: -160px;
-        background: #00ff88;
-        border: none;
-        border-radius: 5px;
-        padding: 5px 10px;
-        cursor: pointer;
-        z-index: 101;
-    `;
-    toggleBtn.onclick = toggleStatDisplay;
+
     
-    document.getElementById('gameContainer').appendChild(toggleBtn);
+
 }
 
 // Update stat display content
@@ -305,10 +292,85 @@ function toggleStatDisplay() {
 
 // Create stats update loop
 export function startStatsUpdateLoop() {
-    setInterval(() => {
-        updateStatDisplay();
+    // Clear any existing interval
+    if (window.statsUpdateInterval) {
+        clearInterval(window.statsUpdateInterval);
+    }
+    
+    window.statsUpdateInterval = setInterval(() => {
+        try {
+            updateStatDisplay();
+        } catch (error) {
+            console.warn('⚠️ Error updating stat display:', error);
+        }
     }, 1000);
+    
+    console.log('📊 Stats update loop started');
 }
+
+
+ export function forceRefreshStats() {
+    console.log('🔄 Force refreshing stats...');
+    
+    // Check what we have
+    console.log('gameState:', window.gameState);
+    console.log('playerStats:', window.gameState?.playerStats);
+    
+    // Update display
+    updateStatDisplay();
+    
+    // Recreate if needed
+    if (!document.getElementById('stat-display')) {
+        console.log('📊 Recreating stat display...');
+        createStatDisplay();
+    }
+}
+
+// Debug function to check stats
+export function debugPlayerStats() {
+    console.log('=== PLAYER STATS DEBUG ===');
+    if (window.gameState && window.gameState.playerStats) {
+        const stats = window.gameState.playerStats;
+        console.log('Player Stats:', stats);
+        console.log('Selected Buffs:', stats.selectedBuffs);
+        console.log('Damage Bonus:', stats.damageBonus);
+        console.log('Attack Speed:', stats.attackSpeed);
+        console.log('Move Speed:', stats.moveSpeed);
+        console.log('Health Regen:', stats.healthRegen);
+        console.log('Bullet Regen:', stats.bulletRegen);
+        console.log('Life Steal:', stats.lifeSteal);
+        console.log('Crit Chance:', stats.critChance);
+        console.log('Crit Damage:', stats.critDamage);
+    } else {
+        console.log('❌ Player stats not available');
+        console.log('gameState exists:', !!window.gameState);
+        console.log('playerStats exists:', !!window.gameState?.playerStats);
+    }
+    console.log('=========================');
+}
+
+// Make functions globally available for debugging
+window.forceRefreshStats = forceRefreshStats;
+window.debugPlayerStats = debugPlayerStats;
+window.updateStatDisplay = updateStatDisplay;
+
+console.log(`
+📊 ENHANCED STAT DISPLAY SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 Debug commands:
+forceRefreshStats()  - Force refresh the display
+debugPlayerStats()   - Show current stats in console
+updateStatDisplay()  - Manual update
+
+📋 Features:
+- Hover over left edge to see stats
+- Auto-updates every second
+- Error handling for missing data
+- Toggle button for easy access
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
 
 // Make functions available globally
 window.createStatDisplay = createStatDisplay;

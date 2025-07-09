@@ -93,6 +93,8 @@ export const gameState = {
     canvas: null,
     ctx: null
 };
+
+
 export function resetGame() {
     gameState.shieldCharges = 0;
     gameState.hasShield = false;
@@ -120,7 +122,7 @@ export function resetGame() {
     gameState.isCorrupted = false;
     gameState.corruptionTimer = 0;
     
-	    gameState.playerStats = {
+    gameState.playerStats = {
         damageBonus: 0,
         attackSpeed: 0,
         moveSpeed: 0,
@@ -148,8 +150,26 @@ export function resetGame() {
     gameState.enemySlowFactor = 1;
     gameState.isBerserker = false;
     
-	gameState.activeBuffs = {};  // Empty object, will be populated by buff effects
-    gameState.availableBuffs = [];  // Empty array, will be populated by roguelike-integration
+    gameState.activeBuffs = {};
+    
+    // FIXED: Initialize available buffs properly
+    if (window.STAT_BUFFS) {
+        gameState.availableBuffs = [...window.STAT_BUFFS];
+        console.log(`✅ Initialized ${gameState.availableBuffs.length} available buffs`);
+    } else {
+        // Fallback buffs if STAT_BUFFS not loaded yet
+        gameState.availableBuffs = [
+            { id: 'undeadResilience', title: '🧟 Undead Vigor', desc: 'Gain extra life every 10 bullet hits (was 15)' },
+            { id: 'shadowLeap', title: '🌙 Shadow Leap', desc: 'Unlock double jump with ethereal shadow form' },
+            { id: 'vampiricStrikes', title: '🩸 Vampiric Strikes', desc: 'Gain 2% life steal, healing on enemy kills' },
+            { id: 'bulletStorm', title: '🔥 Bullet Storm', desc: 'Regenerate 1 bullet every 2 seconds' },
+            { id: 'berserkerRage', title: '💢 Berserker Rage', desc: 'Gain +25% damage and +15% attack speed' },
+            { id: 'survivalInstinct', title: '💚 Survival Instinct', desc: 'Regenerate 1 HP every 3 seconds' },
+            { id: 'criticalFocus', title: '🎯 Critical Focus', desc: '20% chance for critical hits (2x damage)' },
+            { id: 'swiftDeath', title: '⚡ Swift Death', desc: '+20% movement and projectile speed' }
+        ];
+        console.log(`⚠️ Using fallback buffs: ${gameState.availableBuffs.length}`);
+    }
     
     Object.keys(activeDropBuffs).forEach(key => delete activeDropBuffs[key]);
     
@@ -162,7 +182,6 @@ export function resetGame() {
     resetDamageEffects();
     gameState.needsRedraw = true;
 }
-
 
 export function takeDamage(damage) {
     const actualDamage = Math.min(damage, gameState.currentHP);
@@ -239,11 +258,13 @@ export function update() {
                 
                 // Show healing popup if health actually increased
                 if (gameState.currentHP > oldHP) {
-                    createScorePopup(
-                        player.x + player.width/2, 
-                        player.y - 30, 
-                        `+${gameState.currentHP - oldHP} HP`
-                    );
+             if (window.createScorePopup) {
+    window.createScorePopup(
+        player.x + player.width/2, 
+        player.y - 30, 
+        `+${gameState.currentHP - oldHP} HP`
+    );
+}
                 }
             }
         }
@@ -265,11 +286,13 @@ export function update() {
             
             // Show bullet regen popup every 5 bullets
             if (Math.random() < 0.2) {
-                createScorePopup(
-                    player.x + player.width/2, 
-                    player.y - 30, 
-                    `+${bulletAmount} Bolt`
-                );
+                if (window.createScorePopup) {
+    window.createScorePopup(
+        player.x + player.width/2, 
+        player.y - 30, 
+        `+${bulletAmount} Bolt`
+    );
+}
             }
         }
     }
@@ -303,35 +326,64 @@ export function update() {
     gameState.needsRedraw = true;
 }
 
+
+
 export function checkLevelComplete() {
     if (gameState.levelProgress >= GAME_CONSTANTS.MAX_LEVEL_PROGRESS) {
         gameState.levelsCompleted++;
         checkAchievements();
         
-        const isBuffLevel = gameState.level % 2 === 0;
-        const hasAvailableBuffs = gameState.availableBuffs.length > 0;
+        // IMPORTANT: Check if this is a buff level BEFORE incrementing level
+        const nextLevel = gameState.level + 1;
+        const isBuffLevel = nextLevel % 2 === 0;
+        const hasAvailableBuffs = gameState.availableBuffs && gameState.availableBuffs.length > 0;
+        
+        console.log(`🎮 Level ${gameState.level} complete!`);
+        console.log(`🎮 Next level would be: ${nextLevel}`);
+        console.log(`🎮 Is buff level: ${isBuffLevel}`);
+        console.log(`🎮 Available buffs: ${hasAvailableBuffs ? gameState.availableBuffs.length : 0}`);
         
         if (isBuffLevel && hasAvailableBuffs) {
+            // Show buff selection screen
             gameState.currentState = GameState.LEVEL_COMPLETE;
             gameState.gameRunning = false;
             
+            // Update buff selection UI
             const levelScoreEl = document.getElementById('levelScore');
             const enemiesDefeatedEl = document.getElementById('enemiesDefeated');
             
             if (levelScoreEl) levelScoreEl.textContent = gameState.score;
             if (enemiesDefeatedEl) enemiesDefeatedEl.textContent = gameState.enemiesDefeated;
             
+            console.log(`🔮 Showing buff selection screen for level ${nextLevel}`);
             window.showScreen('levelComplete');
+            
+            // Update the buff buttons
+            if (window.updateBuffButtons) {
+                window.updateBuffButtons();
+            }
         } else {
-            gameState.level++;
-            gameState.levelProgress = 1;
-            window.bulletBoxesFound = 0;
-            gameState.damageThisLevel = 0;
-            gameState.gameSpeed *= 1.1; // 10 % schneller
-            if (gameState.gameSpeed > 6) gameState.gameSpeed = 6; // Obergrenze
-            gameState.bullets += 10 * gameState.level;
+            // Regular level progression - no buffs
+            console.log(`➡️ Proceeding to level ${nextLevel} without buffs`);
+            proceedToNextLevel();
         }
     }
+}
+
+// Helper function for level progression
+function proceedToNextLevel() {
+    gameState.level++;
+    gameState.levelProgress = 1;
+    window.bulletBoxesFound = 0;
+    gameState.damageThisLevel = 0;
+    gameState.gameSpeed *= 1.1; // 10% faster
+    if (gameState.gameSpeed > 6) gameState.gameSpeed = 6; // Cap at 6x
+    gameState.bullets += 10 * gameState.level;
+    
+    // Update player stats for new level
+    updatePlayerStatsForLevel(gameState.level);
+    
+    console.log(`🚀 Advanced to level ${gameState.level}`);
 }
 
 // KORRIGIERTER 60 FPS GAME LOOP
