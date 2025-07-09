@@ -420,45 +420,42 @@ function getCategoryIcon(category) {
     }
 }
 
-// REPLACE chooseBuff function
+
 export function chooseBuff(buffId) {
-    switch(buffId) {
-        case 'undeadResilience':
-            gameState.activeBuffs.undeadResilience = 1;
-            break;
-        case 'shadowLeap':
-            gameState.activeBuffs.shadowLeap = 1;
-            break;
-        // New stat-based buffs
-        case 'vampiricStrikes':
-            gameState.playerStats.lifeSteal += 2;
-            break;
-        case 'bulletStorm':
-            gameState.playerStats.bulletRegen += 0.5; // 0.5 per second = 1 per 2 seconds
-            break;
-        case 'berserkerRage':
-            gameState.playerStats.damageBonus += 25;
-            gameState.playerStats.attackSpeed += 15;
-            break;
-        case 'survivalInstinct':
-            gameState.playerStats.healthRegen += 0.33; // 0.33 per second = 1 per 3 seconds
-            break;
-        case 'criticalFocus':
-            gameState.playerStats.critChance += 20;
-            gameState.playerStats.critDamage += 0.5; // +50% crit damage
-            break;
-        case 'swiftDeath':
-            gameState.playerStats.moveSpeed += 20;
-            gameState.playerStats.projectileSpeed += 20;
-            break;
+    console.log(`🎮 Choosing buff: ${buffId}`);
+    
+    // Find the buff in STAT_BUFFS
+    const buff = gameState.availableBuffs.find(b => b.id === buffId);
+    if (!buff) {
+        console.error(`❌ Buff not found: ${buffId}`);
+        return;
     }
     
-    // Track selected buff
-    gameState.playerStats.selectedBuffs = gameState.playerStats.selectedBuffs || [];
-    gameState.playerStats.selectedBuffs.push(buffId);
+    // Apply the buff effect using the new system
+    if (buff.effect && typeof buff.effect === 'function') {
+        buff.effect();
+        console.log(`✅ Applied buff effect for: ${buffId}`);
+    } else {
+        // Fallback for legacy buffs
+        switch(buffId) {
+            case 'undeadResilience':
+                gameState.activeBuffs.undeadResilience = 1;
+                break;
+            case 'shadowLeap':
+                gameState.activeBuffs.shadowLeap = 1;
+                break;
+        }
+    }
     
     // Remove the selected buff from available buffs
-    gameState.availableBuffs = gameState.availableBuffs.filter(buff => buff.id !== buffId);
+    gameState.availableBuffs = gameState.availableBuffs.filter(b => b.id !== buffId);
+    
+    // Replenish buff selection if needed
+    if (gameState.availableBuffs.length < 3) {
+        if (window.replenishBuffSelection) {
+            window.replenishBuffSelection();
+        }
+    }
     
     // Standard level up procedure
     gameState.level++;
@@ -467,6 +464,11 @@ export function chooseBuff(buffId) {
     gameState.damageThisLevel = 0;
     gameState.gameSpeed += 0.6;
     gameState.bullets += 12;
+    
+    // IMPORTANT: Update player stats for new level
+    if (window.updatePlayerStatsForLevel) {
+        window.updatePlayerStatsForLevel(gameState.level);
+    }
     
     gameState.postBuffInvulnerability = 120;
     
@@ -478,6 +480,8 @@ export function chooseBuff(buffId) {
         updateUI();
     });
 }
+
+
 export function updateHighScore() {
     if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;

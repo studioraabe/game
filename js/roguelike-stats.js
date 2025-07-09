@@ -40,7 +40,7 @@ export const STAT_BUFFS = [
         desc: 'Gain extra life every 10 bullet hits (was 15)',
         effect: () => {
             gameState.activeBuffs.undeadResilience = 1;
-            playerStats.selectedBuffs.push('undeadResilience');
+            gameState.playerStats.selectedBuffs.push('undeadResilience');
         }
     },
     { 
@@ -49,7 +49,7 @@ export const STAT_BUFFS = [
         desc: 'Unlock double jump with ethereal shadow form',
         effect: () => {
             gameState.activeBuffs.shadowLeap = 1;
-            playerStats.selectedBuffs.push('shadowLeap');
+            gameState.playerStats.selectedBuffs.push('shadowLeap');
         }
     },
     
@@ -59,8 +59,8 @@ export const STAT_BUFFS = [
         title: '🩸 Vampiric Strikes',
         desc: 'Gain 2% life steal, healing on enemy kills',
         effect: () => {
-            playerStats.lifeSteal += 2;
-            playerStats.selectedBuffs.push('vampiricStrikes');
+            gameState.playerStats.lifeSteal += 2;
+            gameState.playerStats.selectedBuffs.push('vampiricStrikes');
         }
     },
     {
@@ -68,8 +68,9 @@ export const STAT_BUFFS = [
         title: '🔥 Bullet Storm',
         desc: 'Regenerate 1 bullet every 2 seconds',
         effect: () => {
-            playerStats.bulletRegen += 0.5;
-            playerStats.selectedBuffs.push('bulletStorm');
+            // FIXED: 1 bullet per 2 seconds = 0.5 bullets per second
+            gameState.playerStats.bulletRegen += 0.5;
+            gameState.playerStats.selectedBuffs.push('bulletStorm');
         }
     },
     {
@@ -77,9 +78,9 @@ export const STAT_BUFFS = [
         title: '💢 Berserker Rage',
         desc: 'Gain +25% damage and +15% attack speed',
         effect: () => {
-            playerStats.damageBonus += 25;
-            playerStats.attackSpeed += 15;
-            playerStats.selectedBuffs.push('berserkerRage');
+            gameState.playerStats.damageBonus += 25;
+            gameState.playerStats.attackSpeed += 15;
+            gameState.playerStats.selectedBuffs.push('berserkerRage');
         }
     },
     {
@@ -87,8 +88,9 @@ export const STAT_BUFFS = [
         title: '💚 Survival Instinct',
         desc: 'Regenerate 1 HP every 3 seconds',
         effect: () => {
-            playerStats.healthRegen += 0.33;
-            playerStats.selectedBuffs.push('survivalInstinct');
+            // FIXED: 1 HP per 3 seconds = 0.333... HP per second
+            gameState.playerStats.healthRegen += 0.333;
+            gameState.playerStats.selectedBuffs.push('survivalInstinct');
         }
     },
     {
@@ -96,9 +98,10 @@ export const STAT_BUFFS = [
         title: '🎯 Critical Focus',
         desc: '20% chance for critical hits (2x damage)',
         effect: () => {
-            playerStats.critChance += 20;
-            playerStats.critDamage += 0.5;
-            playerStats.selectedBuffs.push('criticalFocus');
+            gameState.playerStats.critChance += 20;
+            // FIXED: critDamage should be 2.0 for 2x damage (was adding 0.5)
+            gameState.playerStats.critDamage = 2.0;
+            gameState.playerStats.selectedBuffs.push('criticalFocus');
         }
     },
     {
@@ -106,9 +109,9 @@ export const STAT_BUFFS = [
         title: '⚡ Swift Death',
         desc: '+20% movement and projectile speed',
         effect: () => {
-            playerStats.moveSpeed += 20;
-            playerStats.projectileSpeed += 20;
-            playerStats.selectedBuffs.push('swiftDeath');
+            gameState.playerStats.moveSpeed += 20;
+            gameState.playerStats.projectileSpeed += 20;
+            gameState.playerStats.selectedBuffs.push('swiftDeath');
         }
     }
 ];
@@ -227,60 +230,6 @@ function createUpgradedBuffs() {
 
 // Update stats per frame - handle regeneration and timers
 export function updatePlayerStats() {
-    if (!gameState.gameRunning) return;
-    
-    // Health regeneration
-    if (playerStats.healthRegen > 0) {
-        playerStats.healthRegenTimer += gameState.deltaTime;
-        const regenInterval = 60; // 1 second at 60 FPS
-        
-        if (playerStats.healthRegenTimer >= regenInterval) {
-            playerStats.healthRegenTimer -= regenInterval;
-            
-            // Calculate healing amount
-            const healAmount = Math.max(1, Math.floor(playerStats.healthRegen));
-            
-            // Apply healing if not at max health
-            if (gameState.currentHP < gameState.maxHP) {
-                const oldHP = gameState.currentHP;
-                gameState.currentHP = Math.min(gameState.maxHP, gameState.currentHP + healAmount);
-                
-                // Show healing popup if health actually increased
-                if (gameState.currentHP > oldHP) {
-                    createScorePopup(
-                        player.x + player.width/2, 
-                        player.y - 30, 
-                        `+${gameState.currentHP - oldHP} HP`
-                    );
-                }
-            }
-        }
-    }
-    
-    // Bullet regeneration
-    if (playerStats.bulletRegen > 0) {
-        playerStats.bulletRegenTimer += gameState.deltaTime;
-        const regenInterval = 60; // 1 second at 60 FPS
-        
-        if (playerStats.bulletRegenTimer >= regenInterval) {
-            playerStats.bulletRegenTimer -= regenInterval;
-            
-            // Calculate bullet regen amount
-            const bulletAmount = Math.max(1, Math.floor(playerStats.bulletRegen));
-            
-            // Add bullets
-            gameState.bullets += bulletAmount;
-            
-            // Show bullet regen popup every 5 bullets
-            if (Math.random() < 0.2) {
-                createScorePopup(
-                    player.x + player.width/2, 
-                    player.y - 30, 
-                    `+${bulletAmount} Bolt`
-                );
-            }
-        }
-    }
 }
 
 // Apply lifesteal when an enemy is killed

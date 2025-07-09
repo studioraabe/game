@@ -95,6 +95,9 @@ export const gameState = {
 };
 
 
+
+
+
 export function resetGame() {
     gameState.shieldCharges = 0;
     gameState.hasShield = false;
@@ -122,6 +125,7 @@ export function resetGame() {
     gameState.isCorrupted = false;
     gameState.corruptionTimer = 0;
     
+    // FIXED: Properly initialize playerStats
     gameState.playerStats = {
         damageBonus: 0,
         attackSpeed: 0,
@@ -134,7 +138,12 @@ export function resetGame() {
         critDamage: 1.5,
         selectedBuffs: []
     };
-	
+    
+    // Initialize roguelike system if available
+    if (window.initRoguelikeSystem) {
+        window.initRoguelikeSystem();
+    }
+    
     gameState.comboCount = 0;
     gameState.comboTimer = 0;
     gameState.lastScoreTime = Date.now();
@@ -212,6 +221,9 @@ export function updatePlayerStatsForLevel(level) {
     gameState.currentHP = Math.min(gameState.currentHP + hpIncrease, gameState.maxHP);
 }
 
+// REPLACEMENT FOR gameState.js update function
+// Replace the entire update function (starting around line 168)
+
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
     
@@ -238,17 +250,22 @@ export function update() {
     window.updateEnvironmentElements();
     window.updateDrops();
     window.updateEffects();
-	
-	
-	 // Handle health regeneration
-    if (gameState.playerStats.healthRegen > 0) {
-        gameState.healthRegenTimer = (gameState.healthRegenTimer || 0) + gameState.deltaTime;
+    
+    // FIXED: Handle health regeneration from playerStats
+    if (gameState.playerStats && gameState.playerStats.healthRegen > 0) {
+        // Initialize timer if not exists
+        if (!gameState.healthRegenTimer) {
+            gameState.healthRegenTimer = 0;
+        }
+        
+        gameState.healthRegenTimer += gameState.deltaTime;
         const regenInterval = 60; // 1 second at 60 FPS
         
         if (gameState.healthRegenTimer >= regenInterval) {
             gameState.healthRegenTimer -= regenInterval;
             
-            // Calculate healing amount
+            // Calculate healing amount based on healthRegen stat
+            // healthRegen is stored as HP per second, so we apply it directly
             const healAmount = Math.max(1, Math.floor(gameState.playerStats.healthRegen));
             
             // Apply healing if not at max health
@@ -258,41 +275,47 @@ export function update() {
                 
                 // Show healing popup if health actually increased
                 if (gameState.currentHP > oldHP) {
-             if (window.createScorePopup) {
-    window.createScorePopup(
-        player.x + player.width/2, 
-        player.y - 30, 
-        `+${gameState.currentHP - oldHP} HP`
-    );
-}
+                    if (window.createScorePopup) {
+                        window.createScorePopup(
+                            player.x + player.width/2, 
+                            player.y - 30, 
+                            `+${gameState.currentHP - oldHP} HP`
+                        );
+                    }
                 }
             }
         }
     }
     
-    // Handle bullet regeneration
-    if (gameState.playerStats.bulletRegen > 0) {
-        gameState.bulletRegenTimer = (gameState.bulletRegenTimer || 0) + gameState.deltaTime;
+    // FIXED: Handle bullet regeneration from playerStats
+    if (gameState.playerStats && gameState.playerStats.bulletRegen > 0) {
+        // Initialize timer if not exists
+        if (!gameState.bulletRegenTimer) {
+            gameState.bulletRegenTimer = 0;
+        }
+        
+        gameState.bulletRegenTimer += gameState.deltaTime;
         const regenInterval = 60; // 1 second at 60 FPS
         
         if (gameState.bulletRegenTimer >= regenInterval) {
             gameState.bulletRegenTimer -= regenInterval;
             
             // Calculate bullet regen amount
+            // bulletRegen is stored as bullets per second
             const bulletAmount = Math.max(1, Math.floor(gameState.playerStats.bulletRegen));
             
             // Add bullets
             gameState.bullets += bulletAmount;
             
-            // Show bullet regen popup every 5 bullets
+            // Show bullet regen popup occasionally
             if (Math.random() < 0.2) {
                 if (window.createScorePopup) {
-    window.createScorePopup(
-        player.x + player.width/2, 
-        player.y - 30, 
-        `+${bulletAmount} Bolt`
-    );
-}
+                    window.createScorePopup(
+                        player.x + player.width/2, 
+                        player.y - 30, 
+                        `+${bulletAmount} Bolt`
+                    );
+                }
             }
         }
     }
@@ -325,6 +348,7 @@ export function update() {
     window.updateUI();
     gameState.needsRedraw = true;
 }
+
 
 
 

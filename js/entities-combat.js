@@ -146,45 +146,6 @@ export function updateBatProjectiles(gameStateParam) {
 }
 // ... keep all existing SHOOTING SYSTEM code ...
 
-export function shoot(gameStateParam) {
-    if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
-    
-    const canUseMultiShot = gameStateParam.activeBuffs.chainLightning > 0 && (gameStateParam.bullets >= 3 || gameStateParam.isBerserker);
-    const bulletCount = canUseMultiShot ? 3 : 1;
-    const enhanced = canUseMultiShot;
-    
-    for (let i = 0; i < bulletCount; i++) {
-        const offsetY = bulletCount > 1 ? (i - 1) * 8 : 0;
-        const baseX = player.facingDirection === 1 ? player.x + player.width : player.x;
-        const startX = baseX + (24 * player.facingDirection);
-        
-        const bulletSpeed = GAME_CONSTANTS.BULLET_SPEED * player.facingDirection * GAME_CONSTANTS.BULLET_SPEED_MULTIPLIER;
-        
-        bulletsFired.push({
-            x: startX,
-            y: player.y + player.height / 1.00 + offsetY,
-            speed: bulletSpeed,
-            enhanced: enhanced,
-            direction: player.facingDirection,
-            piercing: gameStateParam.hasPiercingBullets,
-            // Stretch effect properties
-            age: 0,
-            tailX: startX,
-            baseLength: 30,
-            currentLength: 4,
-            maxStretch: 60,
-            hit: false,
-            hitTime: 0
-        });
-    }
-    
-    if (!gameStateParam.isBerserker) {
-        gameStateParam.bullets -= bulletCount;
-    }
-    soundManager.shoot();
-}
-
-
 
 export function updateBullets(gameStateParam) {
     let anyBulletHit = false;
@@ -237,9 +198,23 @@ export function updateBullets(gameStateParam) {
                     bullet.hit = true;
                     bullet.hitTime = 0;
                     
-                    // FIXED: Enhanced damage calculation with proper scaling
+                    // FIXED: Calculate base damage with proper scaling
                     const baseDamage = gameStateParam.baseDamage || calculatePlayerDamage(gameStateParam.level);
-                    const damage = bullet.enhanced ? baseDamage * 3 : baseDamage;
+                    let damage = bullet.enhanced ? baseDamage * 3 : baseDamage;
+                    
+                    // FIXED: Apply player stat bonuses
+                    damage = damage * (1 + (gameStateParam.playerStats?.damageBonus || 0) / 100);
+                    
+                    // FIXED: Critical hit calculation
+                    let isCritical = false;
+                    const critChance = gameStateParam.playerStats?.critChance || 0;
+                    if (Math.random() * 100 < critChance) {
+                        isCritical = true;
+                        const critMultiplier = gameStateParam.playerStats?.critDamage || 1.5;
+                        damage *= critMultiplier;
+                    }
+                    
+                    damage = Math.floor(damage);
                     
                     // FIXED: Ensure obstacle has proper health before damage
                     if (!obstacle.maxHealth || obstacle.maxHealth <= 0) {
@@ -252,7 +227,17 @@ export function updateBullets(gameStateParam) {
                     
                     obstacle.health -= damage;
                     
-                    console.log(`💥 ${obstacle.type} hit for ${damage} damage. Health: ${obstacle.health}/${obstacle.maxHealth}`);
+                    console.log(`💥 ${obstacle.type} hit for ${damage} damage${isCritical ? ' (CRIT!)' : ''}. Health: ${obstacle.health}/${obstacle.maxHealth}`);
+                    
+                    // Show damage number with critical indication
+                    if (window.createDamageNumber) {
+                        window.createDamageNumber(
+                            obstacle.x + obstacle.width/2, 
+                            obstacle.y + obstacle.height/4, 
+                            damage, 
+                            isCritical
+                        );
+                    }
                     
                     if (obstacle.type === 'skeleton') {
                         obstacle.damageResistance = 30;
@@ -260,7 +245,7 @@ export function updateBullets(gameStateParam) {
                         if (obstacle.health <= 0) {
                             obstacle.isDead = true;
                             obstacle.deathTimer = 0;
-                            handleEnemyDeath(obstacle, j, gameStateParam);
+                            handleEnemyDeathWithLifesteal(obstacle, j, gameStateParam, damage);
                         }
                     }
                     
@@ -271,7 +256,7 @@ export function updateBullets(gameStateParam) {
                     anyBulletHit = true;
                     
                     if (obstacle.health <= 0 && obstacle.type !== 'skeleton') {
-                        handleEnemyDeath(obstacle, j, gameStateParam);
+                        handleEnemyDeathWithLifesteal(obstacle, j, gameStateParam, damage);
                     }
                     
                     if (!bullet.piercing || !gameStateParam.hasPiercingBullets) {
@@ -291,6 +276,87 @@ export function updateBullets(gameStateParam) {
         }
     }
 }
+
+
+function handleEnemyDeathWithLifesteal(obstacle, index, gameStateParam, damage) {
+    // Apply lifesteal if player has it
+    const lifeSteal = gameStateParam.playerStats?.lifeSteal || 0;
+    if (lifeSteal > 0) {
+        const healAmount = Math.max(1, Math.floor(damage * (lifeSteal / 100)));
+        
+        // Apply healing if not at max health
+        if (gameStateParam.currentHP < gameStateParam.maxHP) {
+            const oldHP = gameStateParam.currentHP;
+            gameStateParam.currentHP = Math.min(gameStateParam.maxHP, gameStateParam.currentHP + healAmount);
+            const actualHeal = gameStateParam.currentHP - oldHP;
+            
+            if (actualHeal > 0) {
+                createScorePopup(
+                    player.x + player.width/2, 
+                    player.y - 15, 
+                    `+${actualHeal} 🩸`,
+                    true
+                );
+            }
+        }
+    }
+    
+    // Continue with normal enemy death handling
+    handleEnemyDeath(obstacle, index, gameStateParam);
+}
+
+
+export function shoot(gameStateParam) {
+    if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
+    
+    const canUseMultiShot = gameStateParam.activeBuffs.chainLightning > 0 && (gameStateParam.bullets >= 3 || gameStateParam.isBerserker);
+    const bulletCount = canUseMultiShot ? 3 : 1;
+    const enhanced = canUseMultiShot;
+    
+    // FIXED: Apply projectile speed bonus
+    const projectileSpeedMultiplier = 1 + (gameStateParam.playerStats?.projectileSpeed || 0) / 100;
+    
+    for (let i = 0; i < bulletCount; i++) {
+        const offsetY = bulletCount > 1 ? (i - 1) * 8 : 0;
+        const baseX = player.facingDirection === 1 ? player.x + player.width : player.x;
+        const startX = baseX + (24 * player.facingDirection);
+        
+        // FIXED: Apply projectile speed multiplier
+        const bulletSpeed = GAME_CONSTANTS.BULLET_SPEED * 
+                          player.facingDirection * 
+                          GAME_CONSTANTS.BULLET_SPEED_MULTIPLIER * 
+                          projectileSpeedMultiplier;
+        
+        bulletsFired.push({
+            x: startX,
+            y: player.y + player.height / 1.00 + offsetY,
+            speed: bulletSpeed,
+            enhanced: enhanced,
+            direction: player.facingDirection,
+            piercing: gameStateParam.hasPiercingBullets,
+            // Stretch effect properties
+            age: 0,
+            tailX: startX,
+            baseLength: 30,
+            currentLength: 4,
+            maxStretch: 60,
+            hit: false,
+            hitTime: 0
+        });
+    }
+    
+    if (!gameStateParam.isBerserker) {
+        gameStateParam.bullets -= bulletCount;
+    }
+    soundManager.shoot();
+}
+
+
+
+
+
+
+
 
 
 

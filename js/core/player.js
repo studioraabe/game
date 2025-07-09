@@ -41,9 +41,15 @@ export function resetPlayer() {
     player.wasSpacePressed = false;
 }
 
+
+// REPLACEMENT FOR player.js updatePlayer function
+// Replace the entire updatePlayer function starting around line 31
+
 export function updatePlayer(keys, gameState) {
+    // FIXED: Apply movement speed bonus from playerStats
     const statSpeedBonus = 1 + ((gameState.playerStats?.moveSpeed || 0) / 100);
     const moveSpeed = GAME_CONSTANTS.PLAYER_MOVE_SPEED * gameState.speedMultiplier * statSpeedBonus;
+    
     // VERSTÄRKTE CORRUPTION CHECKS - WICHTIG!
     const isCorrupted = gameState.isCorrupted || false;
     
@@ -86,7 +92,7 @@ export function updatePlayer(keys, gameState) {
     
     // CORRUPTION FEEDBACK beim Versuch zu handeln
     if (isCorrupted) {
-        if (keys.space && !player.wasSpacePressed) {
+        if (keys.s && !player.wasSpacePressed) {
             // BLOCKIERE SCHUSS + Feedback
             createScorePopup(player.x + player.width/2, player.y - 30, 'WEAKENED!');
             console.log("🚫 Shooting blocked - player is corrupted!");
@@ -104,8 +110,24 @@ export function updatePlayer(keys, gameState) {
     // Shooting - NUR wenn nicht corrupted UND keys gedrückt
     if (canShoot && (keys.s || keys.Space) && !player.wasSpacePressed && !isCorrupted) {
         console.log("✅ Shooting allowed - player not corrupted");
-        shoot(gameState);  // Use imported shoot function with gameState parameter
+        
+        // FIXED: Check for attack speed cooldown
+        const attackSpeedBonus = gameState.playerStats?.attackSpeed || 0;
+        const shootCooldown = gameState.shootCooldown || 0;
+        
+        if (shootCooldown <= 0) {
+            shoot(gameState);
+            // Set cooldown based on attack speed
+            const baseCooldown = 15; // frames at 60fps
+            gameState.shootCooldown = baseCooldown / (1 + attackSpeedBonus / 100);
+        }
+        
         gameState.playerIdleTime = 0;
+    }
+    
+    // Update shoot cooldown
+    if (gameState.shootCooldown > 0) {
+        gameState.shootCooldown -= gameState.deltaTime || 1;
     }
     
     // Jump logic - NUR wenn nicht corrupted
@@ -154,6 +176,7 @@ export function updatePlayer(keys, gameState) {
     player.wasUpPressed = keys.space || keys.ArrowUp;
     player.wasSpacePressed = keys.s || keys.Space;
 }
+
 
 export function startJump(gameState) {
     // Diese Funktion wird nur aufgerufen wenn canJump = true (nicht corrupted)
