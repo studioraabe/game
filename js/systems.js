@@ -238,15 +238,43 @@ export function collectDrop(drop) {
             createScorePopup(drop.x, drop.y, 'Speed Boost!');
             break;
             
-        case DropType.JUMP_BOOST:
-            if (!canPickupMoreBuffs() && !activeDropBuffs.jumpBoost) {
-                createScorePopup(drop.x, drop.y, 'Buff Limit!');
-                gameState.score += 500 * gameState.scoreMultiplier;
-                break;
-            }
-            activeDropBuffs.jumpBoost = Math.min((activeDropBuffs.jumpBoost || 0) + dropConfig.duration, 3600);
-            createScorePopup(drop.x, drop.y, 'Jump Boost!');
-            break;
+       case DropType.JUMP_BOOST:
+    // Check buff limit for temporary buffs
+    if (!canPickupMoreBuffs() && !activeDropBuffs.jumpBoost) {
+        createScorePopup(drop.x, drop.y, 'Buff Limit!');
+        gameState.score += 500 * gameState.scoreMultiplier;
+        break;
+    }
+    
+    // FIXED: Jump boost should stack duration, not interfere with normal jumping
+    const jumpBoostDuration = dropConfig.duration || 1800; // 30 seconds default
+    
+    if (activeDropBuffs.jumpBoost) {
+        // If already active, extend the duration (max 3600 = 1 minute)
+        activeDropBuffs.jumpBoost = Math.min(
+            activeDropBuffs.jumpBoost + jumpBoostDuration,
+            3600
+        );
+        createScorePopup(drop.x, drop.y, 'Jump Boost Extended!');
+    } else {
+        // First time activation
+        activeDropBuffs.jumpBoost = jumpBoostDuration;
+        createScorePopup(drop.x, drop.y, 'Triple Jump Unlocked!');
+    }
+    
+    // Show additional info popup
+    setTimeout(() => {
+        if (window.createScorePopup && window.player) {
+            createScorePopup(
+                window.player.x + window.player.width/2,
+                window.player.y - 50,
+                'Press Jump in Mid-Air!'
+            );
+        }
+    }, 500);
+    
+    console.log(`🚀 Jump Boost collected! Duration: ${Math.ceil(activeDropBuffs.jumpBoost / 60)}s`);
+    break;
             
         case DropType.SHIELD:
             // Shield is permanent, not affected by buff limit

@@ -144,7 +144,7 @@ export function updateRegenIndicators() {
     // Update health bar with regen indicator
     const healthContainer = document.getElementById('healthContainer');
     if (healthContainer) {
-        if (healthRegen > 0) {
+        if (healthRegen > 0.5) { // Only show if above baseline
             healthContainer.classList.add('regenerating');
             healthContainer.title = `Regenerating ${healthRegen.toFixed(2)} HP/second`;
         } else {
@@ -156,7 +156,7 @@ export function updateRegenIndicators() {
     // Update bullet counter with regen indicator
     const bulletElement = document.getElementById('bullets');
     if (bulletElement) {
-        if (bulletRegen > 0) {
+        if (bulletRegen > 0.5) { // Only show if above baseline
             bulletElement.classList.add('recharging');
             bulletElement.title = `Regenerating ${bulletRegen.toFixed(2)} bullets/second`;
         } else {
@@ -165,7 +165,6 @@ export function updateRegenIndicators() {
         }
     }
 }
-
 
 // Enhanced Buff Display - ADDED HEALTH BUFF SUPPORT
 let previousBuffs = new Set();
@@ -268,6 +267,22 @@ export function createStatsOverlay() {
         document.getElementById('gameContainer').appendChild(overlay);
     }
 }
+
+// Update the main enhanced displays function to include regen indicators
+export function updateEnhancedDisplays() {
+    const buffContainer = document.getElementById('enhancedBuffs');
+    const comboDisplay = document.getElementById('comboDisplay');
+    
+    if (!buffContainer || !comboDisplay) {
+        console.warn('Enhanced display containers missing, reinitializing...');
+        initEnhancedContainers();
+    }
+    
+    updateEnhancedBuffDisplay();
+    updateEnhancedComboDisplay();
+    updateRegenIndicators(); // Add this line
+}
+
 
 export function updateStatsOverlay() {
     if (!gameState) return;

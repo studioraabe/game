@@ -240,8 +240,7 @@ export function updatePlayerStatsForLevel(level) {
     console.log(`📈 Level ${level}: HP ${gameState.currentHP}/${gameState.maxHP} (+${hpIncrease}), Bullets ${gameState.bullets}/${gameState.maxBullets} (+${bulletIncrease})`);
 }
 
-// REPLACEMENT FOR gameState.js update function
-// Replace the entire update function (starting around line 168)
+
 
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
@@ -259,10 +258,9 @@ export function update() {
     
     // Consistent animation time for sprites
     gameState.animationTime = now * 0.001;
-	
-	updateEnhancedProjectiles(gameState);
-
     
+    updateEnhancedProjectiles(gameState);
+
     // Update all game systems
     window.updatePlayer();
     window.spawnObstacle();
@@ -273,8 +271,51 @@ export function update() {
     window.updateDrops();
     window.updateEffects();
     
-    // FIXED: Handle health regeneration from playerStats
-  if (gameState.playerStats && gameState.playerStats.bulletRegen > 0) {
+    // FIXED: Health regeneration from playerStats
+    if (gameState.playerStats && gameState.playerStats.healthRegen > 0) {
+        // Initialize timer if not exists
+        if (!gameState.healthRegenTimer) {
+            gameState.healthRegenTimer = 0;
+        }
+        
+        gameState.healthRegenTimer += gameState.deltaTime;
+        const regenInterval = 60; // 1 second at 60 FPS
+        
+        if (gameState.healthRegenTimer >= regenInterval) {
+            gameState.healthRegenTimer -= regenInterval;
+            
+            // Calculate health regen amount
+            if (!gameState.healthRegenAccumulator) {
+                gameState.healthRegenAccumulator = 0;
+            }
+            
+            gameState.healthRegenAccumulator += gameState.playerStats.healthRegen;
+            const healthAmount = Math.floor(gameState.healthRegenAccumulator);
+            
+            if (healthAmount > 0 && gameState.currentHP < gameState.maxHP) {
+                gameState.healthRegenAccumulator -= healthAmount;
+                
+                // Apply healing with capacity limit
+                const oldHP = gameState.currentHP;
+                gameState.currentHP = Math.min(gameState.maxHP, gameState.currentHP + healthAmount);
+                const actualRegen = gameState.currentHP - oldHP;
+                
+                // Show health regen popup only if health was actually added
+                if (actualRegen > 0 && Math.random() < 0.3) {
+                    if (window.createScorePopup) {
+                        window.createScorePopup(
+                            player.x + player.width/2, 
+                            player.y - 20, 
+                            `+${actualRegen} HP`
+                        );
+                    }
+                }
+            }
+        }
+    }
+    
+    // FIXED: Bullet regeneration from playerStats
+    if (gameState.playerStats && gameState.playerStats.bulletRegen > 0) {
         // Initialize timer if not exists
         if (!gameState.bulletRegenTimer) {
             gameState.bulletRegenTimer = 0;
@@ -316,47 +357,6 @@ export function update() {
         }
     }
     
-    // FIXED: Handle bullet regeneration from playerStats
-    if (gameState.playerStats && gameState.playerStats.bulletRegen > 0) {
-        // Initialize timer if not exists
-        if (!gameState.bulletRegenTimer) {
-            gameState.bulletRegenTimer = 0;
-        }
-        
-        gameState.bulletRegenTimer += gameState.deltaTime;
-        const regenInterval = 60; // 1 second at 60 FPS
-        
-        if (gameState.bulletRegenTimer >= regenInterval) {
-            gameState.bulletRegenTimer -= regenInterval;
-            
-            // Calculate bullet regen amount
-            // bulletRegen is stored as bullets per second
-            // For fractional amounts, accumulate them
-            if (!gameState.bulletRegenAccumulator) {
-                gameState.bulletRegenAccumulator = 0;
-            }
-            
-            gameState.bulletRegenAccumulator += gameState.playerStats.bulletRegen;
-            const bulletAmount = Math.floor(gameState.bulletRegenAccumulator);
-            
-            if (bulletAmount > 0) {
-                gameState.bulletRegenAccumulator -= bulletAmount;
-                gameState.bullets += bulletAmount;
-                
-                // Show bullet regen popup occasionally
-                if (Math.random() < 0.2) {
-                    if (window.createScorePopup) {
-                        window.createScorePopup(
-                            player.x + player.width/2, 
-                            player.y - 30, 
-                            `+${bulletAmount} Bolt`
-                        );
-                    }
-                }
-            }
-        }
-    }
-    
     // FIXED: Check bat projectiles for player death BEFORE other collision checks
     const batKilledPlayer = window.updateBatProjectiles();
     if (batKilledPlayer) {
@@ -385,8 +385,6 @@ export function update() {
     window.updateUI();
     gameState.needsRedraw = true;
 }
-
-
 
 
 export function checkLevelComplete() {

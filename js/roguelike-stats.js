@@ -18,6 +18,13 @@ const ENHANCED_BUFF_EFFECTS = {
             // Add 0.333 to baseline 0.5 = 0.833 HP/sec total
             gameState.playerStats.healthRegen += 0.333;
             gameState.playerStats.selectedBuffs.push('survivalInstinct');
+            
+            console.log(`✅ Survival Instinct applied! Health regen: ${gameState.playerStats.healthRegen.toFixed(3)}/sec`);
+            
+            // Force UI update
+            if (window.updateRegenIndicators) {
+                window.updateRegenIndicators();
+            }
         }
     },
     
@@ -27,6 +34,13 @@ const ENHANCED_BUFF_EFFECTS = {
             // Add 0.5 to baseline 0.5 = 1.0 bullets/sec total (doubles the rate)
             gameState.playerStats.bulletRegen += 0.5;
             gameState.playerStats.selectedBuffs.push('bulletStorm');
+            
+            console.log(`✅ Bullet Storm applied! Bullet regen: ${gameState.playerStats.bulletRegen.toFixed(3)}/sec`);
+            
+            // Force UI update
+            if (window.updateRegenIndicators) {
+                window.updateRegenIndicators();
+            }
         }
     }
 };
@@ -34,7 +48,6 @@ const ENHANCED_BUFF_EFFECTS = {
 
 
 
-// Then replace the existing STAT_BUFFS array with this:
 export const STAT_BUFFS = [
     // Original buffs from DUNGEON_THEME
     { 
@@ -51,21 +64,6 @@ export const STAT_BUFFS = [
             }
         }
     },
-	
-	   {
-        id: 'survivalInstinct',
-        title: '💚 Survival Instinct',
-        desc: 'Regenerate 1 HP every 3 seconds (+66% health regen)',
-        effect: ENHANCED_BUFF_EFFECTS.survivalInstinct
-    },
-    {
-        id: 'bulletStorm',
-        title: '🔥 Bullet Storm',
-        desc: 'Regenerate 1 bullet every 2 seconds (doubles bullet regen)',
-        effect: ENHANCED_BUFF_EFFECTS.bulletStorm
-    },
-	
-	
     { 
         id: 'shadowLeap', 
         title: '🌙 Shadow Leap', 
@@ -81,7 +79,21 @@ export const STAT_BUFFS = [
         }
     },
     
-    // New stat-based buffs
+    // FIXED: Enhanced regeneration buffs
+    {
+        id: 'survivalInstinct',
+        title: '💚 Survival Instinct',
+        desc: 'Regenerate 1 HP every 3 seconds (+66% health regen)',
+        effect: ENHANCED_BUFF_EFFECTS.survivalInstinct
+    },
+    {
+        id: 'bulletStorm',
+        title: '🔥 Bullet Storm',
+        desc: 'Regenerate 1 bullet every 2 seconds (doubles bullet regen)',
+        effect: ENHANCED_BUFF_EFFECTS.bulletStorm
+    },
+    
+    // Other stat-based buffs
     {
         id: 'vampiricStrikes',
         title: '🩸 Vampiric Strikes',
@@ -91,18 +103,7 @@ export const STAT_BUFFS = [
             if (gameState && gameState.playerStats) {
                 gameState.playerStats.lifeSteal += 2;
                 gameState.playerStats.selectedBuffs.push('vampiricStrikes');
-            }
-        }
-    },
-    {
-        id: 'bulletStorm',
-        title: '🔥 Bullet Storm',
-        desc: 'Regenerate 1 bullet every 2 seconds',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.bulletRegen += 0.5;
-                gameState.playerStats.selectedBuffs.push('bulletStorm');
+                console.log(`✅ Vampiric Strikes applied! Life steal: ${gameState.playerStats.lifeSteal}%`);
             }
         }
     },
@@ -116,18 +117,7 @@ export const STAT_BUFFS = [
                 gameState.playerStats.damageBonus += 25;
                 gameState.playerStats.attackSpeed += 15;
                 gameState.playerStats.selectedBuffs.push('berserkerRage');
-            }
-        }
-    },
-    {
-        id: 'survivalInstinct',
-        title: '💚 Survival Instinct',
-        desc: 'Regenerate 1 HP every 3 seconds',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.healthRegen += 0.333;
-                gameState.playerStats.selectedBuffs.push('survivalInstinct');
+                console.log(`✅ Berserker Rage applied! Damage: +${gameState.playerStats.damageBonus}%, Attack Speed: +${gameState.playerStats.attackSpeed}%`);
             }
         }
     },
@@ -141,6 +131,7 @@ export const STAT_BUFFS = [
                 gameState.playerStats.critChance += 20;
                 gameState.playerStats.critDamage = 2.0;
                 gameState.playerStats.selectedBuffs.push('criticalFocus');
+                console.log(`✅ Critical Focus applied! Crit chance: ${gameState.playerStats.critChance}%`);
             }
         }
     },
@@ -154,11 +145,12 @@ export const STAT_BUFFS = [
                 gameState.playerStats.moveSpeed += 20;
                 gameState.playerStats.projectileSpeed += 20;
                 gameState.playerStats.selectedBuffs.push('swiftDeath');
+                console.log(`✅ Swift Death applied! Move speed: +${gameState.playerStats.moveSpeed}%, Projectile speed: +${gameState.playerStats.projectileSpeed}%`);
             }
         }
     },
     
-    // PROJECTILE BUFFS - manually added
+    // PROJECTILE BUFFS - (keep existing projectile buffs as they are)
     {
         id: 'laserMastery',
         title: '🔵 Laser Mastery',

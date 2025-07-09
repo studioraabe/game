@@ -59,15 +59,15 @@ const PROJECTILE_CONFIGS = {
         cooldown: 1,
         cost: 1,
         damage: 1.0,
-        speed: 15,
+        speed: 16,
         penetration: false
     },
     
     [ProjectileType.LASER_BEAM]: {
         name: "🔵 Laser Beam",
         desc: "Instant piercing beam",
-        cooldown: 45,
-        cost: 3,
+        cooldown: 450,
+        cost: 10,
         damage: 1.5,
         speed: 0, // Instant
         penetration: true,
@@ -77,13 +77,13 @@ const PROJECTILE_CONFIGS = {
     [ProjectileType.ENERGY_SHOTGUN]: {
         name: "💥 Energy Shotgun",
         desc: "Spreads 5 bolts in a cone",
-        cooldown: 30,
+        cooldown: 300,
         cost: 5,
         damage: 0.7,
-        speed: 12,
+        speed: 20,
         penetration: false,
         pellets: 5,
-        spread: 0.6
+        spread: 0.2
     },
     
     [ProjectileType.CHAIN_LIGHTNING]: {
@@ -104,10 +104,10 @@ const PROJECTILE_CONFIGS = {
         cooldown: 25,
         cost: 2,
         damage: 0.9,
-        speed: 10,
+        speed: 20,
         penetration: false,
-        seekRange: 200,
-        turnRate: 0.15
+        seekRange: 600,
+        turnRate: 0.35
     }
 };
 
