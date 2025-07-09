@@ -17,6 +17,7 @@ export let resumeTransition = {
     duration: 120 // 2 Sekunden bei 60 FPS
 };
 
+
 // Game state object
 export const gameState = {
     // Core state
@@ -252,7 +253,7 @@ export function update() {
     window.updateEffects();
     
     // FIXED: Handle health regeneration from playerStats
-    if (gameState.playerStats && gameState.playerStats.healthRegen > 0) {
+  if (gameState.playerStats && gameState.playerStats.healthRegen > 0) {
         // Initialize timer if not exists
         if (!gameState.healthRegenTimer) {
             gameState.healthRegenTimer = 0;
@@ -302,19 +303,27 @@ export function update() {
             
             // Calculate bullet regen amount
             // bulletRegen is stored as bullets per second
-            const bulletAmount = Math.max(1, Math.floor(gameState.playerStats.bulletRegen));
+            // For fractional amounts, accumulate them
+            if (!gameState.bulletRegenAccumulator) {
+                gameState.bulletRegenAccumulator = 0;
+            }
             
-            // Add bullets
-            gameState.bullets += bulletAmount;
+            gameState.bulletRegenAccumulator += gameState.playerStats.bulletRegen;
+            const bulletAmount = Math.floor(gameState.bulletRegenAccumulator);
             
-            // Show bullet regen popup occasionally
-            if (Math.random() < 0.2) {
-                if (window.createScorePopup) {
-                    window.createScorePopup(
-                        player.x + player.width/2, 
-                        player.y - 30, 
-                        `+${bulletAmount} Bolt`
-                    );
+            if (bulletAmount > 0) {
+                gameState.bulletRegenAccumulator -= bulletAmount;
+                gameState.bullets += bulletAmount;
+                
+                // Show bullet regen popup occasionally
+                if (Math.random() < 0.2) {
+                    if (window.createScorePopup) {
+                        window.createScorePopup(
+                            player.x + player.width/2, 
+                            player.y - 30, 
+                            `+${bulletAmount} Bolt`
+                        );
+                    }
                 }
             }
         }

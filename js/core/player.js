@@ -108,10 +108,12 @@ export function updatePlayer(keys, gameState) {
     }
     
     // Shooting - NUR wenn nicht corrupted UND keys gedrückt
-    if (canShoot && (keys.s || keys.Space) && !player.wasSpacePressed && !isCorrupted) {
+   if (canShoot && (keys.s || keys.Space) && !player.wasSpacePressed && !isCorrupted) {
         console.log("✅ Shooting allowed - player not corrupted");
         
         // FIXED: Check for attack speed cooldown
+        if (!gameState.shootCooldown) gameState.shootCooldown = 0;
+        
         const attackSpeedBonus = gameState.playerStats?.attackSpeed || 0;
         const shootCooldown = gameState.shootCooldown || 0;
         

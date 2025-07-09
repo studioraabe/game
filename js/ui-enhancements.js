@@ -182,18 +182,18 @@ export function updateEnhancedBuffDisplay() {
             const isLow = remaining < 180; // Less than 3 seconds
             const isNew = !previousBuffs.has(buffKey);
             
-            activeBuffsHTML.push(`
-                <div class="buff-item ${isLow ? 'buff-expiring' : ''} buff-${buffKey} ${isNew ? 'buff-new' : ''}">
-                    <div class="buff-icon">${dropInfo.icon}</div>
-                    <div class="buff-info">
-                        <div class="buff-name">${dropInfo.name}</div>
-                        <div class="buff-timer">${Math.ceil(remaining / 60)}s</div>
-                        <div class="buff-progress">
-                            <div class="buff-progress-fill" style="width: ${percentage}%"></div>
-                        </div>
-                    </div>
-                </div>
-            `);
+     activeBuffsHTML.push(`
+    <div class="temp-buff-item ${isLow ? 'temp-buff-expiring' : ''} temp-buff-${buffKey} ${isNew ? 'temp-buff-new' : ''}">
+        <div class="temp-buff-icon">${dropInfo.icon}</div>
+        <div class="temp-buff-info">
+            <div class="temp-buff-name">${dropInfo.name}</div>
+            <div class="temp-buff-timer">${Math.ceil(remaining / 60)}s</div>
+            <div class="temp-buff-progress">
+                <div class="temp-buff-progress-fill" style="width: ${percentage}%"></div>
+            </div>
+        </div>
+    </div>
+`);
             currentBuffs.add(buffKey);
         });
         

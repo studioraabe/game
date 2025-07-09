@@ -291,14 +291,14 @@ export function updatePauseScreen() {
 
 
 
+// In ui.js, update the updateBuffButtons function:
+
 export function updateBuffButtons() {
     const buffButtonsContainer = document.getElementById('buffButtons');
     if (!buffButtonsContainer) {
         console.error("❌ buffButtons container not found!");
         return;
     }
-    
-    console.log(`🔮 Updating buff buttons... Available buffs: ${gameState.availableBuffs ? gameState.availableBuffs.length : 0}`);
     
     buffButtonsContainer.innerHTML = '';
     
@@ -308,6 +308,12 @@ export function updateBuffButtons() {
         buffButtonsContainer.innerHTML = '<p style="color: #ff1744; text-align: center; padding: 20px;">No buffs available!</p>';
         return;
     }
+    
+    // Shuffle available buffs and take only 3
+    const shuffled = [...gameState.availableBuffs].sort(() => Math.random() - 0.5);
+    const buffsToShow = shuffled.slice(0, 3);
+    
+    console.log(`🔮 Showing ${buffsToShow.length} random buffs from ${gameState.availableBuffs.length} available`);
     
     // Add styling if not already added
     if (!document.getElementById('enhanced-buff-styles')) {
@@ -322,7 +328,7 @@ export function updateBuffButtons() {
             
             .buff-card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
             }
             
             .buff-icon {
@@ -346,20 +352,19 @@ export function updateBuffButtons() {
             
             .buff-title {
                 font-size: 18px;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
                 text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
             }
             
             .buff-desc {
                 font-size: 14px;
                 line-height: 1.4;
-                margin-bottom: 30px;
             }
         `;
         document.head.appendChild(style);
     }
     
-    gameState.availableBuffs.forEach(buff => {
+    buffsToShow.forEach(buff => {
         console.log(`🔮 Creating buff card for: ${buff.id} - ${buff.title}`);
         
         const button = document.createElement('div');
@@ -479,6 +484,19 @@ export function chooseBuff(buffId) {
         gameState.gameRunning = true;
         updateUI();
     });
+	
+	window.hideAllScreens();
+window.showUniversalCountdown('resume', () => {
+    gameState.currentState = GameState.PLAYING;
+    gameState.gameRunning = true;
+    updateUI();
+    
+    // Reinitialize enhanced containers after buff selection
+    setTimeout(() => {
+        initEnhancedContainers();
+        updateEnhancedBuffDisplay();
+    }, 100);
+});
 }
 
 

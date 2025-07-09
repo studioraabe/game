@@ -1,11 +1,10 @@
 // js/roguelike-integration.js - System Integration Module
-
 import { gameState, resetGame } from './core/gameState.js';
 import { keys } from './core/input.js';
 import { player } from './core/player.js';
-import { enhancedUpdatePlayer } from './enhanced-player.js';
-import { enhancedShoot, enhancedUpdateBullets } from './entities-combat-enhanced.js';
-import { playerStats, updatePlayerStats, initRoguelikeSystem, STAT_BUFFS } from './roguelike-stats.js';
+import { updatePlayer as originalUpdatePlayer } from './core/player.js';
+import { shoot as originalShoot, updateBullets as originalUpdateBullets } from './entities-combat.js';
+import { initRoguelikeSystem, STAT_BUFFS } from './roguelike-stats.js';
 
 // Integration entry point - Call this from main.js
 export function initRoguelikeIntegration() {
@@ -14,26 +13,11 @@ export function initRoguelikeIntegration() {
     // Initialize stats system
     initRoguelikeSystem();
     
-    // Replace original functions with enhanced versions
-    window.updatePlayer = () => enhancedUpdatePlayer(keys, gameState);
-    window.enhancedShoot = () => enhancedShoot(gameState);
-    window.shoot = () => enhancedShoot(gameState); // Replace original shoot
-    window.updateBullets = () => enhancedUpdateBullets(gameState);
-    
-    // Add stats update to game loop
-    const originalUpdate = window.update;
-    window.update = function() {
-        // Call original update first
-        if (originalUpdate) {
-            originalUpdate();
-        }
-        
-        // Add stats update
-        updatePlayerStats();
-    };
+    // No need to replace functions - they already use gameState.playerStats
+    // The original functions in player.js and entities-combat.js are already checking gameState.playerStats
     
     // Override reset game to initialize stats
-    const originalResetGame = resetGame;
+    const originalResetGame = window.resetGame;
     window.resetGame = function() {
         // Call original reset
         originalResetGame();
@@ -42,26 +26,14 @@ export function initRoguelikeIntegration() {
         initRoguelikeSystem();
     };
     
+    // Ensure playerStats reference points to gameState.playerStats
+    window.playerStats = window.gameState.playerStats;
+    
     // Replace buff selection display with enhanced version
     patchBuffSelection();
     
     console.log('🎮 Roguelike Integration Complete!');
-    
-    // Debug helper for stats
-    window.debugStats = function() {
-        console.log('===== PLAYER STATS =====');
-        console.log(`Damage Bonus: +${playerStats.damageBonus}%`);
-        console.log(`Attack Speed: +${playerStats.attackSpeed}%`);
-        console.log(`Move Speed: +${playerStats.moveSpeed}%`);
-        console.log(`Projectile Speed: +${playerStats.projectileSpeed}%`);
-        console.log(`Health Regen: ${playerStats.healthRegen.toFixed(2)}/sec`);
-        console.log(`Bullet Regen: ${playerStats.bulletRegen.toFixed(2)}/sec`);
-        console.log(`Life Steal: ${playerStats.lifeSteal}%`);
-        console.log(`Crit Chance: ${playerStats.critChance}%`);
-        console.log(`Crit Damage: x${playerStats.critDamage.toFixed(2)}`);
-        console.log('=======================');
-        return playerStats;
-    };
+    console.log('📊 Stats are stored in gameState.playerStats');
 }
 
 // Enhanced buff selection display
@@ -237,47 +209,49 @@ export function updateStatDisplay() {
     const container = document.getElementById('stat-display');
     if (!container) return;
     
+    // Get stats from gameState, not from the playerStats reference
+    const stats = window.gameState?.playerStats || {};
+    
     container.innerHTML = `
-     
         <div class="stat-row">
             <span>Damage:</span>
-            <span>+${playerStats.damageBonus}%</span>
+            <span>+${stats.damageBonus || 0}%</span>
         </div>
         <div class="stat-row">
             <span>Attack Speed:</span>
-            <span>+${playerStats.attackSpeed}%</span>
+            <span>+${stats.attackSpeed || 0}%</span>
         </div>
         <div class="stat-row">
             <span>Move Speed:</span>
-            <span>+${playerStats.moveSpeed}%</span>
+            <span>+${stats.moveSpeed || 0}%</span>
         </div>
         <div class="stat-row">
             <span>Projectile Speed:</span>
-            <span>+${playerStats.projectileSpeed}%</span>
+            <span>+${stats.projectileSpeed || 0}%</span>
         </div>
         <div class="stat-row">
             <span>Health Regen:</span>
-            <span>${playerStats.healthRegen.toFixed(2)}/sec</span>
+            <span>${(stats.healthRegen || 0).toFixed(2)}/sec</span>
         </div>
         <div class="stat-row">
             <span>Bullet Regen:</span>
-            <span>${playerStats.bulletRegen.toFixed(2)}/sec</span>
+            <span>${(stats.bulletRegen || 0).toFixed(2)}/sec</span>
         </div>
         <div class="stat-row">
             <span>Life Steal:</span>
-            <span>${playerStats.lifeSteal}%</span>
+            <span>${stats.lifeSteal || 0}%</span>
         </div>
         <div class="stat-row">
             <span>Crit Chance:</span>
-            <span>${playerStats.critChance}%</span>
+            <span>${stats.critChance || 0}%</span>
         </div>
         <div class="stat-row">
             <span>Crit Damage:</span>
-            <span>x${playerStats.critDamage.toFixed(2)}</span>
+            <span>x${(stats.critDamage || 1.5).toFixed(2)}</span>
         </div>
         <div class="stat-row">
             <span>Buffs:</span>
-            <span>${playerStats.selectedBuffs.length}</span>
+            <span>${(stats.selectedBuffs || []).length}</span>
         </div>
     `;
 }

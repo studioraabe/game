@@ -1,35 +1,12 @@
 // js/roguelike-stats.js - Stats System for Roguelike Progression
 
-import { gameState } from './core/gameState.js';
 import { updateUI } from './ui.js';
 import { createScorePopup } from './entities.js';
 import { player } from './core/player.js';
 import { DUNGEON_THEME } from './core/constants.js';
 
 // Initialize the player stats system
-export const playerStats = {
-    // Core stat bonuses (percentage based)
-    damageBonus: 0,       // Percentage bonus to base damage
-    attackSpeed: 0,       // Percentage increase to attack rate
-    moveSpeed: 0,         // Percentage increase to movement speed
-    projectileSpeed: 0,   // Percentage increase to bullet speed
-    
-    // Resource generation
-    healthRegen: 0,       // HP regen per second
-    bulletRegen: 0,       // Bullet regen per second
-    lifeSteal: 0,         // Percentage of damage dealt returned as healing
-    
-    // Critical hit system
-    critChance: 0,        // Percentage chance to land a critical hit
-    critDamage: 1.5,      // Multiplier for critical hit damage (starts at 50% bonus)
-    
-    // Timers for resource regeneration
-    healthRegenTimer: 0,
-    bulletRegenTimer: 0,
-    
-    // Buff history for UI display
-    selectedBuffs: []
-};
+export let playerStats = null;
 
 // New buff definitions with stats effects
 export const STAT_BUFFS = [
@@ -39,8 +16,13 @@ export const STAT_BUFFS = [
         title: '🧟 Undead Vigor', 
         desc: 'Gain extra life every 10 bullet hits (was 15)',
         effect: () => {
-            gameState.activeBuffs.undeadResilience = 1;
-            gameState.playerStats.selectedBuffs.push('undeadResilience');
+            const gameState = window.gameState;
+            if (gameState) {
+                gameState.activeBuffs.undeadResilience = 1;
+                if (gameState.playerStats) {
+                    gameState.playerStats.selectedBuffs.push('undeadResilience');
+                }
+            }
         }
     },
     { 
@@ -48,8 +30,13 @@ export const STAT_BUFFS = [
         title: '🌙 Shadow Leap', 
         desc: 'Unlock double jump with ethereal shadow form',
         effect: () => {
-            gameState.activeBuffs.shadowLeap = 1;
-            gameState.playerStats.selectedBuffs.push('shadowLeap');
+            const gameState = window.gameState;
+            if (gameState) {
+                gameState.activeBuffs.shadowLeap = 1;
+                if (gameState.playerStats) {
+                    gameState.playerStats.selectedBuffs.push('shadowLeap');
+                }
+            }
         }
     },
     
@@ -59,8 +46,11 @@ export const STAT_BUFFS = [
         title: '🩸 Vampiric Strikes',
         desc: 'Gain 2% life steal, healing on enemy kills',
         effect: () => {
-            gameState.playerStats.lifeSteal += 2;
-            gameState.playerStats.selectedBuffs.push('vampiricStrikes');
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.lifeSteal += 2;
+                gameState.playerStats.selectedBuffs.push('vampiricStrikes');
+            }
         }
     },
     {
@@ -68,9 +58,12 @@ export const STAT_BUFFS = [
         title: '🔥 Bullet Storm',
         desc: 'Regenerate 1 bullet every 2 seconds',
         effect: () => {
-            // FIXED: 1 bullet per 2 seconds = 0.5 bullets per second
-            gameState.playerStats.bulletRegen += 0.5;
-            gameState.playerStats.selectedBuffs.push('bulletStorm');
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                // FIXED: 1 bullet per 2 seconds = 0.5 bullets per second
+                gameState.playerStats.bulletRegen += 0.5;
+                gameState.playerStats.selectedBuffs.push('bulletStorm');
+            }
         }
     },
     {
@@ -78,9 +71,12 @@ export const STAT_BUFFS = [
         title: '💢 Berserker Rage',
         desc: 'Gain +25% damage and +15% attack speed',
         effect: () => {
-            gameState.playerStats.damageBonus += 25;
-            gameState.playerStats.attackSpeed += 15;
-            gameState.playerStats.selectedBuffs.push('berserkerRage');
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.damageBonus += 25;
+                gameState.playerStats.attackSpeed += 15;
+                gameState.playerStats.selectedBuffs.push('berserkerRage');
+            }
         }
     },
     {
@@ -88,9 +84,12 @@ export const STAT_BUFFS = [
         title: '💚 Survival Instinct',
         desc: 'Regenerate 1 HP every 3 seconds',
         effect: () => {
-            // FIXED: 1 HP per 3 seconds = 0.333... HP per second
-            gameState.playerStats.healthRegen += 0.333;
-            gameState.playerStats.selectedBuffs.push('survivalInstinct');
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                // FIXED: 1 HP per 3 seconds = 0.333... HP per second
+                gameState.playerStats.healthRegen += 0.333;
+                gameState.playerStats.selectedBuffs.push('survivalInstinct');
+            }
         }
     },
     {
@@ -98,10 +97,13 @@ export const STAT_BUFFS = [
         title: '🎯 Critical Focus',
         desc: '20% chance for critical hits (2x damage)',
         effect: () => {
-            gameState.playerStats.critChance += 20;
-            // FIXED: critDamage should be 2.0 for 2x damage (was adding 0.5)
-            gameState.playerStats.critDamage = 2.0;
-            gameState.playerStats.selectedBuffs.push('criticalFocus');
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.critChance += 20;
+                // FIXED: critDamage should be 2.0 for 2x damage (was adding 0.5)
+                gameState.playerStats.critDamage = 2.0;
+                gameState.playerStats.selectedBuffs.push('criticalFocus');
+            }
         }
     },
     {
@@ -109,15 +111,22 @@ export const STAT_BUFFS = [
         title: '⚡ Swift Death',
         desc: '+20% movement and projectile speed',
         effect: () => {
-            gameState.playerStats.moveSpeed += 20;
-            gameState.playerStats.projectileSpeed += 20;
-            gameState.playerStats.selectedBuffs.push('swiftDeath');
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.moveSpeed += 20;
+                gameState.playerStats.projectileSpeed += 20;
+                gameState.playerStats.selectedBuffs.push('swiftDeath');
+            }
         }
     }
 ];
 
+
 // Update available buffs in gameState for selection screen
 export function initializeStatBuffs() {
+    const gameState = window.gameState;
+    if (!gameState) return;
+    
     // Start with all 6 new stat buffs + the 2 original buffs we kept
     // This ensures all 6 new stat buffs are always in the selection
     const startingBuffs = [...STAT_BUFFS];
@@ -129,7 +138,6 @@ export function initializeStatBuffs() {
     console.log(`📊 Available Buffs: ${startingBuffs.length}`);
 }
 
-// Apply a buff by ID
 export function applyBuff(buffId) {
     const buff = STAT_BUFFS.find(b => b.id === buffId);
     if (!buff) {
@@ -155,6 +163,9 @@ export function applyBuff(buffId) {
 
 // Enhanced chooseBuff function to replace the one in ui.js
 export function chooseBuff(buffId) {
+    const gameState = window.gameState;
+    if (!gameState) return;
+    
     // Apply the buff
     applyBuff(buffId);
     
@@ -187,9 +198,12 @@ export function chooseBuff(buffId) {
 
 // Add new buffs to selection when needed
 function replenishBuffSelection() {
+    const gameState = window.gameState;
+    if (!gameState || !gameState.playerStats) return;
+    
     // Get buffs that haven't been selected yet
     const remainingBuffs = STAT_BUFFS.filter(buff => 
-        !playerStats.selectedBuffs.includes(buff.id) && 
+        !gameState.playerStats.selectedBuffs.includes(buff.id) && 
         !gameState.availableBuffs.some(b => b.id === buff.id)
     );
     
@@ -209,8 +223,11 @@ function replenishBuffSelection() {
 
 // Create upgraded versions of existing buffs
 function createUpgradedBuffs() {
+    const gameState = window.gameState;
+    if (!gameState || !gameState.playerStats) return [];
+    
     // Get most recently selected buffs to offer upgrades
-    const recentBuffIds = playerStats.selectedBuffs.slice(-3);
+    const recentBuffIds = gameState.playerStats.selectedBuffs.slice(-3);
     
     return recentBuffIds.map(id => {
         const originalBuff = STAT_BUFFS.find(b => b.id === id);
@@ -230,14 +247,16 @@ function createUpgradedBuffs() {
 
 // Update stats per frame - handle regeneration and timers
 export function updatePlayerStats() {
+    // Stats are now handled directly in gameState update function
 }
 
 // Apply lifesteal when an enemy is killed
 export function applyLifesteal(damage) {
-    if (playerStats.lifeSteal <= 0) return 0;
+    const gameState = window.gameState;
+    if (!gameState || !gameState.playerStats || gameState.playerStats.lifeSteal <= 0) return 0;
     
     // Calculate healing from lifesteal
-    const healAmount = Math.max(1, Math.floor(damage * (playerStats.lifeSteal / 100)));
+    const healAmount = Math.max(1, Math.floor(damage * (gameState.playerStats.lifeSteal / 100)));
     
     // Apply healing if not at max health
     if (gameState.currentHP < gameState.maxHP) {
@@ -253,14 +272,22 @@ export function applyLifesteal(damage) {
 
 // Calculate damage with critical hit chance
 export function calculateDamage(baseDamage) {
-    // Apply damage bonus
-    let damage = baseDamage * (1 + playerStats.damageBonus / 100);
+    const gameState = window.gameState;
+    if (!gameState || !gameState.playerStats) {
+        return {
+            damage: Math.floor(baseDamage),
+            isCritical: false
+        };
+    }
+    
+    // Apply damage bonus from gameState
+    let damage = baseDamage * (1 + (gameState.playerStats.damageBonus || 0) / 100);
     
     // Roll for critical hit
-    const isCritical = Math.random() * 100 < playerStats.critChance;
+    const isCritical = Math.random() * 100 < (gameState.playerStats.critChance || 0);
     
     if (isCritical) {
-        damage *= playerStats.critDamage;
+        damage *= gameState.playerStats.critDamage || 1.5;
         console.log(`🎯 Critical hit! Damage: ${Math.floor(damage)}`);
     }
     
@@ -270,23 +297,47 @@ export function calculateDamage(baseDamage) {
     };
 }
 
+
 // Initialize the system
 export function initRoguelikeSystem() {
-    // Reset player stats to defaults
-    Object.assign(playerStats, {
-        damageBonus: 0,
-        attackSpeed: 0,
-        moveSpeed: 0,
-        projectileSpeed: 0,
-        healthRegen: 0,
-        bulletRegen: 0,
-        lifeSteal: 0,
-        critChance: 0,
-        critDamage: 1.5,
-        healthRegenTimer: 0,
-        bulletRegenTimer: 0,
-        selectedBuffs: []
-    });
+    const gameState = window.gameState;
+    if (!gameState) {
+        console.error('❌ gameState not available for roguelike system initialization');
+        return;
+    }
+    
+    // Initialize stats in gameState if not already present
+    if (!gameState.playerStats) {
+        gameState.playerStats = {
+            damageBonus: 0,
+            attackSpeed: 0,
+            moveSpeed: 0,
+            projectileSpeed: 0,
+            healthRegen: 0,
+            bulletRegen: 0,
+            lifeSteal: 0,
+            critChance: 0,
+            critDamage: 1.5,
+            selectedBuffs: []
+        };
+    } else {
+        // Reset existing stats
+        Object.assign(gameState.playerStats, {
+            damageBonus: 0,
+            attackSpeed: 0,
+            moveSpeed: 0,
+            projectileSpeed: 0,
+            healthRegen: 0,
+            bulletRegen: 0,
+            lifeSteal: 0,
+            critChance: 0,
+            critDamage: 1.5,
+            selectedBuffs: []
+        });
+    }
+    
+    // Set the playerStats reference to point to gameState.playerStats
+    playerStats = gameState.playerStats;
     
     // Initialize available buffs
     initializeStatBuffs();
@@ -297,7 +348,7 @@ export function initRoguelikeSystem() {
 export { replenishBuffSelection };
 
 // Expose to global for debugging and UI access
-window.playerStats = playerStats;
+window.playerStats = null; // Will be set to gameState.playerStats during init
 window.initRoguelikeSystem = initRoguelikeSystem;
 window.applyBuff = applyBuff;
 window.STAT_BUFFS = STAT_BUFFS;
