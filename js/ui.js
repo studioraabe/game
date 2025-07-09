@@ -166,6 +166,8 @@ function showUniversalCountdown(type = 'resume', callback = null) {
     }, 800);
 }
 
+
+
 // HUD Updates
 export function updateUI() {
     document.getElementById('score').textContent = gameState.score.toLocaleString();
@@ -1182,6 +1184,8 @@ window.showScreen = showScreen;
 window.hideAllScreens = hideAllScreens;
 window.updateUI = updateUI;
 window.updateEnhancedDisplays = updateEnhancedDisplays;
+window.showUniversalCountdown = showUniversalCountdown;
+
 
 
 window.toggleVolumeOverlay = toggleVolumeOverlay;

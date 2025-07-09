@@ -10,6 +10,8 @@ import { drawEnvironment } from './environment.js';
 import { drawPlayer } from './player.js';
 import { drawEnemy } from './enemies.js';
 import { drawEffects, drawBullet, drawDrop } from './effects.js';
+import { createDamageNumber } from '../ui-enhancements.js';
+
 
 export function render(ctx) {
     if (!gameState.needsRedraw && gameState.currentState === 'playing') return;

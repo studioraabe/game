@@ -4,7 +4,9 @@ import { gameState } from './core/gameState.js';
 import { activeDropBuffs } from './systems.js';
 import { DROP_INFO, DROP_CONFIG, CANVAS } from './core/constants.js';
 import { camera } from './core/camera.js';
+import { getScreenX } from './core/camera.js';  // ADD THIS LINE
 import { setComboGlow, clearComboGlow } from './enhanced-damage-system.js';
+
 
 // Initialize enhanced UI containers
 export function initEnhancedContainers() {
@@ -389,7 +391,10 @@ export function showAchievementPopup(achievement) {
 
 // Damage Numbers
 export function createDamageNumber(x, y, damage, critical = false) {
-    const screenX = x - camera.x;
+    // Convert world position to screen position
+    const screenX = getScreenX(x);
+    
+    // Check if it's within visible screen bounds
     if (screenX < -50 || screenX > CANVAS.width + 50) return;
     
     const damageNum = document.createElement('div');
@@ -398,10 +403,17 @@ export function createDamageNumber(x, y, damage, critical = false) {
     damageNum.style.left = `${screenX}px`;
     damageNum.style.top = `${y}px`;
     
-    document.getElementById('gameContainer').appendChild(damageNum);
+    const gameContainer = document.getElementById('gameContainer');
+    if (gameContainer) {
+        gameContainer.appendChild(damageNum);
+    }
     
     // Animate and remove
-    setTimeout(() => damageNum.remove(), 1000);
+    setTimeout(() => {
+        if (damageNum.parentNode) {
+            damageNum.remove();
+        }
+    }, 1000);
 }
 
 // Helper functions - ENHANCED WITH HEALTH BUFF SUPPORT
@@ -508,3 +520,5 @@ export function initEnhancements() {
         }
     });
 }
+
+window.createDamageNumber = createDamageNumber;
