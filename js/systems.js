@@ -162,6 +162,25 @@ export function collectDrop(drop) {
     const dropConfig = [...DROP_CONFIG.boss.items, ...DROP_CONFIG.common.items].find(item => item.type === drop.type);
     
     switch(drop.type) {
+
+
+		case DropType.MEGA_BULLETS:
+            // NEW: Respect bullet capacity
+            const bulletsToAdd = 50;
+            const oldBullets = gameState.bullets;
+            gameState.bullets = Math.min(gameState.maxBullets, gameState.bullets + bulletsToAdd);
+            const actualBulletsAdded = gameState.bullets - oldBullets;
+            
+            if (actualBulletsAdded > 0) {
+                createScorePopup(drop.x, drop.y, `+${actualBulletsAdded} Bolts`);
+            } else {
+                // At max capacity - give score instead
+                const bonusScore = 500 * gameState.scoreMultiplier;
+                gameState.score += bonusScore;
+                createScorePopup(drop.x, drop.y, `+${bonusScore} (Full Ammo)`);
+            }
+            break;	
+
         case DropType.EXTRA_LIFE:
             // ENHANCED: Smart healing system
             const currentHPPercent = gameState.currentHP / gameState.maxHP;

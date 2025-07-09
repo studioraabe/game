@@ -1090,13 +1090,25 @@ export function checkCollisions(gameStateParam) {
             player.y < hitbox.y + hitbox.height &&
             player.y + player.height > hitbox.y) {
             
-            if (obstacle.type === 'boltBox') {
-                // Bolt boxes give ammo
-                gameStateParam.bullets += 20;
-                createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, '+20 Bolts');
-                obstacles.splice(i, 1);
-                continue;
-            }
+        if (obstacle.type === 'boltBox') {
+    // NEW: Respect bullet capacity
+    const bulletsToAdd = 20;
+    const oldBullets = gameState.bullets;
+    gameState.bullets = Math.min(gameState.maxBullets, gameState.bullets + bulletsToAdd);
+    const actualBulletsAdded = gameState.bullets - oldBullets;
+    
+    if (actualBulletsAdded > 0) {
+        createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, `+${actualBulletsAdded} Bolts`);
+    } else {
+        // At max capacity - give score bonus instead
+        const bonusScore = 200 * gameState.scoreMultiplier;
+        gameState.score += bonusScore;
+        createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, `+${bonusScore} (Full Ammo)`);
+    }
+    
+    obstacles.splice(i, 1);
+    continue;
+}
             
             if (obstacle.type === 'rock' || obstacle.type === 'sarcophagus') {
                 // Decorative elements - no collision, player walks through

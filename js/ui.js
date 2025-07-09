@@ -172,7 +172,11 @@ function showUniversalCountdown(type = 'resume', callback = null) {
 export function updateUI() {
     document.getElementById('score').textContent = gameState.score.toLocaleString();
     document.getElementById('level').textContent = gameState.level;
-    document.getElementById('bullets').textContent = gameState.isBerserker ? '∞' : gameState.bullets;
+    
+    // NEW: Show current/max bullets
+    const bulletDisplay = gameState.isBerserker ? '∞' : `${gameState.bullets}/${gameState.maxBullets}`;
+    document.getElementById('bullets').textContent = bulletDisplay;
+    
     document.getElementById('highscoreValue').textContent = gameState.highScore;
     
     updateHealthBar();
@@ -181,7 +185,6 @@ export function updateUI() {
         updateBuffButtons();
     }
 }
-
 
 
 // Enhanced Health Bar Update Function with Shield Overlay
@@ -470,7 +473,6 @@ export function chooseBuff(buffId) {
     window.bulletBoxesFound = 0;
     gameState.damageThisLevel = 0;
     gameState.gameSpeed += 0.6;
-    gameState.bullets += 12;
     
     // IMPORTANT: Update player stats for new level
     if (window.updatePlayerStatsForLevel) {

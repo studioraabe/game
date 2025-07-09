@@ -3,12 +3,35 @@
 import { updateUI } from './ui.js';
 import { createScorePopup } from './entities.js';
 import { player } from './core/player.js';
-import { DUNGEON_THEME } from './core/constants.js';
+import { DUNGEON_THEME, GAME_CONSTANTS } from './core/constants.js'; // ← ADD GAME_CONSTANTS here
 import { PROJECTILE_BUFFS } from './projectile-buff-integration.js';
 
 
 // Initialize the player stats system
 export let playerStats = null;
+
+
+const ENHANCED_BUFF_EFFECTS = {
+    'survivalInstinct': () => {
+        const gameState = window.gameState;
+        if (gameState && gameState.playerStats) {
+            // Add 0.333 to baseline 0.5 = 0.833 HP/sec total
+            gameState.playerStats.healthRegen += 0.333;
+            gameState.playerStats.selectedBuffs.push('survivalInstinct');
+        }
+    },
+    
+    'bulletStorm': () => {
+        const gameState = window.gameState;
+        if (gameState && gameState.playerStats) {
+            // Add 0.5 to baseline 0.5 = 1.0 bullets/sec total (doubles the rate)
+            gameState.playerStats.bulletRegen += 0.5;
+            gameState.playerStats.selectedBuffs.push('bulletStorm');
+        }
+    }
+};
+
+
 
 
 // Then replace the existing STAT_BUFFS array with this:
@@ -28,6 +51,21 @@ export const STAT_BUFFS = [
             }
         }
     },
+	
+	   {
+        id: 'survivalInstinct',
+        title: '💚 Survival Instinct',
+        desc: 'Regenerate 1 HP every 3 seconds (+66% health regen)',
+        effect: ENHANCED_BUFF_EFFECTS.survivalInstinct
+    },
+    {
+        id: 'bulletStorm',
+        title: '🔥 Bullet Storm',
+        desc: 'Regenerate 1 bullet every 2 seconds (doubles bullet regen)',
+        effect: ENHANCED_BUFF_EFFECTS.bulletStorm
+    },
+	
+	
     { 
         id: 'shadowLeap', 
         title: '🌙 Shadow Leap', 
@@ -392,34 +430,35 @@ export function initRoguelikeSystem() {
     }
     
     // Initialize stats in gameState if not already present
-    if (!gameState.playerStats) {
+  if (!gameState.playerStats) {
         gameState.playerStats = {
             damageBonus: 0,
             attackSpeed: 0,
             moveSpeed: 0,
             projectileSpeed: 0,
-            healthRegen: 0,
-            bulletRegen: 0,
+            healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // 0.5 HP/sec baseline
+            bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,  // 0.5 bullets/sec baseline
             lifeSteal: 0,
             critChance: 0,
             critDamage: 1.5,
             selectedBuffs: []
         };
     } else {
-        // Reset existing stats
+        // Reset existing stats but KEEP baseline regeneration
         Object.assign(gameState.playerStats, {
             damageBonus: 0,
             attackSpeed: 0,
             moveSpeed: 0,
             projectileSpeed: 0,
-            healthRegen: 0,
-            bulletRegen: 0,
+            healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // Reset to baseline, not 0
+            bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,  // Reset to baseline, not 0
             lifeSteal: 0,
             critChance: 0,
             critDamage: 1.5,
             selectedBuffs: []
         });
     }
+    
     
     // Set the playerStats reference to point to gameState.playerStats
     playerStats = gameState.playerStats;

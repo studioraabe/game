@@ -21,6 +21,12 @@ export const GAME_CONSTANTS = {
     PLAYER_HP_PER_LEVEL: 25,
     PLAYER_BASE_DAMAGE: 20,
     PLAYER_DAMAGE_PER_LEVEL: 5,
+	
+	    PLAYER_BASE_HEALTH_REGEN: 0.5,    // 1 HP every 2 seconds
+    PLAYER_BASE_BULLET_REGEN: 0.5,    // 1 bullet every 2 seconds
+	
+	    PLAYER_BASE_MAX_BULLETS: 100,        // Start with 100 bullets max
+    PLAYER_BULLETS_PER_LEVEL: 25,        // +25 bullets per level (matches HP scaling)
     
     // NEW: ENEMY SCALING MULTIPLIERS
     ENEMY_HP_MULTIPLIER_PER_LEVEL: 1.5,
@@ -56,7 +62,12 @@ GAME_CONSTANTS.PLAYER_BASE_STAT_BONUSES = {
 };
 
 
-// NEW: HP CALCULATION HELPER FUNCTIONS
+// NEW: Helper functions for bullet capacity
+export function calculatePlayerMaxBullets(level) {
+    return GAME_CONSTANTS.PLAYER_BASE_MAX_BULLETS + (level - 1) * GAME_CONSTANTS.PLAYER_BULLETS_PER_LEVEL;
+}
+
+// Update existing HP calculation functions (keep these)
 export function calculatePlayerMaxHP(level) {
     return GAME_CONSTANTS.PLAYER_BASE_HP + (level - 1) * GAME_CONSTANTS.PLAYER_HP_PER_LEVEL;
 }

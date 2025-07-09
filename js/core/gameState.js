@@ -1,6 +1,7 @@
 // core/gameState.js - Game State Management - FPS KORRIGIERT
 
-import { GameState, GAME_CONSTANTS, DUNGEON_THEME, calculatePlayerMaxHP, calculatePlayerDamage, calculateEnemyHP } from './constants.js';
+import { GameState, GAME_CONSTANTS, DUNGEON_THEME, calculatePlayerMaxHP, calculatePlayerDamage, calculatePlayerMaxBullets, calculateEnemyHP } from './constants.js';
+
 
 import { resetCamera } from './camera.js';
 import { resetPlayer } from './player.js';
@@ -33,8 +34,8 @@ export const gameState = {
     attackSpeed: 0,       // Percentage increase to attack rate
     moveSpeed: 0,         // Percentage increase to movement speed
     projectileSpeed: 0,   // Percentage increase to bullet speed
-    healthRegen: 0,       // HP regen per second
-    bulletRegen: 0,       // Bullet regen per second
+    healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // Should be 0.5
+    bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,
     lifeSteal: 0,         // Percentage of damage dealt returned as healing
     critChance: 0,        // Percentage chance to land a critical hit
     critDamage: 1.5,      // Multiplier for critical hit damage (starts at 50% bonus)
@@ -55,7 +56,9 @@ export const gameState = {
     maxHP: 100,
     baseDamage: 20,
     gameSpeed: 1,
-    bullets: 10,
+    bullets: 100,
+	maxBullets: 100,        // NEW: Maximum bullet capacity
+
     level: 1,
     levelProgress: 0,
     highScore: 0,
@@ -106,13 +109,15 @@ export function resetGame() {
     gameState.hasShield = false;
     resetBulletBoxesFound();
     gameState.score = 0;
+	
+	 gameState.maxBullets = calculatePlayerMaxBullets(1);
+    gameState.bullets = gameState.maxBullets; // Start at full capacity
     
     // NEW: Initialize HP system
     gameState.maxHP = calculatePlayerMaxHP(1);
     gameState.currentHP = gameState.maxHP;
     gameState.baseDamage = calculatePlayerDamage(1);
     
-    gameState.bullets = 10;
     gameState.level = 1;
     gameState.levelProgress = 0;
     gameState.gameSpeed = 2;
@@ -129,18 +134,19 @@ export function resetGame() {
     gameState.corruptionTimer = 0;
     
     // FIXED: Properly initialize playerStats
-    gameState.playerStats = {
+      gameState.playerStats = {
         damageBonus: 0,
         attackSpeed: 0,
         moveSpeed: 0,
         projectileSpeed: 0,
-        healthRegen: 0,
-        bulletRegen: 0,
+        healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // Start with 0.5 HP/sec
+        bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,  // Start with 0.5 bullets/sec
         lifeSteal: 0,
         critChance: 0,
         critDamage: 1.5,
         selectedBuffs: []
     };
+    
     
     // Initialize roguelike system if available
     if (window.initRoguelikeSystem) {
@@ -216,12 +222,22 @@ export function healPlayer(amount) {
 
 export function updatePlayerStatsForLevel(level) {
     const oldMaxHP = gameState.maxHP;
+    const oldMaxBullets = gameState.maxBullets;
+    
+    // Update maximums
     gameState.maxHP = calculatePlayerMaxHP(level);
+    gameState.maxBullets = calculatePlayerMaxBullets(level);
     gameState.baseDamage = calculatePlayerDamage(level);
     
     // Heal proportionally when leveling up
     const hpIncrease = gameState.maxHP - oldMaxHP;
     gameState.currentHP = Math.min(gameState.currentHP + hpIncrease, gameState.maxHP);
+    
+    // NEW: Add bullets proportionally when leveling up
+    const bulletIncrease = gameState.maxBullets - oldMaxBullets;
+    gameState.bullets = Math.min(gameState.bullets + bulletIncrease, gameState.maxBullets);
+    
+    console.log(`📈 Level ${level}: HP ${gameState.currentHP}/${gameState.maxHP} (+${hpIncrease}), Bullets ${gameState.bullets}/${gameState.maxBullets} (+${bulletIncrease})`);
 }
 
 // REPLACEMENT FOR gameState.js update function
@@ -258,34 +274,41 @@ export function update() {
     window.updateEffects();
     
     // FIXED: Handle health regeneration from playerStats
-  if (gameState.playerStats && gameState.playerStats.healthRegen > 0) {
+  if (gameState.playerStats && gameState.playerStats.bulletRegen > 0) {
         // Initialize timer if not exists
-        if (!gameState.healthRegenTimer) {
-            gameState.healthRegenTimer = 0;
+        if (!gameState.bulletRegenTimer) {
+            gameState.bulletRegenTimer = 0;
         }
         
-        gameState.healthRegenTimer += gameState.deltaTime;
+        gameState.bulletRegenTimer += gameState.deltaTime;
         const regenInterval = 60; // 1 second at 60 FPS
         
-        if (gameState.healthRegenTimer >= regenInterval) {
-            gameState.healthRegenTimer -= regenInterval;
+        if (gameState.bulletRegenTimer >= regenInterval) {
+            gameState.bulletRegenTimer -= regenInterval;
             
-            // Calculate healing amount based on healthRegen stat
-            // healthRegen is stored as HP per second, so we apply it directly
-            const healAmount = Math.max(1, Math.floor(gameState.playerStats.healthRegen));
+            // Calculate bullet regen amount
+            if (!gameState.bulletRegenAccumulator) {
+                gameState.bulletRegenAccumulator = 0;
+            }
             
-            // Apply healing if not at max health
-            if (gameState.currentHP < gameState.maxHP) {
-                const oldHP = gameState.currentHP;
-                gameState.currentHP = Math.min(gameState.maxHP, gameState.currentHP + healAmount);
+            gameState.bulletRegenAccumulator += gameState.playerStats.bulletRegen;
+            const bulletAmount = Math.floor(gameState.bulletRegenAccumulator);
+            
+            if (bulletAmount > 0 && gameState.bullets < gameState.maxBullets) {
+                gameState.bulletRegenAccumulator -= bulletAmount;
                 
-                // Show healing popup if health actually increased
-                if (gameState.currentHP > oldHP) {
+                // NEW: Respect bullet capacity limit
+                const oldBullets = gameState.bullets;
+                gameState.bullets = Math.min(gameState.maxBullets, gameState.bullets + bulletAmount);
+                const actualRegen = gameState.bullets - oldBullets;
+                
+                // Show bullet regen popup only if bullets were actually added
+                if (actualRegen > 0 && Math.random() < 0.2) {
                     if (window.createScorePopup) {
                         window.createScorePopup(
                             player.x + player.width/2, 
                             player.y - 30, 
-                            `+${gameState.currentHP - oldHP} HP`
+                            `+${actualRegen} Bolt`
                         );
                     }
                 }

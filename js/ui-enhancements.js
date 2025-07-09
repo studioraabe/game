@@ -136,6 +136,37 @@ export function updateEnhancedComboDisplay() {
     }
 }
 
+
+export function updateRegenIndicators() {
+    const healthRegen = gameState.playerStats?.healthRegen || 0;
+    const bulletRegen = gameState.playerStats?.bulletRegen || 0;
+    
+    // Update health bar with regen indicator
+    const healthContainer = document.getElementById('healthContainer');
+    if (healthContainer) {
+        if (healthRegen > 0) {
+            healthContainer.classList.add('regenerating');
+            healthContainer.title = `Regenerating ${healthRegen.toFixed(2)} HP/second`;
+        } else {
+            healthContainer.classList.remove('regenerating');
+            healthContainer.title = '';
+        }
+    }
+    
+    // Update bullet counter with regen indicator
+    const bulletElement = document.getElementById('bullets');
+    if (bulletElement) {
+        if (bulletRegen > 0) {
+            bulletElement.classList.add('recharging');
+            bulletElement.title = `Regenerating ${bulletRegen.toFixed(2)} bullets/second`;
+        } else {
+            bulletElement.classList.remove('recharging');
+            bulletElement.title = '';
+        }
+    }
+}
+
+
 // Enhanced Buff Display - ADDED HEALTH BUFF SUPPORT
 let previousBuffs = new Set();
 
