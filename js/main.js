@@ -3,7 +3,8 @@
 import { CANVAS, GameState } from './core/constants.js';
 import { gameState, resetGame, startGameLoop, stopGameLoop, update, loadGame, initRenderLoop } from './core/gameState.js';
 import { camera, resetCamera } from './core/camera.js';
-import { player, updatePlayer } from './core/player.js';
+import { player } from './core/player.js';
+import { enhancedUpdatePlayer, startJump, stopJump } from './enhanced-player.js';
 import { keys, initInput } from './core/input.js'; // Now includes controller support
 import { 
     initEnhancements, 
@@ -135,7 +136,7 @@ window.bulletBoxesFound = bulletBoxesFound;
 window.obstacleTimer = obstacleTimer;
 
 // Core functions
-window.updatePlayer = () => updatePlayer(keys, gameState);
+window.updatePlayer = () => enhancedUpdatePlayer(keys, gameState);
 window.spawnObstacle = () => spawnObstacle(gameState.level, gameState.gameSpeed, gameState.timeSlowFactor);
 window.updateObstacles = () => {
     if (obstacles.length > 0) {

@@ -1,10 +1,12 @@
 // core/input.js - Enhanced Input System with Full Controller Support
 
 import { gameState } from './gameState.js';
-import { startJump, stopJump } from './player.js';
 import { shoot } from '../entities.js';
 import { GameState } from './constants.js';
 import { cycleProjectileType } from '../enhanced-projectile-system.js';
+import { startJump, stopJump } from '../enhanced-player.js';
+
+
 
 
 // Input state
@@ -254,9 +256,9 @@ function processButtons(gamepad) {
         handleControllerJumpPress();
     } else if (jumpJustReleased) {
         keys.space = false;
-        if (gameState.gameRunning) {
-            stopJump();
-        }
+       if (gameState.gameRunning) {
+    startJump(gameState);  // New function from enhanced-player.js
+}
     }
     
     // Shoot button (including triggers)

@@ -1,7 +1,7 @@
 // entities-combat.js - Fixed healing system integration
 
 import { GAME_CONSTANTS, CANVAS, ENEMY_BASE_STATS, calculateEnemyDamage, calculateEnemyHP, calculatePlayerDamage } from './core/constants.js';
-
+import { startJump, stopJump } from './enhanced-player.js';
 import { camera } from './core/camera.js';
 import { player } from './core/player.js';
 import { gameState, takeDamage, healPlayer } from './core/gameState.js'; // FIXED: Added healPlayer import

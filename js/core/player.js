@@ -1,6 +1,5 @@
 // FIXED: Enhanced jump system with proper buff integration
 
-
 import { GAME_CONSTANTS, CANVAS } from './constants.js';
 import { updateCamera } from './camera.js';
 import { soundManager, activeDropBuffs } from '../systems.js';
@@ -51,12 +50,14 @@ export function updatePlayer(keys, gameState) {
     // Corruption checks
     const isCorrupted = gameState.isCorrupted || false;
     
-    // FIXED: Jump availability logic with separate flags for different jump types
+    // FIXED: Jump availability logic - check both gameState.activeBuffs AND activeDropBuffs
+    const hasDoubleJump = (gameState.activeBuffs && gameState.activeBuffs.shadowLeap > 0) || false;
+    const hasTripleJump = (activeDropBuffs && activeDropBuffs.jumpBoost > 0) || false;
+    
     const canNormalJump = !isCorrupted && player.grounded;
-    const canDoubleJump = !isCorrupted && !player.grounded && !player.doubleJumpUsed && 
-                         gameState.activeBuffs.shadowLeap > 0;
+    const canDoubleJump = !isCorrupted && !player.grounded && !player.doubleJumpUsed && hasDoubleJump;
     const canTripleJump = !isCorrupted && !player.grounded && player.doubleJumpUsed && 
-                         !player.tripleJumpUsed && activeDropBuffs.jumpBoost > 0;
+                         !player.tripleJumpUsed && hasTripleJump;
     
     const canJump = canNormalJump || canDoubleJump || canTripleJump;
     const canShoot = !isCorrupted && (gameState.bullets > 0 || gameState.isBerserker);
@@ -131,6 +132,7 @@ export function updatePlayer(keys, gameState) {
     // FIXED: Jump logic - handle jump button press with clearer conditions
     if (canJump && (keys.space || keys.ArrowUp) && !player.wasUpPressed && !isCorrupted) {
         console.log("✅ Jumping allowed - player not corrupted");
+        console.log(`🦘 Jump types available: Double=${hasDoubleJump}, Triple=${hasTripleJump}`);
         startJump(gameState);
     }
     
@@ -180,12 +182,14 @@ export function updatePlayer(keys, gameState) {
 
 // FIXED: Enhanced jump function with proper jump boost logic
 export function startJump(gameState) {
-    // Log available jump types
-    const hasDoubleJump = gameState.activeBuffs.shadowLeap > 0;
-    const hasTripleJump = activeDropBuffs.jumpBoost > 0;
+    // Check both gameState.activeBuffs AND activeDropBuffs
+    const hasDoubleJump = (gameState.activeBuffs && gameState.activeBuffs.shadowLeap > 0) || false;
+    const hasTripleJump = (activeDropBuffs && activeDropBuffs.jumpBoost > 0) || false;
     
     console.log(`🦘 Jump Status: ground=${player.grounded}, doubleJump=${hasDoubleJump}, tripleJump=${hasTripleJump}`);
     console.log(`🦘 Jump States: doubleJumpUsed=${player.doubleJumpUsed}, tripleJumpUsed=${player.tripleJumpUsed}`);
+    console.log(`🦘 Active Drop Buffs:`, activeDropBuffs);
+    console.log(`🦘 Game State Buffs:`, gameState.activeBuffs);
     
     if (player.grounded) {
         // NORMAL JUMP - Always use full strength
@@ -200,32 +204,65 @@ export function startJump(gameState) {
         
         console.log("🦘 Normal jump executed");
         
-    } else if (!player.doubleJumpUsed && gameState.activeBuffs.shadowLeap > 0) {
-        // SHADOW LEAP DOUBLE JUMP - Independent of jump boost
-        player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
-        player.doubleJumpUsed = true;
-        player.isHoldingJump = false; // Don't allow hold for double jump
-        player.jumpHoldTime = 0;
-        createDoubleJumpParticles(player.x, player.y);
-        soundManager.jump();
+    } else if (!player.grounded) {
+        // AIR JUMPS - Check what's available
+        let jumpExecuted = false;
         
-        console.log("🌙 Shadow Leap double jump executed");
+        // If we have both double jump and triple jump available
+        if (hasDoubleJump && hasTripleJump) {
+            // Player has both buffs - allow up to 3 jumps total
+            if (!player.doubleJumpUsed) {
+                // Use double jump first
+                player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
+                player.doubleJumpUsed = true;
+                player.isHoldingJump = false;
+                player.jumpHoldTime = 0;
+                createDoubleJumpParticles(player.x, player.y);
+                soundManager.jump();
+                jumpExecuted = true;
+                console.log("🌙 Shadow Leap double jump executed (2nd jump)");
+            } else if (!player.tripleJumpUsed) {
+                // Then use triple jump
+                player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
+                player.tripleJumpUsed = true;
+                player.isHoldingJump = false;
+                player.jumpHoldTime = 0;
+                createDoubleJumpParticles(player.x, player.y);
+                soundManager.jump();
+                jumpExecuted = true;
+                console.log("🚀 Jump Boost triple jump executed (3rd jump)");
+                createScorePopup(player.x + player.width/2, player.y - 20, 'TRIPLE JUMP!');
+            }
+        }
+        // Only double jump available
+        else if (hasDoubleJump && !player.doubleJumpUsed) {
+            player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
+            player.doubleJumpUsed = true;
+            player.isHoldingJump = false;
+            player.jumpHoldTime = 0;
+            createDoubleJumpParticles(player.x, player.y);
+            soundManager.jump();
+            jumpExecuted = true;
+            console.log("🌙 Shadow Leap double jump executed");
+        }
+        // Only triple jump available (jump boost without shadow leap)
+        else if (hasTripleJump && !player.tripleJumpUsed) {
+            player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
+            player.tripleJumpUsed = true;
+            player.isHoldingJump = false;
+            player.jumpHoldTime = 0;
+            createDoubleJumpParticles(player.x, player.y);
+            soundManager.jump();
+            jumpExecuted = true;
+            console.log("🚀 Jump Boost jump executed (2nd jump)");
+            createScorePopup(player.x + player.width/2, player.y - 20, 'JUMP BOOST!');
+        }
         
-    } else if (activeDropBuffs.jumpBoost > 0 && !player.tripleJumpUsed && player.doubleJumpUsed) {
-        // JUMP BOOST TRIPLE JUMP - Only available with jumpBoost buff after double jump
-        player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
-        player.tripleJumpUsed = true;
-        player.isHoldingJump = false; // Don't allow hold for triple jump
-        player.jumpHoldTime = 0;
-        createDoubleJumpParticles(player.x, player.y);
-        soundManager.jump();
-        
-        console.log("🚀 Jump Boost triple jump executed");
-        
-        // Show special effect for jump boost usage
-        createScorePopup(player.x + player.width/2, player.y - 20, 'TRIPLE JUMP!');
-    } else {
-        console.log("❌ No jump available: not grounded, double jump used, or no triple jump buff");
+        if (!jumpExecuted) {
+            console.log("❌ No jump available: all air jumps used");
+            console.log(`   Details: hasDoubleJump=${hasDoubleJump}, hasTripleJump=${hasTripleJump}`);
+            console.log(`   States: doubleJumpUsed=${player.doubleJumpUsed}, tripleJumpUsed=${player.tripleJumpUsed}`);
+        }
     }
 }
 
