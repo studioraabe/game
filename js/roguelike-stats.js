@@ -4,11 +4,14 @@ import { updateUI } from './ui.js';
 import { createScorePopup } from './entities.js';
 import { player } from './core/player.js';
 import { DUNGEON_THEME } from './core/constants.js';
+import { PROJECTILE_BUFFS } from './projectile-buff-integration.js';
+
 
 // Initialize the player stats system
 export let playerStats = null;
 
-// New buff definitions with stats effects
+
+// Then replace the existing STAT_BUFFS array with this:
 export const STAT_BUFFS = [
     // Original buffs from DUNGEON_THEME
     { 
@@ -60,7 +63,6 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                // FIXED: 1 bullet per 2 seconds = 0.5 bullets per second
                 gameState.playerStats.bulletRegen += 0.5;
                 gameState.playerStats.selectedBuffs.push('bulletStorm');
             }
@@ -86,7 +88,6 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                // FIXED: 1 HP per 3 seconds = 0.333... HP per second
                 gameState.playerStats.healthRegen += 0.333;
                 gameState.playerStats.selectedBuffs.push('survivalInstinct');
             }
@@ -100,7 +101,6 @@ export const STAT_BUFFS = [
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
                 gameState.playerStats.critChance += 20;
-                // FIXED: critDamage should be 2.0 for 2x damage (was adding 0.5)
                 gameState.playerStats.critDamage = 2.0;
                 gameState.playerStats.selectedBuffs.push('criticalFocus');
             }
@@ -118,9 +118,94 @@ export const STAT_BUFFS = [
                 gameState.playerStats.selectedBuffs.push('swiftDeath');
             }
         }
+    },
+    
+    // PROJECTILE BUFFS - manually added
+    {
+        id: 'laserMastery',
+        title: '🔵 Laser Mastery',
+        desc: 'Unlock Laser Beam projectiles - instant piercing damage',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.selectedBuffs.push('laserMastery');
+                if (window.unlockProjectileType) {
+                    window.unlockProjectileType('laserBeam');
+                }
+            }
+        }
+    },
+    {
+        id: 'shotgunBlast',
+        title: '💥 Shotgun Blast',
+        desc: 'Unlock Energy Shotgun - spread attack with 5 pellets',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.selectedBuffs.push('shotgunBlast');
+                if (window.unlockProjectileType) {
+                    window.unlockProjectileType('energyShotgun');
+                }
+            }
+        }
+    },
+    {
+        id: 'chainLightning',
+        title: '⚡ Chain Lightning',
+        desc: 'Unlock Chain Lightning - jumps between 3 enemies',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.selectedBuffs.push('chainLightning');
+                if (window.unlockProjectileType) {
+                    window.unlockProjectileType('chainLightning');
+                }
+            }
+        }
+    },
+    {
+        id: 'seekingBolt',
+        title: '🎯 Seeking Bolt',
+        desc: 'Unlock Seeking Bolt - homes in on nearest enemy',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.selectedBuffs.push('seekingBolt');
+                if (window.unlockProjectileType) {
+                    window.unlockProjectileType('seekingBolt');
+                }
+            }
+        }
+    },
+    {
+        id: 'weaponMaster',
+        title: '🗡️ Weapon Master',
+        desc: 'Unlock weapon cycling - switch between projectile types',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.selectedBuffs.push('weaponMaster');
+                
+                // Enable weapon cycling
+                if (window.projectileSystem) {
+                    window.projectileSystem.weaponCyclingEnabled = true;
+                }
+            }
+        }
+    },
+    {
+        id: 'rapidFire',
+        title: '🔥 Rapid Fire',
+        desc: '+50% attack speed and reduced projectile cooldowns',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.attackSpeed += 50;
+                gameState.playerStats.selectedBuffs.push('rapidFire');
+            }
+        }
     }
 ];
-
 
 // Update available buffs in gameState for selection screen
 export function initializeStatBuffs() {

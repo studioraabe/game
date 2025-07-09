@@ -13,6 +13,9 @@ import {
 } from './ui-enhancements.js';
 import { spriteManager } from './rendering/sprite-system.js';
 import { initRoguelikeIntegration, createStatDisplay, startStatsUpdateLoop } from './roguelike-integration.js';
+import './projectile-buff-integration.js';
+import enhancedProjectileSystem from './enhanced-projectile-system.js';
+
 
 
 import { 
@@ -73,6 +76,24 @@ import {
     clearComboGlow,
     damageEffectsDebug
 } from './enhanced-damage-system.js';
+
+import { 
+    enhancedShoot, 
+    updateEnhancedProjectiles, 
+    renderEnhancedProjectiles,
+    cycleProjectileType,
+    getCurrentProjectileType,
+    unlockProjectileType,
+    projectileSystem,
+    ProjectileType,
+    PROJECTILE_CONFIGS
+} from './enhanced-projectile-system.js';
+
+import { 
+    integrateProjectileSystem,
+    createProjectileUI,
+    PROJECTILE_BUFFS
+} from './projectile-buff-integration.js';
 
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');

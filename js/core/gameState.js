@@ -8,6 +8,8 @@ import { resetBulletBoxesFound } from '../entities.js';
 import { clearArrays, obstacleTimer, bulletBoxesFound } from '../entities.js';
 import { loadHighScore, checkAchievements, activeDropBuffs, loadAchievements, loadGlobalHighscores, updateDropBuffs } from '../systems.js';
 import { updateDamageEffects, resetDamageEffects, triggerDamageEffects } from '../enhanced-damage-system.js';
+import { updateEnhancedProjectiles } from '../enhanced-projectile-system.js';
+
 
 
 // Resume Transition für Sound Overlay
@@ -241,6 +243,9 @@ export function update() {
     
     // Consistent animation time for sprites
     gameState.animationTime = now * 0.001;
+	
+	updateEnhancedProjectiles(gameState);
+
     
     // Update all game systems
     window.updatePlayer();

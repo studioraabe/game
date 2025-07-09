@@ -11,6 +11,8 @@ import { drawPlayer } from './player.js';
 import { drawEnemy } from './enemies.js';
 import { drawEffects, drawBullet, drawDrop } from './effects.js';
 import { createDamageNumber } from '../ui-enhancements.js';
+import { renderEnhancedProjectiles } from '../enhanced-projectile-system.js';
+
 
 
 export function render(ctx) {
@@ -115,6 +117,8 @@ export function render(ctx) {
             // Zeile ~95 in renderer.js
 			drawBullet(ctx, screenX, bullet.y, bullet.enhanced, gameState.hasPiercingBullets, bullet);
         }
+		
+		renderEnhancedProjectiles(ctx);
     }
     
     // 5. Draw all effects (particles, explosions, etc.)

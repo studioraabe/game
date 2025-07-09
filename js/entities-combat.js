@@ -18,6 +18,9 @@ import {
     getObstacleHitbox 
 } from './entities-core.js';
 
+import { enhancedShoot } from './enhanced-projectile-system.js';
+
+
 // ... keep all existing BAT PROJECTILE SYSTEM code ...
 
 function createBatProjectile(startX, startY, targetX, targetY) {
@@ -306,51 +309,7 @@ function handleEnemyDeathWithLifesteal(obstacle, index, gameStateParam, damage) 
 }
 
 
-export function shoot(gameStateParam) {
-    if (!gameStateParam.gameRunning || (gameStateParam.bullets <= 0 && !gameStateParam.isBerserker)) return;
-    
-    const canUseMultiShot = gameStateParam.activeBuffs.chainLightning > 0 && (gameStateParam.bullets >= 3 || gameStateParam.isBerserker);
-    const bulletCount = canUseMultiShot ? 3 : 1;
-    const enhanced = canUseMultiShot;
-    
-    // FIXED: Apply projectile speed bonus
-    const projectileSpeedMultiplier = 1 + (gameStateParam.playerStats?.projectileSpeed || 0) / 100;
-    
-    for (let i = 0; i < bulletCount; i++) {
-        const offsetY = bulletCount > 1 ? (i - 1) * 8 : 0;
-        const baseX = player.facingDirection === 1 ? player.x + player.width : player.x;
-        const startX = baseX + (24 * player.facingDirection);
-        
-        // FIXED: Apply projectile speed multiplier
-        const bulletSpeed = GAME_CONSTANTS.BULLET_SPEED * 
-                          player.facingDirection * 
-                          GAME_CONSTANTS.BULLET_SPEED_MULTIPLIER * 
-                          projectileSpeedMultiplier;
-        
-        bulletsFired.push({
-            x: startX,
-            y: player.y + player.height / 1.00 + offsetY,
-            speed: bulletSpeed,
-            enhanced: enhanced,
-            direction: player.facingDirection,
-            piercing: gameStateParam.hasPiercingBullets,
-            // Stretch effect properties
-            age: 0,
-            tailX: startX,
-            baseLength: 30,
-            currentLength: 4,
-            maxStretch: 60,
-            hit: false,
-            hitTime: 0
-        });
-    }
-    
-    if (!gameStateParam.isBerserker) {
-        gameStateParam.bullets -= bulletCount;
-    }
-    soundManager.shoot();
-}
-
+export { enhancedShoot as shoot };
 
 
 

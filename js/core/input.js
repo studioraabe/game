@@ -4,6 +4,8 @@ import { gameState } from './gameState.js';
 import { startJump, stopJump } from './player.js';
 import { shoot } from '../entities.js';
 import { GameState } from './constants.js';
+import { cycleProjectileType } from '../enhanced-projectile-system.js';
+
 
 // Input state
 export const keys = {
@@ -353,7 +355,18 @@ function vibrateController(duration = 100, intensity = 0.5) {
 // Keyboard Input Handlers (unchanged)
 function handleKeyDown(e) {
     if (inputSettings.inputMode === 'controller') return; // Ignore keyboard when controller is active
-    
+
+
+	if (e.code === 'KeyQ' && gameState.gameRunning) {
+		e.preventDefault();
+		cycleProjectileType(-1); // Previous weapon
+	}
+
+	if (e.code === 'KeyE' && gameState.gameRunning) {
+		e.preventDefault();
+		cycleProjectileType(1); // Next weapon
+	}
+
     // Escape key for pause
     if (e.code === 'Escape') {
         e.preventDefault();
