@@ -305,11 +305,11 @@ function handleControllerJumpPress() {
         return;
     }
     if (gameState.gameRunning) {
+        // FIXED: Pass gameState to startJump
         startJump(gameState);
         vibrateController(100, 0.1); // Light vibration for jump
     }
 }
-
 function handleControllerShoot() {
     if (gameState.gameRunning) {
         shoot(gameState);
@@ -379,7 +379,7 @@ function handleKeyDown(e) {
     }
     
     // Jump controls (W or Up Arrow)
-    if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+ if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') {
         e.preventDefault();
         keys.space = true;
         
@@ -392,6 +392,7 @@ function handleKeyDown(e) {
             return;
         }
         if (gameState.gameRunning) {
+            // FIXED: Pass gameState to startJump
             startJump(gameState);
         }
     }

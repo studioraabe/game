@@ -1,4 +1,5 @@
-// Fix for js/core/player.js - Corrected jump system
+// FIXED: Enhanced jump system with proper buff integration
+
 
 import { GAME_CONSTANTS, CANVAS } from './constants.js';
 import { updateCamera } from './camera.js';
@@ -50,12 +51,12 @@ export function updatePlayer(keys, gameState) {
     // Corruption checks
     const isCorrupted = gameState.isCorrupted || false;
     
-    // FIXED: Improved jump availability logic
+    // FIXED: Jump availability logic with separate flags for different jump types
     const canNormalJump = !isCorrupted && player.grounded;
     const canDoubleJump = !isCorrupted && !player.grounded && !player.doubleJumpUsed && 
                          gameState.activeBuffs.shadowLeap > 0;
-    const canTripleJump = !isCorrupted && !player.grounded && !player.tripleJumpUsed && 
-                         activeDropBuffs.jumpBoost > 0 && player.doubleJumpUsed;
+    const canTripleJump = !isCorrupted && !player.grounded && player.doubleJumpUsed && 
+                         !player.tripleJumpUsed && activeDropBuffs.jumpBoost > 0;
     
     const canJump = canNormalJump || canDoubleJump || canTripleJump;
     const canShoot = !isCorrupted && (gameState.bullets > 0 || gameState.isBerserker);
@@ -114,7 +115,7 @@ export function updatePlayer(keys, gameState) {
         const shootCooldown = gameState.shootCooldown || 0;
         
         if (shootCooldown <= 0) {
-            shoot(gameState);
+            window.shoot(gameState);
             const baseCooldown = 15;
             gameState.shootCooldown = baseCooldown / (1 + attackSpeedBonus / 100);
         }
@@ -127,16 +128,16 @@ export function updatePlayer(keys, gameState) {
         gameState.shootCooldown -= gameState.deltaTime || 1;
     }
     
-    // FIXED: Jump logic - properly handle all jump types
+    // FIXED: Jump logic - handle jump button press with clearer conditions
     if (canJump && (keys.space || keys.ArrowUp) && !player.wasUpPressed && !isCorrupted) {
         console.log("✅ Jumping allowed - player not corrupted");
         startJump(gameState);
     }
     
-    // FIXED: Jump hold mechanics - only for initial jump, not affecting other jumps
+    // FIXED: Jump hold mechanics - only for initial jump, not affecting double/triple jumps
     if (!isCorrupted && player.isHoldingJump && 
         player.jumpHoldTime < GAME_CONSTANTS.MAX_JUMP_HOLD_TIME && 
-        player.velocityY < 0 && player.grounded === false) {
+        player.velocityY < 0 && !player.grounded) {
         
         const holdStrength = 1 - (player.jumpHoldTime / GAME_CONSTANTS.MAX_JUMP_HOLD_TIME);
         player.velocityY -= 0.3 * holdStrength;
@@ -179,6 +180,13 @@ export function updatePlayer(keys, gameState) {
 
 // FIXED: Enhanced jump function with proper jump boost logic
 export function startJump(gameState) {
+    // Log available jump types
+    const hasDoubleJump = gameState.activeBuffs.shadowLeap > 0;
+    const hasTripleJump = activeDropBuffs.jumpBoost > 0;
+    
+    console.log(`🦘 Jump Status: ground=${player.grounded}, doubleJump=${hasDoubleJump}, tripleJump=${hasTripleJump}`);
+    console.log(`🦘 Jump States: doubleJumpUsed=${player.doubleJumpUsed}, tripleJumpUsed=${player.tripleJumpUsed}`);
+    
     if (player.grounded) {
         // NORMAL JUMP - Always use full strength
         player.velocityY = GAME_CONSTANTS.JUMP_STRENGTH;
@@ -193,7 +201,7 @@ export function startJump(gameState) {
         console.log("🦘 Normal jump executed");
         
     } else if (!player.doubleJumpUsed && gameState.activeBuffs.shadowLeap > 0) {
-        // SHADOW LEAP DOUBLE JUMP - Independent of other boosts
+        // SHADOW LEAP DOUBLE JUMP - Independent of jump boost
         player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
         player.doubleJumpUsed = true;
         player.isHoldingJump = false; // Don't allow hold for double jump
@@ -204,7 +212,7 @@ export function startJump(gameState) {
         console.log("🌙 Shadow Leap double jump executed");
         
     } else if (activeDropBuffs.jumpBoost > 0 && !player.tripleJumpUsed && player.doubleJumpUsed) {
-        // JUMP BOOST TRIPLE JUMP - Only available after double jump
+        // JUMP BOOST TRIPLE JUMP - Only available with jumpBoost buff after double jump
         player.velocityY = GAME_CONSTANTS.DOUBLE_JUMP_STRENGTH;
         player.tripleJumpUsed = true;
         player.isHoldingJump = false; // Don't allow hold for triple jump
@@ -216,6 +224,8 @@ export function startJump(gameState) {
         
         // Show special effect for jump boost usage
         createScorePopup(player.x + player.width/2, player.y - 20, 'TRIPLE JUMP!');
+    } else {
+        console.log("❌ No jump available: not grounded, double jump used, or no triple jump buff");
     }
 }
 
