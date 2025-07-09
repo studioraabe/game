@@ -11,7 +11,7 @@ import { soundManager } from './systems.js';
 // PROJECTILE TYPES ENUM
 // ========================================
 
-export const ProjectileType = {
+const ProjectileType = {
     NORMAL: 'normal',
     LASER_BEAM: 'laserBeam',
     ENERGY_SHOTGUN: 'energyShotgun',
@@ -23,7 +23,7 @@ export const ProjectileType = {
 // PROJECTILE SYSTEM STATE
 // ========================================
 
-export const projectileSystem = {
+const projectileSystem = {
     availableTypes: [
         ProjectileType.NORMAL,
         ProjectileType.LASER_BEAM,
@@ -41,6 +41,7 @@ export const projectileSystem = {
     chainLightning: [],
     
     // Cooldowns
+    normalCooldown: 0,
     laserCooldown: 0,
     shotgunCooldown: 0,
     lightningCooldown: 0,
@@ -111,10 +112,25 @@ const PROJECTILE_CONFIGS = {
 };
 
 // ========================================
+// HELPER FUNCTIONS
+// ========================================
+
+function getCooldownProperty(projectileType) {
+    const cooldownMap = {
+        [ProjectileType.NORMAL]: 'normalCooldown',
+        [ProjectileType.LASER_BEAM]: 'laserCooldown',
+        [ProjectileType.ENERGY_SHOTGUN]: 'shotgunCooldown',
+        [ProjectileType.CHAIN_LIGHTNING]: 'lightningCooldown',
+        [ProjectileType.SEEKING_BOLT]: 'seekingCooldown'
+    };
+    return cooldownMap[projectileType] || 'normalCooldown';
+}
+
+// ========================================
 // PROJECTILE TYPE CYCLING
 // ========================================
 
-export function cycleProjectileType(direction = 1) {
+function cycleProjectileType(direction = 1) {
     if (projectileSystem.equippedTypes.length <= 1) return;
     
     projectileSystem.currentTypeIndex = (projectileSystem.currentTypeIndex + direction) % projectileSystem.equippedTypes.length;
@@ -137,7 +153,7 @@ export function cycleProjectileType(direction = 1) {
     soundManager.pickup();
 }
 
-export function getCurrentProjectileType() {
+function getCurrentProjectileType() {
     return projectileSystem.equippedTypes[projectileSystem.currentTypeIndex] || ProjectileType.NORMAL;
 }
 
@@ -145,7 +161,7 @@ export function getCurrentProjectileType() {
 // ENHANCED SHOOTING FUNCTION
 // ========================================
 
-export function enhancedShoot(gameStateParam) {
+function enhancedShoot(gameStateParam) {
     if (!gameStateParam.gameRunning) return false;
     
     const currentType = getCurrentProjectileType();
@@ -157,7 +173,7 @@ export function enhancedShoot(gameStateParam) {
     }
     
     // Check cooldowns
-    const cooldownProperty = `${currentType}Cooldown`;
+    const cooldownProperty = getCooldownProperty(currentType);
     if (projectileSystem[cooldownProperty] > 0) {
         return false;
     }
@@ -190,7 +206,7 @@ export function enhancedShoot(gameStateParam) {
         }
         
         // Set cooldown
-        projectileSystem[cooldownProperty] = config.cooldown;
+        projectileSystem[getCooldownProperty(currentType)] = config.cooldown;
         
         // Play appropriate sound
         playProjectileSound(currentType);
@@ -209,10 +225,11 @@ function fireNormalBolt(gameStateParam, config) {
     const bulletSpeed = config.speed * player.facingDirection * projectileSpeedMultiplier;
     
     const startX = player.facingDirection === 1 ? player.x + player.width + 24 : player.x - 24;
+    const startY = player.y + player.height / 2 - 2; // Lower the projectile start height
     
     window.bulletsFired.push({
         x: startX,
-        y: player.y + player.height / 2,
+        y: startY,
         speed: bulletSpeed,
         enhanced: false,
         direction: player.facingDirection,
@@ -225,15 +242,19 @@ function fireNormalBolt(gameStateParam, config) {
         currentLength: 4,
         maxStretch: 60,
         hit: false,
-        hitTime: 0
+        hitTime: 0,
+        showTrail: true  // FIXED: Add visual trail for normal bullets
     });
     
     return true;
 }
 
 function fireLaserBeam(gameStateParam, config) {
+    // FIXED: Debug logging to track laser creation
+    console.log(`Creating laser beam. Current active: ${projectileSystem.laserBeams.length}`);
+    
     // Create instant laser beam
-    const laserY = player.y + player.height / 2;
+    const laserY = player.y + player.height / 2 - 2;
     const startX = player.facingDirection === 1 ? player.x + player.width : player.x;
     const endX = player.facingDirection === 1 ? 
         Math.min(startX + config.range, camera.x + CANVAS.width + 200) :
@@ -245,14 +266,16 @@ function fireLaserBeam(gameStateParam, config) {
         y: laserY,
         direction: player.facingDirection,
         damage: config.damage,
-        life: 20, // Frames to display
-        maxLife: 20,
+        life: 45, // FIXED: Increased duration for better visibility
+        maxLife: 45,
         piercing: config.penetration,
         type: ProjectileType.LASER_BEAM,
-        hitTargets: new Set() // Track hit enemies to prevent double hits
+        hitTargets: new Set(),
+        id: Date.now() + Math.random() // FIXED: Add unique ID for tracking
     };
     
     projectileSystem.laserBeams.push(laser);
+    console.log(`Laser created with ID: ${laser.id}, total active: ${projectileSystem.laserBeams.length}`);
     
     // Immediately check for hits along the laser path
     processLaserHits(laser, gameStateParam);
@@ -264,6 +287,7 @@ function fireEnergyShotgun(gameStateParam, config) {
     const projectileSpeedMultiplier = 1 + (gameStateParam.playerStats?.projectileSpeed || 0) / 100;
     const baseSpeed = config.speed * projectileSpeedMultiplier;
     const startX = player.facingDirection === 1 ? player.x + player.width + 24 : player.x - 24;
+    const startY = player.y + player.height / 2 - 2; // Lower the shotgun pellet height
     
     // Create multiple pellets in a spread pattern
     for (let i = 0; i < config.pellets; i++) {
@@ -273,7 +297,7 @@ function fireEnergyShotgun(gameStateParam, config) {
         
         window.bulletsFired.push({
             x: startX,
-            y: player.y + player.height / 2,
+            y: startY,
             speed: speedX,
             velocityY: speedY,
             enhanced: true,
@@ -288,7 +312,8 @@ function fireEnergyShotgun(gameStateParam, config) {
             maxStretch: 40,
             hit: false,
             hitTime: 0,
-            pelletIndex: i
+            pelletIndex: i,
+            showTrail: true  // FIXED: Add visual trail for shotgun pellets
         });
     }
     
@@ -299,10 +324,11 @@ function fireChainLightning(gameStateParam, config) {
     const projectileSpeedMultiplier = 1 + (gameStateParam.playerStats?.projectileSpeed || 0) / 100;
     const bulletSpeed = config.speed * player.facingDirection * projectileSpeedMultiplier;
     const startX = player.facingDirection === 1 ? player.x + player.width + 24 : player.x - 24;
+    const startY = player.y + player.height / 2 - 2; // Lower the chain lightning height
     
     window.bulletsFired.push({
         x: startX,
-        y: player.y + player.height / 2,
+        y: startY,
         speed: bulletSpeed,
         enhanced: true,
         direction: player.facingDirection,
@@ -318,7 +344,8 @@ function fireChainLightning(gameStateParam, config) {
         currentLength: 6,
         maxStretch: 80,
         hit: false,
-        hitTime: 0
+        hitTime: 0,
+        showTrail: true  // FIXED: Add visual trail for chain lightning
     });
     
     return true;
@@ -326,6 +353,7 @@ function fireChainLightning(gameStateParam, config) {
 
 function fireSeekingBolt(gameStateParam, config) {
     const startX = player.facingDirection === 1 ? player.x + player.width + 24 : player.x - 24;
+    const startY = player.y + player.height / 2 - 2; // Lower the seeking bolt height
     
     // Find nearest enemy within seek range
     let nearestEnemy = null;
@@ -335,7 +363,7 @@ function fireSeekingBolt(gameStateParam, config) {
         if (obstacle.type === 'boltBox' || obstacle.type === 'rock') continue;
         
         const dx = (obstacle.x + obstacle.width/2) - startX;
-        const dy = (obstacle.y + obstacle.height/2) - (player.y + player.height/2);
+        const dy = (obstacle.y + obstacle.height/2) - startY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         if (distance < nearestDistance) {
@@ -346,7 +374,7 @@ function fireSeekingBolt(gameStateParam, config) {
     
     const seekingBolt = {
         x: startX,
-        y: player.y + player.height / 2,
+        y: startY,
         velocityX: config.speed * player.facingDirection,
         velocityY: 0,
         target: nearestEnemy,
@@ -368,7 +396,7 @@ function fireSeekingBolt(gameStateParam, config) {
 // PROJECTILE UPDATE FUNCTIONS
 // ========================================
 
-export function updateEnhancedProjectiles(gameStateParam) {
+function updateEnhancedProjectiles(gameStateParam) {
     updateProjectileCooldowns(gameStateParam);
     updateLaserBeams(gameStateParam);
     updateSeekingBolts(gameStateParam);
@@ -376,11 +404,14 @@ export function updateEnhancedProjectiles(gameStateParam) {
 }
 
 function updateProjectileCooldowns(gameStateParam) {
-    const cooldownKeys = ['laserCooldown', 'shotgunCooldown', 'lightningCooldown', 'seekingCooldown'];
+    const cooldownKeys = ['normalCooldown', 'laserCooldown', 'shotgunCooldown', 'lightningCooldown', 'seekingCooldown'];
     
     cooldownKeys.forEach(key => {
         if (projectileSystem[key] > 0) {
-            projectileSystem[key] -= gameStateParam.deltaTime;
+            projectileSystem[key] -= gameStateParam.deltaTime || 1;
+            if (projectileSystem[key] < 0) {
+                projectileSystem[key] = 0;
+            }
         }
     });
 }
@@ -389,11 +420,18 @@ function updateLaserBeams(gameStateParam) {
     for (let i = projectileSystem.laserBeams.length - 1; i >= 0; i--) {
         const laser = projectileSystem.laserBeams[i];
         
-        laser.life -= gameStateParam.deltaTime;
+        laser.life -= gameStateParam.deltaTime || 1;
         
+        // FIXED: More thorough cleanup and debug logging
         if (laser.life <= 0) {
+            console.log(`Removing laser beam ${i}, remaining: ${projectileSystem.laserBeams.length - 1}`);
             projectileSystem.laserBeams.splice(i, 1);
         }
+    }
+    
+    // FIXED: Debug logging to track laser beam state
+    if (projectileSystem.laserBeams.length > 0) {
+        console.log(`Active laser beams: ${projectileSystem.laserBeams.length}`);
     }
 }
 
@@ -404,9 +442,9 @@ function updateSeekingBolts(gameStateParam) {
         bolt.life -= gameStateParam.deltaTime;
         bolt.age += gameStateParam.deltaTime;
         
-        // Update trail
-        if (bolt.age % 3 === 0) {
-            bolt.trail.push({ x: bolt.x, y: bolt.y, life: 15 });
+        // FIXED: Update trail more frequently for better visibility
+        if (bolt.age % 2 === 0) { // Was % 3, now % 2 for more trail particles
+            bolt.trail.push({ x: bolt.x, y: bolt.y, life: 20 }); // Increased life from 15 to 20
         }
         
         // Update trail particles
@@ -438,7 +476,8 @@ function updateSeekingBolts(gameStateParam) {
         
         // Check collision with enemies
         let hit = false;
-        for (const obstacle of obstacles) {
+        for (let j = obstacles.length - 1; j >= 0; j--) {
+            const obstacle = obstacles[j];
             if (obstacle.type === 'boltBox' || obstacle.type === 'rock') continue;
             
             if (bolt.x < obstacle.x + obstacle.width &&
@@ -459,6 +498,19 @@ function updateSeekingBolts(gameStateParam) {
                 }
                 
                 createLightningEffect(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
+                
+                // FIXED: Check for enemy death and handle it properly
+                if (obstacle.health <= 0) {
+                    handleProjectileEnemyDeath(obstacle, gameStateParam, damage);
+                } else {
+                    // Update combo for hits that don't kill
+                    gameStateParam.consecutiveHits++;
+                    gameStateParam.comboCount++;
+                    if (gameStateParam.comboCount >= 2) {
+                        gameStateParam.comboTimer = 300;
+                    }
+                }
+                
                 hit = true;
                 break;
             }
@@ -477,10 +529,14 @@ function updateEnhancedBullets(gameStateParam) {
         const bullet = window.bulletsFired[i];
         
         if (bullet.type === ProjectileType.ENERGY_SHOTGUN) {
-            // Handle shotgun pellet physics
+            // FIXED: Improved shotgun pellet physics with less dramatic gravity
             if (bullet.velocityY !== undefined) {
                 bullet.y += bullet.velocityY * gameStateParam.deltaTime;
-                bullet.velocityY += 0.2 * gameStateParam.deltaTime; // Slight gravity
+                // Reduced gravity for more natural flight path
+                bullet.velocityY += 0.1 * gameStateParam.deltaTime; // Was 0.2, now 0.1
+                
+                // Add slight air resistance to velocityY for more realistic arc
+                bullet.velocityY *= 0.998;
             }
         }
         
@@ -532,7 +588,73 @@ function processLaserHits(laser, gameStateParam) {
         }
         
         createLightningEffect(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+        
+        // FIXED: Check for enemy death and handle it properly
+        if (enemy.health <= 0) {
+            handleProjectileEnemyDeath(enemy, gameStateParam, damage);
+        }
     });
+}
+
+function handleProjectileEnemyDeath(enemy, gameStateParam, damage) {
+    // Calculate score
+    const config = window.ENEMY_CONFIG?.[enemy.type] || { points: 10 };
+    const basePoints = config.points || 10;
+    const levelBonus = (gameStateParam.level - 1) * 5;
+    const points = (basePoints + levelBonus) * gameStateParam.scoreMultiplier;
+    
+    gameStateParam.score += points;
+    if (window.createScorePopup) {
+        window.createScorePopup(enemy.x + enemy.width/2, enemy.y, points);
+    }
+
+    // Apply lifesteal if player has it
+    const lifeSteal = gameStateParam.playerStats?.lifeSteal || 0;
+    if (lifeSteal > 0) {
+        const healAmount = Math.max(1, Math.floor(damage * (lifeSteal / 100)));
+        
+        if (gameStateParam.currentHP < gameStateParam.maxHP) {
+            const oldHP = gameStateParam.currentHP;
+            gameStateParam.currentHP = Math.min(gameStateParam.maxHP, gameStateParam.currentHP + healAmount);
+            const actualHeal = gameStateParam.currentHP - oldHP;
+            
+            if (actualHeal > 0 && window.createScorePopup) {
+                window.createScorePopup(
+                    player.x + player.width/2, 
+                    player.y - 15, 
+                    `+${actualHeal} 🩸`
+                );
+            }
+        }
+    }
+    
+    // Roll for drops
+    if (window.rollForDrop) {
+        window.rollForDrop(enemy.type, enemy.x + enemy.width/2, enemy.y);
+    }
+    
+    if (enemy.type === 'alphaWolf') {
+        gameStateParam.bossesKilled++;
+    }
+    
+    // Update game stats
+    gameStateParam.enemiesDefeated++;
+    gameStateParam.bulletsHit++;
+    gameStateParam.levelProgress += 3;
+    if (window.soundManager) {
+        window.soundManager.hit();
+    }
+    
+    gameStateParam.comboCount++;
+    if (gameStateParam.comboCount >= 2) {
+        gameStateParam.comboTimer = 300;
+    }
+    
+    // Remove enemy from obstacles array
+    const enemyIndex = obstacles.indexOf(enemy);
+    if (enemyIndex > -1) {
+        obstacles.splice(enemyIndex, 1);
+    }
 }
 
 function processChainLightning(bullet, gameStateParam) {
@@ -579,6 +701,11 @@ function processChainLightning(bullet, gameStateParam) {
         // Create lightning effect between current position and enemy
         createLightningEffect(nearestEnemy.x + nearestEnemy.width/2, nearestEnemy.y + nearestEnemy.height/2);
         
+        // FIXED: Check for enemy death and handle it properly
+        if (nearestEnemy.health <= 0) {
+            handleProjectileEnemyDeath(nearestEnemy, gameStateParam, damage);
+        }
+        
         currentX = nearestEnemy.x + nearestEnemy.width/2;
         currentY = nearestEnemy.y + nearestEnemy.height/2;
         chainCount++;
@@ -589,7 +716,7 @@ function processChainLightning(bullet, gameStateParam) {
 // PROJECTILE UNLOCKING SYSTEM
 // ========================================
 
-export function unlockProjectileType(type) {
+function unlockProjectileType(type) {
     if (!projectileSystem.unlockedTypes.includes(type)) {
         projectileSystem.unlockedTypes.push(type);
         
@@ -614,7 +741,7 @@ export function unlockProjectileType(type) {
     return false;
 }
 
-export function equipProjectileType(type) {
+function equipProjectileType(type) {
     if (!projectileSystem.unlockedTypes.includes(type)) return false;
     if (projectileSystem.equippedTypes.includes(type)) return false;
     if (projectileSystem.equippedTypes.length >= 3) return false;
@@ -623,7 +750,7 @@ export function equipProjectileType(type) {
     return true;
 }
 
-export function unequipProjectileType(type) {
+function unequipProjectileType(type) {
     if (type === ProjectileType.NORMAL) return false; // Can't unequip normal
     
     const index = projectileSystem.equippedTypes.indexOf(type);
@@ -674,77 +801,125 @@ function playProjectileSound(type) {
 // RENDERING FUNCTIONS
 // ========================================
 
-export function renderEnhancedProjectiles(ctx) {
+function renderEnhancedProjectiles(ctx) {
+    // Safety check for context
+    if (!ctx) {
+        console.warn('renderEnhancedProjectiles called without valid context');
+        return;
+    }
+    
     renderLaserBeams(ctx);
     renderSeekingBolts(ctx);
 }
 
 function renderLaserBeams(ctx) {
-    for (const laser of projectileSystem.laserBeams) {
-        const alpha = laser.life / laser.maxLife;
+    if (!ctx) return;
+    
+    // FIXED: Debug logging for laser rendering
+    if (projectileSystem.laserBeams.length > 0) {
+        console.log(`Rendering ${projectileSystem.laserBeams.length} laser beams`);
+    }
+    
+    for (let i = 0; i < projectileSystem.laserBeams.length; i++) {
+        const laser = projectileSystem.laserBeams[i];
+        
+        // FIXED: Force minimum visibility and log laser state
+        const alpha = Math.max(0.4, laser.life / laser.maxLife);
         const startScreenX = getScreenX(laser.startX);
         const endScreenX = getScreenX(laser.endX);
         
-        // Main beam
-        ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
+        console.log(`Laser ${laser.id}: life=${laser.life}/${laser.maxLife}, alpha=${alpha}, startX=${startScreenX}, endX=${endScreenX}`);
+        
+        // Save context state
+        ctx.save();
+        
+        // Outer glow effect (draw first, behind main beam)
+        ctx.strokeStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
+        ctx.lineWidth = 16;
+        ctx.beginPath();
+        ctx.moveTo(startScreenX, laser.y);
+        ctx.lineTo(endScreenX, laser.y);
+        ctx.stroke();
+        
+        // Main beam (thicker and more visible)
+        ctx.strokeStyle = `rgba(0, 255, 255, ${alpha * 0.9})`;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(startScreenX, laser.y);
+        ctx.lineTo(endScreenX, laser.y);
+        ctx.stroke();
+        
+        // Core beam (bright white center)
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(startScreenX, laser.y);
         ctx.lineTo(endScreenX, laser.y);
         ctx.stroke();
         
-        // Core beam
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        // Inner glow
+        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(startScreenX, laser.y);
         ctx.lineTo(endScreenX, laser.y);
         ctx.stroke();
         
-        // Glow effect
-        ctx.strokeStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(startScreenX, laser.y);
-        ctx.lineTo(endScreenX, laser.y);
-        ctx.stroke();
+        ctx.restore();
     }
 }
 
 function renderSeekingBolts(ctx) {
+    if (!ctx) return;
+    
     for (const bolt of projectileSystem.seekingBolts) {
         const screenX = getScreenX(bolt.x);
         
-        // Draw trail
+        ctx.save();
+        
+        // Draw trail (more visible)
         for (let i = 0; i < bolt.trail.length; i++) {
             const trailPoint = bolt.trail[i];
             const trailScreenX = getScreenX(trailPoint.x);
-            const trailAlpha = trailPoint.life / 15;
+            const trailAlpha = (trailPoint.life / 15) * 0.8; // More visible trail
+            const trailSize = 3 + (trailPoint.life / 15) * 2; // Variable size trail
             
-            ctx.fillStyle = `rgba(0, 255, 255, ${trailAlpha * 0.4})`;
-            ctx.fillRect(trailScreenX - 2, trailPoint.y - 2, 4, 4);
+            ctx.fillStyle = `rgba(0, 255, 255, ${trailAlpha})`;
+            ctx.fillRect(trailScreenX - trailSize/2, trailPoint.y - trailSize/2, trailSize, trailSize);
         }
         
-        // Draw seeking bolt
+        // Draw outer glow for seeking bolt
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.4)';
+        ctx.fillRect(screenX - 8, bolt.y - 8, 16, 16);
+        
+        // Draw main seeking bolt (larger and more visible)
         ctx.fillStyle = '#00FFFF';
-        ctx.fillRect(screenX - 4, bolt.y - 4, 8, 8);
+        ctx.fillRect(screenX - 6, bolt.y - 6, 12, 12);
         
-        // Draw core
+        // Draw bright core
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(screenX - 2, bolt.y - 2, 4, 4);
+        ctx.fillRect(screenX - 3, bolt.y - 3, 6, 6);
         
-        // Draw seeking indicator if has target
+        // Add pulsing effect
+        const pulse = 0.7 + Math.sin(Date.now() * 0.01) * 0.3;
+        ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+        ctx.fillRect(screenX - 1, bolt.y - 1, 2, 2);
+        
+        // Draw seeking indicator if has target (more visible)
         if (bolt.target) {
             const targetScreenX = getScreenX(bolt.target.x + bolt.target.width/2);
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = `rgba(0, 255, 255, 0.6)`;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 4]);
+            ctx.lineDashOffset = Date.now() * 0.01;
             ctx.beginPath();
             ctx.moveTo(screenX, bolt.y);
             ctx.lineTo(targetScreenX, bolt.target.y + bolt.target.height/2);
             ctx.stroke();
             ctx.setLineDash([]);
         }
+        
+        ctx.restore();
     }
 }
 
@@ -765,6 +940,9 @@ window.projectileSystem = projectileSystem;
 window.ProjectileType = ProjectileType;
 window.PROJECTILE_CONFIGS = PROJECTILE_CONFIGS;
 
+// ========================================
+// EXPORTS
+// ========================================
 
 export {
     ProjectileType,
@@ -776,7 +954,21 @@ export {
     unlockProjectileType,
     equipProjectileType,
     unequipProjectileType,
-	renderEnhancedProjectiles
-	PROJECTILE_CONFIGS
+    renderEnhancedProjectiles,
+    PROJECTILE_CONFIGS
 };
 
+// Default export for compatibility
+export default {
+    ProjectileType,
+    projectileSystem,
+    cycleProjectileType,
+    getCurrentProjectileType,
+    enhancedShoot,
+    updateEnhancedProjectiles,
+    unlockProjectileType,
+    equipProjectileType,
+    unequipProjectileType,
+    renderEnhancedProjectiles,
+    PROJECTILE_CONFIGS
+};

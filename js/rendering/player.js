@@ -1,9 +1,9 @@
-// rendering/player.js - Dungeon Character Rendering with SPRITE SUPPORT
+// js/rendering/player.js - Fixed Shoot Detection for Enhanced Projectile System
 
 import { activeDropBuffs } from '../systems.js';
 import { spriteManager } from './sprite-system.js';
-import { GAME_CONSTANTS } from '../core/constants.js'; // DIESER IMPORT FEHLT!
-import { keys } from '../core/input.js'; // NEU: Für Shoot-Detection
+import { GAME_CONSTANTS } from '../core/constants.js';
+import { keys } from '../core/input.js';
 
 export function drawPlayer(ctx, x, y, player, gameState) {
     // Use sprite renderer if sprites are loaded
@@ -22,35 +22,31 @@ export function drawPlayer(ctx, x, y, player, gameState) {
     // (Der original Code bleibt als Fallback)
 }
 
-// NEW FUNCTION: Sprite-based player rendering
+// FIXED: Enhanced sprite-based player rendering with better shoot detection
 function drawPlayerSprite(ctx, x, y, player, gameState) {
-    const scale = 4; // Same scale as original
+    const scale = 4;
     const isInvulnerable = gameState.postBuffInvulnerability > 0 || 
                           gameState.postDamageInvulnerability > 0;
     const facingLeft = player.facingDirection === -1;
     
-    // HIER IST DIE ZEILE DIE DU GESUCHT HAST:
-    // Sprite scaling - adjust 480 to match your actual sprite frame size
-    const spriteScale = (player.width / 480) * scale; // 480 ist deine Frame-Größe!
-    const offsetX = -62; // Adjust if sprite needs horizontal offset
-    const offsetY = -54; // Adjust if sprite needs vertical offset
+    const spriteScale = (player.width / 480) * scale;
+    const offsetX = -62;
+    const offsetY = -54;
     
-    // KORREKTE BERECHNUNG für 480x480 Sprites
     const SPRITE_FRAME_WIDTH = 480;
     const SPRITE_FRAME_HEIGHT = 480;
     const renderedSpriteWidth = SPRITE_FRAME_WIDTH * spriteScale;
     const renderedSpriteHeight = SPRITE_FRAME_HEIGHT * spriteScale;
     
-    // Zentrum des gerenderten Sprites
     const centerX = x + offsetX + (renderedSpriteWidth / 2);
     const centerY = y + offsetY + (renderedSpriteHeight / 2);
     
-    // Effekt-Skalierung
-    const effectScale = spriteScale * 4.0; // Kann angepasst werden
+    const effectScale = spriteScale * 4.0;
     
     // Initialize animation timers if not exists
     if (!player.shootAnimTimer) player.shootAnimTimer = 0;
     if (!player.hitAnimTimer) player.hitAnimTimer = 0;
+    if (!player.lastShootTime) player.lastShootTime = 0;
     
     // Blink effect when invulnerable
     if (isInvulnerable) {
@@ -68,12 +64,12 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
     // Determine current state based on player actions
     let currentState = 'idle';
     
-    // KORRIGIERT: Hit state - verlängerte Dauer
+    // Hit state - extended duration
     if (player.damageResistance > 0 && player.damageResistance > GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME - 30) {
-        currentState = 'hit'; // Zeige Hit-Animation für 30 Frames (0.5 Sekunden)
+        currentState = 'hit';
         player.hitAnimTimer = 30;
     }
-    // KORRIGIERT: Shoot state - mit Timer
+    // FIXED: Enhanced shoot state detection
     else if (player.shootAnimTimer > 0) {
         currentState = 'shoot';
         player.shootAnimTimer--;
@@ -87,21 +83,58 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
         currentState = 'run';
     }
     
-    // KORRIGIERT: Trigger shoot animation when shooting
-    if ((gameState.bullets > 0 || gameState.isBerserker) && keys.s && !player.wasSpacePressed) {
-        player.shootAnimTimer = 15; // Zeige Shoot-Animation für 15 Frames (0.25 Sekunden)
+    // FIXED: Enhanced shoot detection for all projectile types
+    const currentTime = Date.now();
+    const isShootingInput = (keys.s || keys.Space) && !player.wasSpacePressed;
+    const hasBullets = gameState.bullets > 0 || gameState.isBerserker;
+    const canShoot = hasBullets && !gameState.isCorrupted;
+    
+    // Check for actual shooting (either input or recent shoot action)
+    const timeSinceLastShoot = currentTime - player.lastShootTime;
+    const recentlyShot = timeSinceLastShoot < 150; // 150ms window
+    
+    // Enhanced shoot detection
+    if (canShoot && (isShootingInput || recentlyShot)) {
+        // Track when we detect a shoot attempt
+        if (isShootingInput) {
+            player.lastShootTime = currentTime;
+        }
+        
+        // Trigger shoot animation
+        if (player.shootAnimTimer <= 0) {
+            player.shootAnimTimer = 15; // Show shoot animation for 15 frames
+        }
     }
     
-   // Korrigierte drawPlayerSprite Funktion - Buff-Effekte Teil
-// Ersetze den Buff-Effekte Abschnitt in player.js mit diesem Code:
-
-    ctx.save(); // Haupt-Save für alle Effekte
+    // Alternative method: Check if enhanced projectile system fired anything
+    if (window.projectileSystem) {
+        const anyProjectileOnCooldown = 
+            window.projectileSystem.normalCooldown > 0 ||
+            window.projectileSystem.laserCooldown > 0 ||
+            window.projectileSystem.shotgunCooldown > 0 ||
+            window.projectileSystem.lightningCooldown > 0 ||
+            window.projectileSystem.seekingCooldown > 0;
+        
+        if (anyProjectileOnCooldown && player.shootAnimTimer <= 0) {
+            player.shootAnimTimer = 10; // Shorter animation for cooldown-based detection
+        }
+    }
+    
+    // Monitor bullet count decrease as shooting indicator
+    if (!player.lastBulletCount) player.lastBulletCount = gameState.bullets;
+    if (gameState.bullets < player.lastBulletCount && !gameState.isBerserker) {
+        player.shootAnimTimer = Math.max(player.shootAnimTimer, 12);
+        player.lastShootTime = currentTime;
+    }
+    player.lastBulletCount = gameState.bullets;
+    
+    ctx.save();
     
     // Apply all visual effects before drawing sprite
     
-    // Shield Effect - ISOLIERT
+    // Shield Effect
     if (gameState.shieldCharges > 0) {
-        ctx.save(); // Isoliere Shield-Effekt
+        ctx.save();
         for (let i = 0; i < Math.min(gameState.shieldCharges, 3); i++) {
             const shieldPulse = 0.7 + Math.sin(Date.now() * 0.003 + i * 0.5) * 0.3;
             const shieldRadius = (35 + (i * 8)) * effectScale;
@@ -118,12 +151,12 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
             ctx.arc(centerX, centerY, shieldRadius, 0, Math.PI * 2);
             ctx.fill();
         }
-        ctx.restore(); // Stelle Canvas-State wieder her
+        ctx.restore();
     }
     
-    // Corruption Effect - ISOLIERT
+    // Corruption Effect
     if (gameState.isCorrupted) {
-        ctx.save(); // Isoliere Corruption-Effekt
+        ctx.save();
         const corruptionIntensity = gameState.corruptionTimer / 120;
         const corruptionPulse = 0.5 + Math.sin(Date.now() * 0.02) * 0.5;
         
@@ -136,15 +169,12 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
         corruptionGradient.addColorStop(1, 'rgba(25, 25, 112, 0)');
         ctx.fillStyle = corruptionGradient;
         ctx.fillRect(centerX - 50 * effectScale, centerY - 50 * effectScale, 100 * effectScale, 100 * effectScale);
-        
-        // Corruption particles... (rest of corruption code)
-        
-        ctx.restore(); // Stelle Canvas-State wieder her
+        ctx.restore();
     }
     
-    // Score Multiplier Effect - ISOLIERT
+    // Score Multiplier Effect
     if (activeDropBuffs.scoreMultiplier) {
-        ctx.save(); // Isoliere Score-Multiplier-Effekt
+        ctx.save();
         const goldPulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.3;
         const gradient = ctx.createRadialGradient(
             centerX, centerY, 0,
@@ -166,14 +196,13 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
             ctx.fillStyle = `rgba(255, 215, 0, ${goldPulse})`;
             ctx.fillRect(sparkX - sparkSize, sparkY - sparkSize, sparkSize * 2, sparkSize * 2);
         }
-        ctx.restore(); // Stelle Canvas-State wieder her
+        ctx.restore();
     }
     
-    // Berserker Mode Fire - ISOLIERT
+    // Berserker Mode Fire
     if (gameState.isBerserker) {
-        ctx.save(); // Isoliere Berserker-Effekt
+        ctx.save();
         
-        // Berserker fire effect code...
         for (let i = 0; i < 12; i++) {
             const fireTime = Date.now() * 0.008 + i * 0.5;
             const angle = (i / 12) * Math.PI * 2;
@@ -193,15 +222,12 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
                 ctx.fillRect(fireX - fireSize/4, fireY - fireSize * 0.5, fireSize * 0.4, fireSize);
             }
         }
-        
-        // Rest of berserker code...
-        
-        ctx.restore(); // WICHTIG: Stelle Canvas-State wieder her
+        ctx.restore();
     }
     
-    // Jump Boost Springs - ISOLIERT
+    // Jump Boost Springs
     if (activeDropBuffs.jumpBoost) {
-        ctx.save(); // Isoliere Jump-Boost-Effekt
+        ctx.save();
         ctx.strokeStyle = '#FF4500';
         ctx.lineWidth = 2 * effectScale;
         const springBounce = Math.abs(Math.sin(Date.now() * 0.008)) * 3 * effectScale;
@@ -226,12 +252,12 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
                     3 * effectScale, 0, Math.PI);
             ctx.stroke();
         }
-        ctx.restore(); // Stelle Canvas-State wieder her
+        ctx.restore();
     }
     
-    // Magnet Mode - ISOLIERT
+    // Magnet Mode
     if (activeDropBuffs.magnetMode) {
-        ctx.save(); // Isoliere Magnet-Effekt
+        ctx.save();
         const magnetPulse = Date.now() * 0.002;
         ctx.strokeStyle = 'rgba(255, 105, 180, 0.4)';
         ctx.lineWidth = 1 * effectScale;
@@ -253,12 +279,12 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
             ctx.fillRect(particleX - particleSize, particleY - particleSize, 
                          particleSize * 2, particleSize * 2);
         }
-        ctx.restore(); // Stelle Canvas-State wieder her
+        ctx.restore();
     }
     
-    // Time Slow - ISOLIERT
+    // Time Slow
     if (activeDropBuffs.timeSlow) {
-        ctx.save(); // Isoliere Time-Slow-Effekt
+        ctx.save();
         const timePulse = Date.now() * 0.001;
         ctx.strokeStyle = 'rgba(0, 206, 209, 0.3)';
         ctx.lineWidth = 2 * effectScale;
@@ -269,18 +295,13 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
         ctx.arc(centerX, centerY, 45 * effectScale, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.restore(); // Stelle Canvas-State wieder her
+        ctx.restore();
     }
     
-    // Ghost Walking - ISOLIERT
-// Korrigierter Ghost Walking Effekt für player.js
-// Ersetze den Ghost Walking Abschnitt und das finale Sprite-Drawing:
-
-    // Ghost Walking Trail - NUR für den Trail
+    // Ghost Walking Trail
     if (gameState.isGhostWalking) {
-        ctx.save(); // Isoliere Ghost-Trail
+        ctx.save();
         
-        // Ghost trail - semi-transparente Kopien HINTER dem Hauptsprite
         for (let i = 1; i <= 3; i++) {
             ctx.globalAlpha = 0.1 / i;
             spriteManager.drawSprite(
@@ -291,7 +312,7 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
             );
         }
         
-        ctx.restore(); // Restore nach Trail
+        ctx.restore();
     }
     
     // Death state
@@ -300,9 +321,9 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
         ctx.filter = 'grayscale(100%)';
     }
     
-    // Ghost Walking Transparenz für Hauptsprite
+    // Ghost Walking Transparency for main sprite
     if (gameState.isGhostWalking) {
-        ctx.globalAlpha = 0.5; // Mache Hauptsprite semi-transparent
+        ctx.globalAlpha = 0.5;
     }
     
     // DRAW THE ACTUAL SPRITE
@@ -312,10 +333,5 @@ function drawPlayerSprite(ctx, x, y, player, gameState) {
         gameState.deltaTime
     );
     
-    ctx.restore(); // Haupt-Restore
-	
-}
-// Original pixel art function remains as fallback
-function drawDungeonCharacter(ctx, x, y, facingLeft = false, isDead = false) {
-    // ... keep all your original pixel art code here ...
+    ctx.restore();
 }

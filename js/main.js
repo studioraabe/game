@@ -14,7 +14,6 @@ import {
 import { spriteManager } from './rendering/sprite-system.js';
 import { initRoguelikeIntegration, createStatDisplay, startStatsUpdateLoop } from './roguelike-integration.js';
 import './projectile-buff-integration.js';
-import enhancedProjectileSystem from './enhanced-projectile-system.js';
 
 
 

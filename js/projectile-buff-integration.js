@@ -1,6 +1,12 @@
 // js/projectile-buff-integration.js - Buff System Integration for Projectiles
 
-import { ProjectileType, unlockProjectileType, equipProjectileType } from './enhanced-projectile-system.js';
+import { 
+    ProjectileType, 
+    unlockProjectileType, 
+    equipProjectileType,
+    getCurrentProjectileType,
+    cycleProjectileType
+} from './enhanced-projectile-system.js';
 
 // ========================================
 // PROJECTILE-RELATED BUFFS
@@ -142,6 +148,15 @@ export const PROJECTILE_BUFFS = [
 // ========================================
 
 export function createEnhancedBuffSystem() {
+	
+	
+	if (!window.gameState) {
+        console.warn('⚠️ Game state not ready, deferring buff system creation');
+        setTimeout(createEnhancedBuffSystem, 100);
+        return;
+    }
+    
+	
     // Import existing stat buffs
     const existingBuffs = window.STAT_BUFFS || [];
     
@@ -181,7 +196,7 @@ export function createProjectileUI() {
     projectileUI.style.cssText = `
         position: absolute;
         top: 60px;
-        right: 20px;
+        right: -240px;
         background: rgba(0, 0, 0, 0.7);
         border: 2px solid #00ff88;
         border-radius: 8px;
@@ -282,6 +297,247 @@ function updateProjectileUI() {
     `;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function createCooldownDisplay() {
+    // Check if cooldown display already exists
+    if (document.getElementById('projectileCooldownDisplay')) return;
+    
+    const gameContainer = document.getElementById('gameContainer');
+    if (!gameContainer) return;
+    
+    const cooldownDisplay = document.createElement('div');
+    cooldownDisplay.id = 'projectileCooldownDisplay';
+    cooldownDisplay.style.cssText = `
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 15;
+        pointer-events: none;
+    `;
+    
+    gameContainer.appendChild(cooldownDisplay);
+    
+    // Add CSS for circular progress
+    if (!document.getElementById('cooldownDisplayStyles')) {
+        const style = document.createElement('style');
+        style.id = 'cooldownDisplayStyles';
+        style.textContent = `
+            .weapon-cooldown-item {
+                position: relative;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.8);
+                border-radius: 50%;
+                border: 2px solid #333;
+                transition: all 0.2s ease;
+            }
+            
+            .weapon-cooldown-item.active {
+                border-color: #00ff88;
+                box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+                transform: scale(1.1);
+            }
+            
+            .weapon-cooldown-item.on-cooldown {
+                border-color: #ff6b6b;
+            }
+            
+            .weapon-icon {
+                font-size: 20px;
+                z-index: 2;
+                filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+            }
+            
+            .cooldown-progress {
+                position: absolute;
+                top: -2px;
+                left: -2px;
+                width: 54px;
+                height: 54px;
+                border-radius: 50%;
+                background: conic-gradient(
+                    from 0deg,
+                    #ff6b6b 0deg,
+                    #ff6b6b var(--progress),
+                    transparent var(--progress),
+                    transparent 360deg
+                );
+                z-index: 1;
+            }
+            
+            .weapon-name {
+                position: absolute;
+                bottom: -18px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 10px;
+                font-family: 'Rajdhani', sans-serif;
+                font-weight: bold;
+                color: #ccc;
+                text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+                white-space: nowrap;
+            }
+            
+            .weapon-cooldown-item.active .weapon-name {
+                color: #00ff88;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Start update loop
+    if (!window.cooldownDisplayInterval) {
+        window.cooldownDisplayInterval = setInterval(updateCooldownDisplay, 50); // More frequent updates for smooth animation
+    }
+}
+
+function updateCooldownDisplay() {
+    const display = document.getElementById('projectileCooldownDisplay');
+    if (!display || !window.projectileSystem) return;
+    
+    const currentType = window.getCurrentProjectileType();
+    const equippedTypes = window.projectileSystem.equippedTypes || ['normal'];
+    
+    // Get weapon configs and icons
+    const weaponInfo = {
+        'normal': { icon: '⚡', name: 'Bolt', cooldownKey: 'normalCooldown' },
+        'laserBeam': { icon: '🔵', name: 'Laser', cooldownKey: 'laserCooldown' },
+        'energyShotgun': { icon: '💥', name: 'Shotgun', cooldownKey: 'shotgunCooldown' },
+        'chainLightning': { icon: '⚡', name: 'Chain', cooldownKey: 'lightningCooldown' },
+        'seekingBolt': { icon: '🎯', name: 'Seeking', cooldownKey: 'seekingCooldown' }
+    };
+    
+    let html = '';
+    
+    // Only show equipped weapons
+    equippedTypes.forEach((weaponType, index) => {
+        const info = weaponInfo[weaponType];
+        if (!info) return;
+        
+        const config = window.PROJECTILE_CONFIGS[weaponType];
+        if (!config) return;
+        
+        const cooldownValue = window.projectileSystem[info.cooldownKey] || 0;
+        const maxCooldown = config.cooldown || 1;
+        const isActive = currentType === weaponType;
+        const isOnCooldown = cooldownValue > 0;
+        
+        // Calculate progress percentage (0-100)
+        const progressPercent = isOnCooldown ? (cooldownValue / maxCooldown) * 100 : 0;
+        const progressDegrees = (progressPercent / 100) * 360;
+        
+        const timeLeft = Math.ceil(cooldownValue / 60);
+        
+        html += `
+            <div class="weapon-cooldown-item ${isActive ? 'active' : ''} ${isOnCooldown ? 'on-cooldown' : ''}"
+                 style="margin-bottom: ${index < equippedTypes.length - 1 ? '4px' : '0'};">
+                ${isOnCooldown ? `
+                    <div class="cooldown-progress" style="--progress: ${progressDegrees}deg;"></div>
+                ` : ''}
+                <div class="weapon-icon">${info.icon}</div>
+                <div class="weapon-name">${info.name}</div>
+            </div>
+        `;
+    });
+    
+    display.innerHTML = html;
+}
+
+// Clean up old display and create new one
+function reinitializeCooldownDisplay() {
+    const existing = document.getElementById('projectileCooldownDisplay');
+    if (existing) {
+        existing.remove();
+    }
+    
+    if (window.cooldownDisplayInterval) {
+        clearInterval(window.cooldownDisplayInterval);
+        window.cooldownDisplayInterval = null;
+    }
+    
+    createCooldownDisplay();
+}
+
+// Initialize the cooldown display
+function initializeCooldownDisplay() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', createCooldownDisplay);
+    } else {
+        setTimeout(createCooldownDisplay, 1000); // Delay to ensure projectile system is loaded
+    }
+}
+
+// Auto-initialize
+initializeCooldownDisplay();
+
+// Make functions available globally
+window.createCooldownDisplay = createCooldownDisplay;
+window.updateCooldownDisplay = updateCooldownDisplay;
+window.reinitializeCooldownDisplay = reinitializeCooldownDisplay;
+
+// Debug commands
+window.clearLaserBeams = function() {
+    if (window.projectileSystem) {
+        const count = window.projectileSystem.laserBeams.length;
+        window.projectileSystem.laserBeams.length = 0;
+        console.log(`Cleared ${count} laser beams`);
+    }
+};
+
+window.debugLaserBeams = function() {
+    if (window.projectileSystem) {
+        console.log('Laser Beams:', window.projectileSystem.laserBeams);
+        console.log('Laser Cooldown:', window.projectileSystem.laserCooldown);
+    }
+};
+
+window.debugWeapons = function() {
+    if (window.projectileSystem) {
+        console.log('Equipped Types:', window.projectileSystem.equippedTypes);
+        console.log('Current Type:', window.getCurrentProjectileType());
+        console.log('Cooldowns:', {
+            normal: window.projectileSystem.normalCooldown,
+            laser: window.projectileSystem.laserCooldown,
+            shotgun: window.projectileSystem.shotgunCooldown,
+            lightning: window.projectileSystem.lightningCooldown,
+            seeking: window.projectileSystem.seekingCooldown
+        });
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ========================================
 // INTEGRATION HOOKS
 // ========================================
@@ -307,12 +563,13 @@ export function integrateProjectileSystem() {
         }
     };
     
-    // Hook into the render loop
+    // Hook into the render loop - FIXED
     const originalRender = window.render;
     window.render = function(ctx) {
         if (originalRender) originalRender(ctx);
         
-        if (window.renderEnhancedProjectiles) {
+        // Only call renderEnhancedProjectiles if we have a valid context
+        if (ctx && window.renderEnhancedProjectiles) {
             window.renderEnhancedProjectiles(ctx);
         }
     };
@@ -325,6 +582,7 @@ export function integrateProjectileSystem() {
     
     console.log('🚀 Projectile system fully integrated!');
 }
+
 
 // ========================================
 // AUTO-INITIALIZE
