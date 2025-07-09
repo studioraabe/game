@@ -66,7 +66,7 @@ const PROJECTILE_CONFIGS = {
     [ProjectileType.LASER_BEAM]: {
         name: "🔵 Laser Beam",
         desc: "Instant piercing beam",
-        cooldown: 450,
+        cooldown: 120,
         cost: 10,
         damage: 1.5,
         speed: 0, // Instant
@@ -77,7 +77,7 @@ const PROJECTILE_CONFIGS = {
     [ProjectileType.ENERGY_SHOTGUN]: {
         name: "💥 Energy Shotgun",
         desc: "Spreads 5 bolts in a cone",
-        cooldown: 300,
+        cooldown: 90,
         cost: 5,
         damage: 0.7,
         speed: 20,
@@ -130,8 +130,19 @@ function getCooldownProperty(projectileType) {
 // PROJECTILE TYPE CYCLING
 // ========================================
 
-function cycleProjectileType(direction = 1) {
-    if (projectileSystem.equippedTypes.length <= 1) return;
+ function cycleProjectileType(direction = 1) {
+    // Only cycle if player has more than 1 weapon type
+    if (projectileSystem.equippedTypes.length <= 1) {
+        // Show a message that only 1 weapon is available
+        if (window.createScorePopup && window.player) {
+            window.createScorePopup(
+                window.player.x + window.player.width/2,
+                window.player.y - 40,
+                'Need More Weapons!'
+            );
+        }
+        return;
+    }
     
     projectileSystem.currentTypeIndex = (projectileSystem.currentTypeIndex + direction) % projectileSystem.equippedTypes.length;
     if (projectileSystem.currentTypeIndex < 0) {
@@ -142,15 +153,17 @@ function cycleProjectileType(direction = 1) {
     const config = PROJECTILE_CONFIGS[currentType];
     
     // Show weapon switch notification
-    if (window.createScorePopup) {
+    if (window.createScorePopup && window.player) {
         window.createScorePopup(
-            player.x + player.width/2,
-            player.y - 40,
+            window.player.x + window.player.width/2,
+            window.player.y - 40,
             config.name
         );
     }
     
     soundManager.pickup();
+    
+    console.log(`🔄 Switched to: ${config.name} (${projectileSystem.currentTypeIndex + 1}/${projectileSystem.equippedTypes.length})`);
 }
 
 function getCurrentProjectileType() {

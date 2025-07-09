@@ -20,30 +20,30 @@ export const GAME_CONSTANTS = {
     PLAYER_BASE_HP: 100,
     PLAYER_HP_PER_LEVEL: 25,
     PLAYER_BASE_DAMAGE: 20,
-    PLAYER_DAMAGE_PER_LEVEL: 5,
+    PLAYER_DAMAGE_PER_LEVEL: 10,
 	
 	    PLAYER_BASE_HEALTH_REGEN: 0.5,    // 1 HP every 2 seconds
     PLAYER_BASE_BULLET_REGEN: 0.5,    // 1 bullet every 2 seconds
 	
 	    PLAYER_BASE_MAX_BULLETS: 100,        // Start with 100 bullets max
-    PLAYER_BULLETS_PER_LEVEL: 25,        // +25 bullets per level (matches HP scaling)
+    PLAYER_BULLETS_PER_LEVEL: 100,        // +25 bullets per level (matches HP scaling)
     
     // NEW: ENEMY SCALING MULTIPLIERS
-    ENEMY_HP_MULTIPLIER_PER_LEVEL: 1.5,
-    ENEMY_DAMAGE_MULTIPLIER_PER_LEVEL: 1.3
+    ENEMY_HP_MULTIPLIER_PER_LEVEL: 1.25,
+    ENEMY_DAMAGE_MULTIPLIER_PER_LEVEL: 1.2
 };
 
 // NEW: ENEMY BASE STATS OBJECT (separate from GAME_CONSTANTS)
 export const ENEMY_BASE_STATS = {
     bat: { hp: 20, damage: 10 },
-    spider: { hp: 30, damage: 15 },
+    spider: { hp: 30, damage: 10 },
     vampire: { hp: 50, damage: 20 },
-    skeleton: { hp: 100, damage: 15 },
-    wolf: { hp: 80, damage: 25 },
+    skeleton: { hp: 100, damage: 20 },
+    wolf: { hp: 80, damage: 20 },
     alphaWolf: { hp: 200, damage: 40 },
     rock: { hp: 1, damage: 0 },
-    teslaCoil: { hp: 1, damage: 50 },
-    frankensteinTable: { hp: 1, damage: 50 },
+    teslaCoil: { hp: 1, damage: 20 },
+    frankensteinTable: { hp: 1, damage: 20 },
     sarcophagus: { hp: 1, damage: 0 },
     boltBox: { hp: 1, damage: 0 }
 };
@@ -254,8 +254,8 @@ export const SPAWN_INTERVAL_DISTANCE = 1;
 
 // Canvas dimensions (will be set by main.js)
 export const CANVAS = {
-    width: 888,
-    height: 488,
+    width: 1024,
+    height: 600,
     groundY: 340
 };
 

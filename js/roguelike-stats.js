@@ -48,6 +48,8 @@ const ENHANCED_BUFF_EFFECTS = {
 
 
 
+
+
 export const STAT_BUFFS = [
     // Original buffs from DUNGEON_THEME
     { 
@@ -79,21 +81,33 @@ export const STAT_BUFFS = [
         }
     },
     
-    // FIXED: Enhanced regeneration buffs
+    // Enhanced regeneration buffs
     {
         id: 'survivalInstinct',
         title: '💚 Survival Instinct',
         desc: 'Regenerate 1 HP every 3 seconds (+66% health regen)',
-        effect: ENHANCED_BUFF_EFFECTS.survivalInstinct
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.healthRegen += 0.333;
+                gameState.playerStats.selectedBuffs.push('survivalInstinct');
+            }
+        }
     },
     {
         id: 'bulletStorm',
         title: '🔥 Bullet Storm',
         desc: 'Regenerate 1 bullet every 2 seconds (doubles bullet regen)',
-        effect: ENHANCED_BUFF_EFFECTS.bulletStorm
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.bulletRegen += 0.5;
+                gameState.playerStats.selectedBuffs.push('bulletStorm');
+            }
+        }
     },
     
-    // Other stat-based buffs
+    // Combat buffs
     {
         id: 'vampiricStrikes',
         title: '🩸 Vampiric Strikes',
@@ -103,7 +117,6 @@ export const STAT_BUFFS = [
             if (gameState && gameState.playerStats) {
                 gameState.playerStats.lifeSteal += 2;
                 gameState.playerStats.selectedBuffs.push('vampiricStrikes');
-                console.log(`✅ Vampiric Strikes applied! Life steal: ${gameState.playerStats.lifeSteal}%`);
             }
         }
     },
@@ -117,7 +130,6 @@ export const STAT_BUFFS = [
                 gameState.playerStats.damageBonus += 25;
                 gameState.playerStats.attackSpeed += 15;
                 gameState.playerStats.selectedBuffs.push('berserkerRage');
-                console.log(`✅ Berserker Rage applied! Damage: +${gameState.playerStats.damageBonus}%, Attack Speed: +${gameState.playerStats.attackSpeed}%`);
             }
         }
     },
@@ -131,7 +143,6 @@ export const STAT_BUFFS = [
                 gameState.playerStats.critChance += 20;
                 gameState.playerStats.critDamage = 2.0;
                 gameState.playerStats.selectedBuffs.push('criticalFocus');
-                console.log(`✅ Critical Focus applied! Crit chance: ${gameState.playerStats.critChance}%`);
             }
         }
     },
@@ -145,16 +156,15 @@ export const STAT_BUFFS = [
                 gameState.playerStats.moveSpeed += 20;
                 gameState.playerStats.projectileSpeed += 20;
                 gameState.playerStats.selectedBuffs.push('swiftDeath');
-                console.log(`✅ Swift Death applied! Move speed: +${gameState.playerStats.moveSpeed}%, Projectile speed: +${gameState.playerStats.projectileSpeed}%`);
             }
         }
     },
     
-    // PROJECTILE BUFFS - (keep existing projectile buffs as they are)
+    // PROJECTILE BUFFS - Weapon unlocks (cycling is automatic)
     {
         id: 'laserMastery',
         title: '🔵 Laser Mastery',
-        desc: 'Unlock Laser Beam projectiles - instant piercing damage',
+        desc: 'Unlock Laser Beam - instant piercing damage (Q/E to cycle)',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
@@ -168,7 +178,7 @@ export const STAT_BUFFS = [
     {
         id: 'shotgunBlast',
         title: '💥 Shotgun Blast',
-        desc: 'Unlock Energy Shotgun - spread attack with 5 pellets',
+        desc: 'Unlock Energy Shotgun - 5 pellet spread (Q/E to cycle)',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
@@ -182,7 +192,7 @@ export const STAT_BUFFS = [
     {
         id: 'chainLightning',
         title: '⚡ Chain Lightning',
-        desc: 'Unlock Chain Lightning - jumps between 3 enemies',
+        desc: 'Unlock Chain Lightning - jumps 3 enemies (Q/E to cycle)',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
@@ -196,7 +206,7 @@ export const STAT_BUFFS = [
     {
         id: 'seekingBolt',
         title: '🎯 Seeking Bolt',
-        desc: 'Unlock Seeking Bolt - homes in on nearest enemy',
+        desc: 'Unlock Seeking Bolt - homes on enemies (Q/E to cycle)',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
@@ -207,35 +217,54 @@ export const STAT_BUFFS = [
             }
         }
     },
+    
+    // REPLACE weaponMaster with something more useful
     {
-        id: 'weaponMaster',
-        title: '🗡️ Weapon Master',
-        desc: 'Unlock weapon cycling - switch between projectile types',
+        id: 'energyEfficiency',
+        title: '⚡ Energy Efficiency',
+        desc: 'All weapons cost 1 less bullet (minimum 1)',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.selectedBuffs.push('weaponMaster');
+                gameState.playerStats.selectedBuffs.push('energyEfficiency');
                 
-                // Enable weapon cycling
-                if (window.projectileSystem) {
-                    window.projectileSystem.weaponCyclingEnabled = true;
+                // Reduce all projectile costs by 1 (minimum 1)
+                if (window.PROJECTILE_CONFIGS) {
+                    Object.keys(window.PROJECTILE_CONFIGS).forEach(type => {
+                        const config = window.PROJECTILE_CONFIGS[type];
+                        config.cost = Math.max(1, config.cost - 1);
+                    });
+                    
+                    console.log('⚡ Energy Efficiency: Reduced all weapon costs by 1');
                 }
             }
         }
     },
+    
     {
         id: 'rapidFire',
         title: '🔥 Rapid Fire',
-        desc: '+50% attack speed and reduced projectile cooldowns',
+        desc: '+50% attack speed and -30% weapon cooldowns',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
                 gameState.playerStats.attackSpeed += 50;
                 gameState.playerStats.selectedBuffs.push('rapidFire');
+                
+                // Reduce all projectile cooldowns by 30%
+                if (window.PROJECTILE_CONFIGS) {
+                    Object.keys(window.PROJECTILE_CONFIGS).forEach(type => {
+                        const config = window.PROJECTILE_CONFIGS[type];
+                        config.cooldown = Math.floor(config.cooldown * 0.7);
+                    });
+                    
+                    console.log('🔥 Rapid Fire: Reduced all weapon cooldowns by 30%');
+                }
             }
         }
     }
 ];
+
 
 // Update available buffs in gameState for selection screen
 export function initializeStatBuffs() {

@@ -359,15 +359,17 @@ function handleKeyDown(e) {
     if (inputSettings.inputMode === 'controller') return; // Ignore keyboard when controller is active
 
 
-	if (e.code === 'KeyQ' && gameState.gameRunning) {
-		e.preventDefault();
-		cycleProjectileType(-1); // Previous weapon
-	}
+ if (e.code === 'KeyQ' && gameState.gameRunning) {
+        e.preventDefault();
+        cycleProjectileType(-1); // Previous weapon
+        return;
+    }
 
-	if (e.code === 'KeyE' && gameState.gameRunning) {
-		e.preventDefault();
-		cycleProjectileType(1); // Next weapon
-	}
+    if (e.code === 'KeyE' && gameState.gameRunning) {
+        e.preventDefault();
+        cycleProjectileType(1); // Next weapon
+        return;
+    }
 
     // Escape key for pause
     if (e.code === 'Escape') {

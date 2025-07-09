@@ -62,15 +62,22 @@ export const PROJECTILE_BUFFS = [
         }
     },
     {
-        id: 'projectileSpeed',
-        title: '⚡ Projectile Velocity',
-        desc: '+30% projectile speed and +20% damage',
+        id: 'energyEfficiency',
+        title: '⚡ Energy Efficiency',
+        desc: 'All projectiles cost 1 less bullet (minimum 1)',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.projectileSpeed += 30;
-                gameState.playerStats.damageBonus += 20;
-                gameState.playerStats.selectedBuffs.push('projectileSpeed');
+                gameState.playerStats.selectedBuffs.push('energyEfficiency');
+                
+                // Reduce all projectile costs by 1 (minimum 1)
+                if (window.PROJECTILE_CONFIGS) {
+                    Object.keys(window.PROJECTILE_CONFIGS).forEach(type => {
+                        window.PROJECTILE_CONFIGS[type].cost = Math.max(1, 
+                            window.PROJECTILE_CONFIGS[type].cost - 1
+                        );
+                    });
+                }
             }
         }
     },
@@ -85,57 +92,11 @@ export const PROJECTILE_BUFFS = [
                 gameState.playerStats.selectedBuffs.push('rapidFire');
                 
                 // Reduce all projectile cooldowns by 30%
-                if (window.projectileSystem) {
+                if (window.PROJECTILE_CONFIGS) {
                     Object.keys(window.PROJECTILE_CONFIGS).forEach(type => {
                         window.PROJECTILE_CONFIGS[type].cooldown = Math.floor(
                             window.PROJECTILE_CONFIGS[type].cooldown * 0.7
                         );
-                    });
-                }
-            }
-        }
-    },
-    {
-        id: 'energyEfficiency',
-        title: '⚡ Energy Efficiency',
-        desc: 'All projectiles cost 1 less bullet (minimum 1)',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.selectedBuffs.push('energyEfficiency');
-                
-                // Reduce all projectile costs by 1 (minimum 1)
-                if (window.projectileSystem) {
-                    Object.keys(window.PROJECTILE_CONFIGS).forEach(type => {
-                        window.PROJECTILE_CONFIGS[type].cost = Math.max(1, 
-                            window.PROJECTILE_CONFIGS[type].cost - 1
-                        );
-                    });
-                }
-            }
-        }
-    },
-    {
-        id: 'weaponMaster',
-        title: '🗡️ Weapon Master',
-        desc: 'Unlock weapon cycling - switch between projectile types',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.selectedBuffs.push('weaponMaster');
-                
-                // Enable weapon cycling
-                if (window.projectileSystem) {
-                    window.projectileSystem.weaponCyclingEnabled = true;
-                    
-                    // Add input listener for weapon cycling
-                    document.addEventListener('keydown', (e) => {
-                        if (e.code === 'KeyQ' && gameState.gameRunning) {
-                            window.cycleProjectileType(-1); // Previous weapon
-                        }
-                        if (e.code === 'KeyE' && gameState.gameRunning) {
-                            window.cycleProjectileType(1); // Next weapon
-                        }
                     });
                 }
             }
