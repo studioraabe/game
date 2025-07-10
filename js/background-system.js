@@ -1,4 +1,4 @@
-// js/background-system.js - FINAL FIX (Ground as Static, Background as Parallax)
+// js/background-system.js - IMPROVED VERSION (Independent Speed Control)
 
 import { CANVAS } from './core/constants.js';
 import { camera } from './core/camera.js';
@@ -23,7 +23,7 @@ class BackgroundSystem {
             width: 0,
             height: 0,
             y: 0,
-            cameraRatio: 0.5,     // Background moves slower than camera
+            scrollSpeed: 0.3,     // Absolute speed (pixels per frame when camera moves 1 pixel)
             renderMode: 'parallax'
         };
         
@@ -86,40 +86,54 @@ class BackgroundSystem {
             this.lastCameraX = camera.x;
             console.log('🎨 Background system initialized');
             console.log(`📐 Ground: STATIC (like original environment)`);
-            console.log(`📐 Background: PARALLAX (ratio ${this.backgroundLayer.cameraRatio})`);
+            console.log(`📐 Background: PARALLAX (speed ${this.backgroundLayer.scrollSpeed})`);
         }
     }
     
-    configure(backgroundCameraRatio) {
-        this.backgroundLayer.cameraRatio = Math.max(0, Math.min(1, backgroundCameraRatio));
+    configure(backgroundScrollSpeed) {
+        this.backgroundLayer.scrollSpeed = Math.max(0, backgroundScrollSpeed);
         
         console.log(`🔧 Background configured:`);
         console.log(`   Ground: STATIC (stays with world objects)`);
-        console.log(`   Background: PARALLAX ratio ${this.backgroundLayer.cameraRatio}`);
-        console.log(`📐 Example: Camera moves 100px → Background moves ${this.backgroundLayer.cameraRatio * 100}px`);
+        console.log(`   Background: PARALLAX speed ${this.backgroundLayer.scrollSpeed}`);
+        console.log(`📐 Example: Camera moves 100px → Background moves ${this.backgroundLayer.scrollSpeed * 100}px`);
+        
+        // Show speed comparison
+        if (backgroundScrollSpeed < 1) {
+            console.log(`🐌 Background moves SLOWER than camera (${(backgroundScrollSpeed * 100).toFixed(1)}% speed)`);
+        } else if (backgroundScrollSpeed === 1) {
+            console.log(`🏃 Background moves SAME speed as camera (100% speed)`);
+        } else {
+            console.log(`🚀 Background moves FASTER than camera (${(backgroundScrollSpeed * 100).toFixed(1)}% speed)`);
+        }
     }
     
     update() {
         if (!this.initialized) return;
         
-        const cameraMovement = camera.x - this.lastCameraX;
+        // For simple formula approach, we don't need complex position tracking
         this.lastCameraX = camera.x;
         
-        if (Math.abs(cameraMovement) < 0.1) return;
-        
-        // Ground layer doesn't need updates (static rendering)
-        
-        // Update background layer (parallax)
-        if (this.backgroundLayer.loaded) {
-            this.updateBackgroundLayer(cameraMovement);
-        }
+        // The rendering handles everything with the simple formula
     }
     
     updateBackgroundLayer(cameraMovement) {
-        const parallaxMovement = cameraMovement * this.backgroundLayer.cameraRatio;
+        // TRUE PARALLAX CALCULATION:
+        // For parallax effect, background should move LESS than camera
+        // scrollSpeed = 0: background static (no movement)
+        // scrollSpeed = 0.5: background moves 50% as much as camera (slower)
+        // scrollSpeed = 1.0: background moves same as camera (no parallax)
+        // scrollSpeed > 1.0: background moves faster than camera
         
-        this.backgroundLayer.x1 -= parallaxMovement;
-        this.backgroundLayer.x2 -= parallaxMovement;
+        // Calculate how much the background should move relative to camera
+        const backgroundMovement = cameraMovement * this.backgroundLayer.scrollSpeed;
+        
+        // The background world position should lag behind camera movement
+        // We subtract the difference between camera movement and background movement
+        const parallaxOffset = cameraMovement - backgroundMovement;
+        
+        this.backgroundLayer.x1 -= parallaxOffset;
+        this.backgroundLayer.x2 -= parallaxOffset;
         
         // Wrap-around logic
         const viewLeft = camera.x - 200;
@@ -197,21 +211,36 @@ class BackgroundSystem {
     }
     
     renderParallaxLayer(ctx, layer) {
-        // PARALLAX RENDERING: Moving background
+        // EXPERIMENTAL: Simple reverse parallax formula
+        // screenX = -camera.x / 2
         
-        const screenX1 = Math.round(layer.x1 - camera.x);
-        const screenX2 = Math.round(layer.x2 - camera.x);
         const layerY = Math.round(layer.y);
         const layerWidth = Math.round(layer.width);
         const layerHeight = Math.round(layer.height);
-        const overlap = 1;
         
-        if (screenX1 > -layerWidth - overlap && screenX1 < CANVAS.width + overlap) {
-            ctx.drawImage(layer.image, screenX1, layerY, layerWidth + overlap, layerHeight);
+        // Test the simple formula
+        const baseScreenX = Math.round(-camera.x / 2);
+        
+        // Draw multiple tiles to ensure coverage
+        const tilesNeeded = Math.ceil(CANVAS.width / layerWidth) + 4;
+        const startTile = Math.floor(baseScreenX / layerWidth) - 2;
+        
+        for (let i = 0; i < tilesNeeded; i++) {
+            const screenX = baseScreenX + (i + startTile) * layerWidth;
+            
+            // Only draw if visible on screen
+            if (screenX > -layerWidth && screenX < CANVAS.width + layerWidth) {
+                ctx.drawImage(layer.image, screenX, layerY, layerWidth, layerHeight);
+            }
         }
         
-        if (screenX2 > -layerWidth - overlap && screenX2 < CANVAS.width + overlap) {
-            ctx.drawImage(layer.image, screenX2 - overlap, layerY, layerWidth + overlap, layerHeight);
+        // Debug info
+        if (window.debugBackgroundRendering) {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            ctx.fillRect(baseScreenX, layerY, 10, 10);
+            ctx.fillStyle = 'white';
+            ctx.font = '12px monospace';
+            ctx.fillText(`camera: ${Math.round(camera.x)}, screenX: ${baseScreenX}`, 10, 30);
         }
     }
     
@@ -223,17 +252,64 @@ class BackgroundSystem {
         ctx.fillRect(0, 0, CANVAS.width, CANVAS.groundY);
     }
     
-    // Set background parallax ratio (only setting that matters)
-    setBackgroundParallaxSpeed(ratio) {
-        this.backgroundLayer.cameraRatio = Math.max(0, Math.min(1, ratio));
-        console.log(`🔧 Background parallax ratio: ${this.backgroundLayer.cameraRatio}`);
-        console.log(`📐 Camera moves 100px → Background moves ${this.backgroundLayer.cameraRatio * 100}px`);
+    // NEW: Set background absolute scroll speed
+    setBackgroundScrollSpeed(speed) {
+        this.backgroundLayer.scrollSpeed = Math.max(0, speed);
+        console.log(`🔧 Background scroll speed: ${this.backgroundLayer.scrollSpeed}`);
+        
+        if (speed < 1) {
+            console.log(`🐌 Background moves SLOWER than camera (${(speed * 100).toFixed(1)}% speed)`);
+        } else if (speed === 1) {
+            console.log(`🏃 Background moves SAME speed as camera (100% speed)`);
+        } else {
+            console.log(`🚀 Background moves FASTER than camera (${(speed * 100).toFixed(1)}% speed)`);
+        }
+        
+        console.log(`📐 Camera moves 100px → Background moves ${this.backgroundLayer.scrollSpeed * 100}px`);
     }
     
-    // REMOVED: setGroundSpeed() - ground is always static
+    // DEPRECATED: Keep for compatibility but redirect to new method
+    setBackgroundParallaxSpeed(ratio) {
+        console.log(`⚠️ setBackgroundParallaxSpeed() is deprecated. Use setBackgroundScrollSpeed() instead.`);
+        this.setBackgroundScrollSpeed(ratio);
+    }
+    
+    // Ground speed is ignored (always static)
     setGroundSpeed(speed) {
         console.log(`⚠️ Ground speed ignored - ground is always static (like original environment)`);
-        console.log(`💡 Use setBackgroundParallaxSpeed() to control parallax effect`);
+        console.log(`💡 Use setBackgroundScrollSpeed() to control background movement`);
+    }
+    
+    // NEW: Preset speed configurations
+    setBackgroundPreset(preset) {
+        switch (preset) {
+            case 'static':
+                this.setBackgroundScrollSpeed(0);
+                console.log('🔧 Background preset: STATIC (no movement)');
+                break;
+            case 'slow':
+                this.setBackgroundScrollSpeed(0.2);
+                console.log('🔧 Background preset: SLOW (20% camera speed)');
+                break;
+            case 'medium':
+                this.setBackgroundScrollSpeed(0.5);
+                console.log('🔧 Background preset: MEDIUM (50% camera speed)');
+                break;
+            case 'normal':
+                this.setBackgroundScrollSpeed(1.0);
+                console.log('🔧 Background preset: NORMAL (same as camera)');
+                break;
+            case 'fast':
+                this.setBackgroundScrollSpeed(1.5);
+                console.log('🔧 Background preset: FAST (150% camera speed)');
+                break;
+            case 'very-fast':
+                this.setBackgroundScrollSpeed(2.0);
+                console.log('🔧 Background preset: VERY FAST (200% camera speed)');
+                break;
+            default:
+                console.warn(`❌ Unknown preset: ${preset}. Available: static, slow, medium, normal, fast, very-fast`);
+        }
     }
     
     getDebugInfo() {
@@ -244,7 +320,7 @@ class BackgroundSystem {
             cameraX: camera.x,
             groundRenderMode: this.groundLayer.renderMode,
             backgroundRenderMode: this.backgroundLayer.renderMode,
-            backgroundCameraRatio: this.backgroundLayer.cameraRatio,
+            backgroundScrollSpeed: this.backgroundLayer.scrollSpeed,
             backgroundX1: Math.round(this.backgroundLayer.x1),
             backgroundX2: Math.round(this.backgroundLayer.x2)
         };
@@ -254,15 +330,21 @@ class BackgroundSystem {
 export const backgroundSystem = new BackgroundSystem();
 
 export function initBackgroundSystem(groundImagePath = 'assets/ground.png', backgroundImagePath = 'assets/background.png') {
-    console.log('🌄 Initializing FINAL background system');
+    console.log('🌄 Initializing IMPROVED background system');
     console.log('📐 Ground: STATIC (like original environment)');
-    console.log('📐 Background: PARALLAX (configurable speed)');
+    console.log('📐 Background: PARALLAX (absolute speed control)');
     backgroundSystem.loadImages(groundImagePath, backgroundImagePath);
 }
 
-export function configureBackground(backgroundParallaxRatio = 0.5) {
-    console.log(`🔧 Configuring background parallax: ${backgroundParallaxRatio}`);
-    backgroundSystem.configure(backgroundParallaxRatio);
+export function configureBackground(backgroundScrollSpeed = 0.5) {
+    console.log(`🔧 Configuring background scroll speed: ${backgroundScrollSpeed}`);
+    backgroundSystem.configure(backgroundScrollSpeed);
+}
+
+// LEGACY SUPPORT: Keep configureBackground working with new system
+export function configureBackgroundSpeed(speed) {
+    console.log(`🔧 Configuring background scroll speed: ${speed}`);
+    backgroundSystem.setBackgroundScrollSpeed(speed);
 }
 
 export function updateBackground() {
@@ -277,7 +359,17 @@ export function renderBackground(ctx) {
     }
 }
 
-// Only background speed matters now
+// NEW: Improved background speed control
+export function setBackgroundScrollSpeed(speed) {
+    backgroundSystem.setBackgroundScrollSpeed(speed);
+}
+
+// NEW: Preset configurations
+export function setBackgroundPreset(preset) {
+    backgroundSystem.setBackgroundPreset(preset);
+}
+
+// DEPRECATED: Keep for compatibility
 export function setBackgroundParallaxSpeed(ratio) {
     backgroundSystem.setBackgroundParallaxSpeed(ratio);
 }
@@ -288,15 +380,18 @@ export function setGroundSpeed(speed) {
 }
 
 export function debugBackground() {
-    console.log('=== FINAL BACKGROUND DEBUG ===');
+    console.log('=== IMPROVED BACKGROUND DEBUG ===');
     const info = backgroundSystem.getDebugInfo();
     console.table(info);
-    console.log('=============================');
+    console.log('================================');
 }
 
+// Make globally available
 window.backgroundSystem = backgroundSystem;
 window.initBackgroundSystem = initBackgroundSystem;
 window.configureBackground = configureBackground;
+window.setBackgroundScrollSpeed = setBackgroundScrollSpeed;
+window.setBackgroundPreset = setBackgroundPreset;
 window.setBackgroundParallaxSpeed = setBackgroundParallaxSpeed;
 window.setGroundSpeed = setGroundSpeed;
 window.debugBackground = debugBackground;

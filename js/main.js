@@ -224,7 +224,7 @@ async function init() {
     console.log('🌄 Initializing background system...');
     initBackgroundSystem('assets/ground.png', 'assets/background.png');
 	// FIXED: Adjust speeds for same-width images
-	configureBackground(0.5); 
+	
     // Load sprite system
     console.log('🎨 Loading sprite system...');
     try {
