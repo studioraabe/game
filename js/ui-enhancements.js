@@ -7,6 +7,10 @@ import { camera } from './core/camera.js';
 import { getScreenX } from './core/camera.js';  // ADD THIS LINE
 import { setComboGlow, clearComboGlow } from './enhanced-damage-system.js';
 
+import { getComboPointsMultiplier, getComboDropBonus } from './systems.js';
+
+
+
 
 // Initialize enhanced UI containers
 export function initEnhancedContainers() {
@@ -57,6 +61,9 @@ function hexToRgba(hex, alpha = 1) {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+
+
+
 export function updateEnhancedComboDisplay() {
     if (!gameState) return;
     
@@ -69,30 +76,6 @@ export function updateEnhancedComboDisplay() {
         document.getElementById('gameContainer').appendChild(comboDisplay);
     }
     
-    // Timer-Ablauf/Reset Detection
-    const timerExpired = lastComboTimer > 0 && gameState.comboTimer <= 0;
-    const comboReset = gameState.comboCount < lastComboCount;
-    
-    // Hide combo display
-    if (timerExpired || comboReset) {
-        comboDisplay.className = 'combo-display-enhanced';
-        comboDisplay.style.display = 'none';
-        comboDisplay.innerHTML = '';
-        
-        displayWasVisible = false;
-        lastComboCount = gameState.comboCount;
-        lastComboTimer = gameState.comboTimer;
-        
-        const canvas = document.getElementById('gameCanvas');
-        if (canvas) canvas.style.filter = '';
-        return;
-    }
-    
-    // Update tracking
-    lastComboCount = gameState.comboCount;
-    lastComboTimer = gameState.comboTimer;
-    
-    // Show combo display
     const shouldShow = gameState.comboCount >= 2 && gameState.comboTimer > 0;
     
     if (shouldShow) {
@@ -102,39 +85,52 @@ export function updateEnhancedComboDisplay() {
         comboDisplay.className = 'combo-display-enhanced combo-subtle';
         
         const getComboColor = (count) => {
-            if (count >= 200) return '#FF00FF';
-            if (count >= 100) return '#DC143C';
-            if (count >= 50) return '#FF4500';
-            if (count >= 30) return '#00ff88';
-            if (count >= 20) return '#00ff88';
-            if (count >= 10) return '#00ff88';
-            if (count >= 5) return '#00ff88';
-            return '#00ff88';
+            if (count >= 100) return '#FF00FF';  // Magenta for 100+
+            if (count >= 50) return '#DC143C';   // Crimson for 50+
+            if (count >= 30) return '#FF4500';   // Orange for 30+
+            if (count >= 20) return '#FFD700';   // Gold for 20+
+            if (count >= 10) return '#00ff88';   // Green for 10+
+            return '#00ff88';                    // Default green
         };
         
         const timerPercent = Math.max(0, Math.min(100, (gameState.comboTimer / 300) * 100));
         const comboColor = getComboColor(gameState.comboCount);
         const shouldWiggle = gameState.comboCount > (lastComboCount - 1) && displayWasVisible;
         
+        // Calculate bonus percentages
+        const dropBonus = Math.min(gameState.comboCount * 1, 100);
+        const pointsBonus = Math.min(gameState.comboCount * 1, 100);
+        
         comboDisplay.innerHTML = `
             <div class="combo-number-subtle ${shouldWiggle ? 'combo-wiggle' : ''}" style="color: ${comboColor}">
-                ${gameState.comboCount}x
+                ${gameState.comboCount}x COMBO
+            </div>
+            <div class="combo-bonuses" style="font-size: 12px; color: ${comboColor}; margin-top: 2px;">
+                +${dropBonus}% Drops | +${pointsBonus}% Points
             </div>
             <div class="combo-timer-subtle">
                 <div class="combo-timer-fill-subtle" style="width: ${timerPercent}%; background-color: ${comboColor}"></div>
             </div>
         `;
         
-        // Canvas glow effect using enhanced glow system
+        // Enhanced glow effect
         if (gameState.comboCount >= 20) {
-            const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 10);
-            const comboColor = getComboColor(gameState.comboCount);
+            const glowIntensity = Math.min((gameState.comboCount - 20) * 0.5, 15);
             setComboGlow(glowIntensity, comboColor);
         } else {
             clearComboGlow();
         }
+    } else {
+        // Hide combo display
+        comboDisplay.style.display = 'none';
+        clearComboGlow();
     }
+    
+    // Update tracking
+    lastComboCount = gameState.comboCount;
+    lastComboTimer = gameState.comboTimer;
 }
+
 
 
 export function updateRegenIndicators() {
@@ -290,9 +286,9 @@ export function updateStatsOverlay() {
     const overlay = document.getElementById('statsOverlay');
     if (!overlay) return;
     
-    const hitRate = gameState.bulletsHit > 0 && gameState.enemiesDefeated > 0
-        ? Math.round((gameState.bulletsHit / (gameState.bulletsHit + (gameState.obstaclesAvoided || 0))) * 100) 
-        : 0;
+    // Calculate combo bonuses
+    const comboDropBonus = Math.min(gameState.comboCount * 1, 100);
+    const comboPointsBonus = Math.min(gameState.comboCount * 1, 100);
     
     // Achievement status
     const achievements = window.ACHIEVEMENTS || {};

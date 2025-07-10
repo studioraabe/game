@@ -115,12 +115,15 @@ export function createDrop(x, y, type) {
 
 export function rollForDrop(enemyType, x, y) {
     const dropChanceBonus = ACHIEVEMENTS.firstBlood.unlocked ? 0.1 : 0;
-    const comboBonus = Math.min(gameState.comboCount * 0.01, 0.2);
+    
+    // NEW: Enhanced combo bonus - 1% per combo level
+    const comboBonus = Math.min(gameState.comboCount * 0.01, 1.0); // Up to 100% bonus at 100 combo
     
     let dropConfig;
     if (enemyType === 'alphaWolf') {
         dropConfig = DROP_CONFIG.boss;
         
+        // Boss always drops at 20+ combo (unchanged)
         if (gameState.comboCount >= 20) {
             const items = dropConfig.items;
             const selectedDrop = selectDropFromItems(items);
@@ -134,6 +137,8 @@ export function rollForDrop(enemyType, x, y) {
     }
     
     const finalChance = dropConfig.chance + dropChanceBonus + comboBonus;
+    
+    console.log(`🎯 Drop calculation: Base=${dropConfig.chance}, Achievement=${dropChanceBonus}, Combo=${comboBonus} (${gameState.comboCount}x), Final=${finalChance}`);
     
     if (Math.random() < finalChance) {
         const selectedDrop = selectDropFromItems(dropConfig.items);
@@ -1221,6 +1226,17 @@ export class GameCache {
         this.themeCache = null;
     }
 }
+
+
+export function getComboPointsMultiplier() {
+    return 1 + (gameState.comboCount * 0.01);
+}
+
+// Get current combo bonus for drop rates
+export function getComboDropBonus() {
+    return Math.min(gameState.comboCount * 0.01, 1.0);
+}
+
 
 export const gameCache = new GameCache();
 

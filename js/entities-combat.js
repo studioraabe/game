@@ -19,6 +19,8 @@ import {
 } from './entities-core.js';
 
 import { enhancedShoot } from './enhanced-projectile-system.js';
+import { getComboPointsMultiplier } from './systems.js';
+
 
 
 // ... keep all existing BAT PROJECTILE SYSTEM code ...
@@ -339,24 +341,49 @@ function applyLifesteal(damage, gameStateParam) {
 }
 
 
-
-function handleEnemyDeath(obstacle, index, gameStateParam) {
+export function handleEnemyDeath(obstacle, index, gameStateParam) {
     const config = window.ENEMY_CONFIG?.[obstacle.type] || { points: 10 };
     const basePoints = config.points || 10;
     const levelBonus = (gameStateParam.level - 1) * 5;
-    const points = (basePoints + levelBonus) * gameStateParam.scoreMultiplier;
+    
+    // NEW: Enhanced combo point multiplier - 1% per combo level
+const comboMultiplier = getComboPointsMultiplier();
+    const points = Math.floor((basePoints + levelBonus) * gameStateParam.scoreMultiplier * comboMultiplier);
     
     gameStateParam.score += points;
-    createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
+    
+    // Show enhanced popup with combo indicator
+    if (gameStateParam.comboCount >= 5) {
+        createScorePopup(
+            obstacle.x + obstacle.width/2, 
+            obstacle.y, 
+            `${points} (+${Math.round((comboMultiplier - 1) * 100)}%)`
+        );
+    } else {
+        createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
+    }
 
-    // FIXED: Enhanced drop rolling
+    // Apply lifesteal when killing enemies
+    if (playerStats.lifeSteal > 0) {
+        const lifeStealAmount = applyLifesteal(damage);
+        if (lifeStealAmount > 0) {
+            createScorePopup(
+                player.x + player.width/2, 
+                player.y - 15, 
+                `+${lifeStealAmount} 🩸`,
+                true
+            );
+        }
+    }
+    
+    // Roll for drops with enhanced combo bonus
     rollForDrop(obstacle.type, obstacle.x + obstacle.width/2, obstacle.y);
     
     if (obstacle.type === 'alphaWolf') {
         gameStateParam.bossesKilled++;
     }
     
-    // FIXED: Proper cleanup before removal
+    // Cleanup and progression
     if (obstacle.id && window.spriteManager) {
         window.spriteManager.cleanupEntity(obstacle.type, obstacle.id);
     }
@@ -372,7 +399,7 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
         gameStateParam.comboTimer = 300;
     }
     
-    // FIXED: Enhanced healing with buff support
+    // Enhanced healing with combo bonus
     const bulletsNeeded = gameStateParam.activeBuffs.undeadResilience > 0 ? 10 : 15;
     if (gameStateParam.bulletsHit >= bulletsNeeded) {
         const baseHealAmount = Math.floor(gameStateParam.maxHP * 0.25);
@@ -381,14 +408,14 @@ function handleEnemyDeath(obstacle, index, gameStateParam) {
         if (actualHeal > 0) {
             createScorePopup(player.x + player.width/2, player.y, `+${actualHeal} HP`);
         } else {
-            gameStateParam.score += 500 * gameStateParam.scoreMultiplier;
-            createScorePopup(player.x + player.width/2, player.y, '+500 Bonus!');
+            // Bonus points also get combo multiplier
+            const bonusPoints = Math.floor(500 * gameStateParam.scoreMultiplier * comboMultiplier);
+            gameStateParam.score += bonusPoints;
+            createScorePopup(player.x + player.width/2, player.y, `+${bonusPoints} Bonus!`);
         }
         gameStateParam.bulletsHit = 0;
     }
 }
-
-// ... keep all existing ENEMY UPDATE SYSTEMS code ...
 
 export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, gameStateParam) {
     const speed = gameSpeed * enemySlowFactor * 0.7;
@@ -473,12 +500,26 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
         }
         
         // Check if passed player
-        if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
+if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
             obstacle.passed = true;
-            const points = 10 * gameStateParam.scoreMultiplier;
+            
+            // NEW: Enhanced combo point multiplier for avoidance
+            const comboMultiplier = 1 + (gameStateParam.comboCount * 0.01);
+            const basePoints = 10;
+            const points = Math.floor(basePoints * gameStateParam.scoreMultiplier * comboMultiplier);
+            
             gameStateParam.score += points;
             gameStateParam.obstaclesAvoided++;
             gameStateParam.levelProgress += 2;
+            
+            // Show enhanced popup for avoidance
+            if (gameStateParam.comboCount >= 5) {
+                createScorePopup(
+                    obstacle.x + obstacle.width/2, 
+                    obstacle.y - 30, 
+                    `+${points} Avoided (+${Math.round((comboMultiplier - 1) * 100)}%)`
+                );
+            }
             
             gameStateParam.comboCount++;
             if (gameStateParam.comboCount >= 2) {
@@ -837,6 +878,12 @@ function handlePlayerDamageWithAmount(gameStateParam, damageAmount, damageSource
             triggerDamageEffects(gameStateParam, 'shield');
         }
         
+        // NEW: Reset combo on shield hit (player still got hit!)
+        gameStateParam.comboCount = 0;
+        gameStateParam.comboTimer = 0;
+        gameStateParam.consecutiveHits = 0;
+        gameStateParam.bulletsHit = 0;
+        
         // Set invulnerability but don't remove enemy (for bat projectiles, they're already removed)
         gameStateParam.postDamageInvulnerability = 60;
         player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
@@ -864,7 +911,7 @@ function handlePlayerDamageWithAmount(gameStateParam, damageAmount, damageSource
     gameStateParam.postDamageInvulnerability = 120;
     player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
     
-    // Reset combo on damage
+    // Reset combo on HP damage (this was already here)
     gameStateParam.bulletsHit = 0;
     gameStateParam.comboCount = 0;
     gameStateParam.comboTimer = 0;
@@ -879,7 +926,6 @@ function handlePlayerDamageWithAmount(gameStateParam, damageAmount, damageSource
 
 
 
-// NEW: Player-only damage function (enemies unaffected)
 function handlePlayerDamage(gameStateParam, damageSource, damageCategory = 'enemy') {
     console.log(`🎯 Player takes damage from ${damageSource} (${damageCategory}) - enemy unaffected`);
     
@@ -912,6 +958,12 @@ function handlePlayerDamage(gameStateParam, damageSource, damageCategory = 'enem
             triggerDamageEffects(gameStateParam, 'shield');
         }
         
+        // NEW: Reset combo on shield hit (player still got hit!)
+        gameStateParam.comboCount = 0;
+        gameStateParam.comboTimer = 0;
+        gameStateParam.consecutiveHits = 0;
+        gameStateParam.bulletsHit = 0;
+        
         // Do NOT remove enemy - only set invulnerability
         gameStateParam.postDamageInvulnerability = 60;
         player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
@@ -939,21 +991,18 @@ function handlePlayerDamage(gameStateParam, damageSource, damageCategory = 'enem
     gameStateParam.postDamageInvulnerability = 120;
     player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
     
-    // Reset combo on damage
+    // Reset combo on HP damage (this was already here)
     gameStateParam.bulletsHit = 0;
     gameStateParam.comboCount = 0;
     gameStateParam.comboTimer = 0;
     gameStateParam.consecutiveHits = 0;
-    
-    // Do NOT remove the enemy - they should remain alive after collision
-    // Enemies are only damaged/destroyed by bullets, not by player collision
     
     soundManager.hit();
     
     return playerDied;
 }
 
-// ORIGINAL: Bullet damage function (for bullets hitting enemies)
+
 function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCategory = 'enemy') {
     console.log(`🎯 Damage from ${damageSource} (${damageCategory})`);
     
@@ -986,6 +1035,12 @@ function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCa
             triggerDamageEffects(gameStateParam, 'shield');
         }
         
+        // NEW: Reset combo on shield hit (player still got hit!)
+        gameStateParam.comboCount = 0;
+        gameStateParam.comboTimer = 0;
+        gameStateParam.consecutiveHits = 0;
+        gameStateParam.bulletsHit = 0;
+        
         // Remove obstacle
         if (obstacleIndex >= 0 && obstacles[obstacleIndex]) {
             obstacles.splice(obstacleIndex, 1);
@@ -1016,7 +1071,7 @@ function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCa
     gameStateParam.postDamageInvulnerability = 120;
     player.damageResistance = GAME_CONSTANTS.DAMAGE_RESISTANCE_TIME;
     
-    // Reset combo on damage
+    // Reset combo on HP damage (this was already here)
     gameStateParam.bulletsHit = 0;
     gameStateParam.comboCount = 0;
     gameStateParam.comboTimer = 0;
@@ -1030,7 +1085,6 @@ function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCa
     
     return playerDied;
 }
-
 export function checkCollisions(gameStateParam) {
     if (isPlayerInvulnerable(gameStateParam)) {
         return false;

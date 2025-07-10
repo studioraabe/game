@@ -251,7 +251,9 @@ export function update() {
     
     const frameTime = now - gameState.lastFrameTime;
     gameState.lastFrameTime = now;
-    
+	
+	
+
     // Clamp delta time to avoid extreme jumps
     const clampedFrameTime = Math.min(frameTime, 33.33); // Max 30 FPS minimum
     gameState.deltaTime = clampedFrameTime / 16.67; // Normalized to 60 FPS
@@ -270,6 +272,11 @@ export function update() {
     window.updateEnvironmentElements();
     window.updateDrops();
     window.updateEffects();
+	
+	window.update = () => {
+    update();
+    updateBackground(); // Now this will work
+};
     
     // FIXED: Health regeneration from playerStats
     if (gameState.playerStats && gameState.playerStats.healthRegen > 0) {
