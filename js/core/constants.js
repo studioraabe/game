@@ -42,8 +42,8 @@ export const ENEMY_BASE_STATS = {
     wolf: { hp: 80, damage: 20 },
     alphaWolf: { hp: 200, damage: 40 },
     rock: { hp: 1, damage: 0 },
-    teslaCoil: { hp: 1, damage: 20 },
-    frankensteinTable: { hp: 1, damage: 20 },
+    teslaCoil: { hp: 1, damage: 30 },
+    frankensteinTable: { hp: 1, damage: 30 },
     sarcophagus: { hp: 1, damage: 0 },
     boltBox: { hp: 1, damage: 0 }
 };

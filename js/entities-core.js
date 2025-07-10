@@ -218,89 +218,89 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         const rockChance = humanChance + staticObstacleChance * 1.0;
         
         // Determine obstacle properties
-        if (obstacleType < 0.15 && bulletBoxesFound < 4) {
+        if (obstacleType < 0.15 && bulletBoxesFound < 3) {
             obstacleTypeStr = 'boltBox';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight;
+            obstacleY = CANVAS.groundY - obstacleHeight - 20;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < bossChance) {
             obstacleTypeStr = 'alphaWolf';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight + 45;
+            obstacleY = CANVAS.groundY - obstacleHeight;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < flyingChance) {
             obstacleTypeStr = 'bat';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = 140 + Math.random() * 100;
+            obstacleY = 120 + Math.random() * 110;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < mediumChance) {
             obstacleTypeStr = 'spider';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY;
+            obstacleY = CANVAS.groundY - obstacleHeight + 10;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < mediumChance + 0.05) {
             obstacleTypeStr = 'wolf';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - 0;
+            obstacleY = CANVAS.groundY - obstacleHeight - 20;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < humanChance) {
             obstacleTypeStr = 'vampire';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - 45;
+            obstacleY = CANVAS.groundY - obstacleHeight - 30;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < skeletonChance) {
             obstacleTypeStr = 'skeleton';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight + 70;
+            obstacleY = CANVAS.groundY - obstacleHeight + 20;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < teslaChance) {
             obstacleTypeStr = 'teslaCoil';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = 0;
+            obstacleY = CANVAS.groundY - obstacleHeight;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < frankensteinChance) {
             obstacleTypeStr = 'frankensteinTable';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight + 224;
+            obstacleY = CANVAS.groundY - obstacleHeight + 160;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < rockChance) {
             obstacleTypeStr = 'rock';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY + 10;
+            obstacleY = CANVAS.groundY - obstacleHeight + 2;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < rockChance + 0.05) {
             obstacleTypeStr = 'sarcophagus';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight + 40;
+            obstacleY = CANVAS.groundY - obstacleHeight - 3;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else {
             obstacleTypeStr = 'rock';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY + 10;
+            obstacleY = CANVAS.groundY - obstacleHeight;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         }
         

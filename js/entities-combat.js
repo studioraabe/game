@@ -444,7 +444,7 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
                 obstacle.damageResistance -= gameState.deltaTime;
             }
             
-            obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * gameState.deltaTime;
+          //  obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * gameState.deltaTime;
         }
         
         const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
@@ -502,6 +502,11 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
         // Check if passed player
 if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
             obstacle.passed = true;
+
+     // Skip points for decorative objects
+            if (obstacle.type === 'rock' || obstacle.type === 'sarcophagus') {
+                continue;
+            }
             
             // NEW: Enhanced combo point multiplier for avoidance
             const comboMultiplier = 1 + (gameStateParam.comboCount * 0.01);
@@ -1123,7 +1128,7 @@ export function checkCollisions(gameStateParam) {
                 const zapX = obstacle.x + obstacle.width/2 - 12;
                 const zapY = 0;
                 const zapWidth = 24;
-                const zapHeight = obstacle.y + obstacle.height - 55;
+                const zapHeight = obstacle.y;
                 
                 if (player.x < zapX + zapWidth &&
                     player.x + player.width > zapX &&

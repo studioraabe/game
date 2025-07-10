@@ -97,8 +97,8 @@ export function enhancedUpdatePlayer(keys, gameState) {
     player.y += player.velocityY;
     
     // Ground collision
-    if (player.y >= CANVAS.groundY - player.height) {
-        player.y = CANVAS.groundY - player.height;
+    if (player.y >= CANVAS.groundY - player.height - 18) {
+        player.y = CANVAS.groundY - player.height - 18;
         player.velocityY = 0;
         player.jumping = false;
         player.grounded = true;

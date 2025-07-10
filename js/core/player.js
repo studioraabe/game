@@ -7,9 +7,9 @@ import { createDoubleJumpParticles, createScorePopup, shoot } from '../entities.
 
 export const player = {
     x: 120,
-    y: -80,
+    y: CANVAS.groundY - 80,
     width: 40,
-    height: 40,
+    height: 60,
     velocityY: 0,
     velocityX: 0,
     jumping: false,
@@ -26,7 +26,7 @@ export const player = {
 
 export function resetPlayer() {
     player.x = 120;
-    player.y = 0;
+    player.y = CANVAS.groundY - 80;
     player.velocityY = 0;
     player.velocityX = 0;
     player.jumping = false;

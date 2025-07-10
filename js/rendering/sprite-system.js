@@ -381,7 +381,7 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
     } else if (skeleton.isAttacking) {
         currentAnimation = 'attack';
         skeleton.canDamagePlayer = false;
-    } else if (Math.abs(skeleton.velocityX || 0) > 0.02) {
+    } else if (Math.abs(skeleton.velocityX || 0) > 0.00) {
         currentAnimation = 'walk';
         skeleton.canDamagePlayer = true;
     } else {
@@ -399,7 +399,7 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
     
     // Death fade effect
     if (skeleton.isDead || skeleton.health <= 0) {
-        const fadeProgress = Math.min((skeleton.deathTimer || 0) / 30, 1);
+        const fadeProgress = Math.min((skeleton.deathTimer || 10) / 30, 1);
         ctx.globalAlpha = Math.max(0.1, 1 - fadeProgress);
         ctx.filter = 'grayscale(100%) brightness(0.5)';
     }

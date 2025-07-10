@@ -841,7 +841,7 @@ function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
 
 
 function drawSkeleton(ctx, x, y, animTime = 0) {
-    const scale = 1.3;
+    const scale = 1.2;
     const timeScale = animTime * 0.001;
     
     // Subtile Bewegungen - reduziert für weniger Ablenkung
@@ -1049,7 +1049,7 @@ function drawSkeleton(ctx, x, y, animTime = 0) {
 
 // In enemies.js - neue Funktion hinzufügen:
 function drawSarcophagus(ctx, x, y, width, height, animTime = 0) {
-    const scale = 1;
+    const scale = 1.5;
     const timeScale = animTime * 0.001;
     const eyeGlow = 0.6 + Math.sin(timeScale * 3) * 0.4;
     
@@ -1167,7 +1167,7 @@ function drawSarcophagus(ctx, x, y, width, height, animTime = 0) {
 }
 
 function drawVampire(ctx, x, y, animTime = 0) {
-    const scale = 1.5; // 30% größer
+    const scale = 1.8; // 30% größer
     const timeScale = animTime * 0.001;
     const hover = Math.sin(timeScale * 2) * 3 * scale; // Schwebt bedrohlich
     const capeFlow = Math.sin(timeScale * 3) * 4 * scale;
