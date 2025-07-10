@@ -297,8 +297,8 @@ export const SPAWN_CHANCES = {
 // Enemy configurations
 export const ENEMY_CONFIG = {
     skeleton: {
-        width: 70,
-        height: 140,
+        width: 80,
+        height: 120,
         health: 3,
         points: 20,
         timerBase: 80,
@@ -306,7 +306,7 @@ export const ENEMY_CONFIG = {
     },
     bat: {
         width: 60,
-        height: 34,
+        height: 44,
         health: 1,
         points: 40,
         timerBase: 100,
@@ -314,7 +314,7 @@ export const ENEMY_CONFIG = {
     },
     vampire: {
         width: 40,
-        height: 42,
+        height: 82,
         health: 4,
         points: 25,
         timerBase: 100,
@@ -330,7 +330,7 @@ export const ENEMY_CONFIG = {
     },
     wolf: {
         width: 48,
-        height: 32,
+        height: 42,
         health: 4,
         points: 35,
         timerBase: 120,
@@ -353,8 +353,8 @@ export const ENEMY_CONFIG = {
         timerMin: 15
     },
     boltBox: {
-        width: 24,
-        height: 16,
+        width: 40,
+        height: 32,
         health: 1,
         points: 0,
         timerBase: 80,
@@ -370,7 +370,7 @@ export const ENEMY_CONFIG = {
     },
     frankensteinTable: {
         width: 48,
-        height: 60,
+        height: 70,
         health: 1,
         points: 0,  // Keine Punkte da es ein Hindernis ist
         timerBase: 160,  // Seltener als Tesla Coil
@@ -378,7 +378,7 @@ export const ENEMY_CONFIG = {
     },
     sarcophagus: {
     width: 45,
-    height: 20,
+    height: 30,
     health: 1,
     points: 0,
     timerBase: 100,

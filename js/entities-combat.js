@@ -501,13 +501,13 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
         
         // Check if passed player
 if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
-            obstacle.passed = true;
-
-     // Skip points for decorative objects
-            if (obstacle.type === 'rock' || obstacle.type === 'sarcophagus') {
-                continue;
-            }
-            
+    obstacle.passed = true;
+    
+    // Only give points for actual enemies
+    const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf', 'teslaCoil', 'frankensteinTable'];
+    if (!enemyTypes.includes(obstacle.type)) {
+        continue;
+    }    
             // NEW: Enhanced combo point multiplier for avoidance
             const comboMultiplier = 1 + (gameStateParam.comboCount * 0.01);
             const basePoints = 10;
