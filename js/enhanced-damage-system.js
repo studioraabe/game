@@ -484,7 +484,7 @@ export function triggerDamageEffects(gameStateParam, damageType = 'health') {
         case 'corruption':
             glowColor = 'corruption';
             glowIntensity = 0.7;
-            glowDuration = 40;
+            glowDuration = 180;
             break;
     }
     

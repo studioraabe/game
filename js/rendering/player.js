@@ -24,14 +24,14 @@ export function drawPlayer(ctx, x, y, player, gameState) {
 
 // FIXED: Enhanced sprite-based player rendering with better shoot detection
 function drawPlayerSprite(ctx, x, y, player, gameState) {
-    const scale = 4;
+    const scale = 3.2;
     const isInvulnerable = gameState.postBuffInvulnerability > 0 || 
                           gameState.postDamageInvulnerability > 0;
     const facingLeft = player.facingDirection === -1;
     
     const spriteScale = (player.width / 480) * scale;
-    const offsetX = -62;
-    const offsetY = -54;
+    const offsetX = -36;
+    const offsetY = -24;
     
     const SPRITE_FRAME_WIDTH = 480;
     const SPRITE_FRAME_HEIGHT = 480;

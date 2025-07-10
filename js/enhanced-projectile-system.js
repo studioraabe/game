@@ -238,7 +238,7 @@ function fireNormalBolt(gameStateParam, config) {
     const bulletSpeed = config.speed * player.facingDirection * projectileSpeedMultiplier;
     
     const startX = player.facingDirection === 1 ? player.x + player.width + 24 : player.x - 24;
-    const startY = player.y + player.height / 2 + 20; // Lower the projectile start height
+    const startY = player.y + player.height / 2 + 32; // Lower the projectile start height
     
     window.bulletsFired.push({
         x: startX,

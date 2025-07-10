@@ -26,7 +26,7 @@ export const player = {
 
 export function resetPlayer() {
     player.x = 120;
-    player.y = 73;
+    player.y = 0;
     player.velocityY = 0;
     player.velocityX = 0;
     player.jumping = false;

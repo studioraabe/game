@@ -20,8 +20,8 @@ import {
     initBackgroundSystem, 
     updateBackground, 
     renderBackground,
-    setBackgroundParallaxSpeed,
-    setGroundSpeed,
+    setBackgroundScrollSpeed,     // ✅ ADD - new function
+    setBackgroundPreset,          // ✅ ADD - new function (optional)
     debugBackground
 } from './background-system.js';
 
@@ -277,9 +277,8 @@ window.update = () => {
 };
 
 // Make background system functions available globally
-window.setBackgroundParallaxSpeed = setBackgroundParallaxSpeed;
-window.setGroundSpeed = setGroundSpeed;
-window.debugBackground = debugBackground;		
+window.setBackgroundScrollSpeed = setBackgroundScrollSpeed;     
+window.setBackgroundPreset = setBackgroundPreset;  	
 
 		
 

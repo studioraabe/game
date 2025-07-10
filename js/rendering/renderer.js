@@ -133,6 +133,108 @@ export function render(ctx) {
         dropParticles: window.dropParticles || [],
         explosions: window.explosions || []
     });
+	
+	
+	function renderHitboxes(ctx) {
+    if (!window.showHitboxes) return;
     
-    gameState.needsRedraw = false;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';  // Red for regular hitboxes
+    ctx.lineWidth = 2;
+    
+    // PLAYER HITBOX (GREEN)
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+    ctx.strokeRect(
+        player.x - camera.x, 
+        player.y, 
+        player.width, 
+        player.height
+    );
+    
+    // Add center cross for player
+    const playerCenterX = player.x - camera.x + player.width / 2;
+    const playerCenterY = player.y + player.height / 2;
+    ctx.beginPath();
+    ctx.moveTo(playerCenterX - 5, playerCenterY);
+    ctx.lineTo(playerCenterX + 5, playerCenterY);
+    ctx.moveTo(playerCenterX, playerCenterY - 5);
+    ctx.lineTo(playerCenterX, playerCenterY + 5);
+    ctx.stroke();
+    
+    // ENEMY HITBOXES (RED)
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+    obstacles.forEach(obstacle => {
+        const screenX = obstacle.x - camera.x;
+        
+        // Only draw if on screen
+        if (screenX > -200 && screenX < CANVAS.width + 200) {
+            // Get hitbox (uses your existing getObstacleHitbox function if available)
+            let hitbox;
+            if (window.getObstacleHitbox) {
+                hitbox = window.getObstacleHitbox(obstacle);
+                hitbox.x = hitbox.x - camera.x; // Convert to screen coords
+            } else {
+                // Fallback to full rectangle
+                hitbox = {
+                    x: screenX,
+                    y: obstacle.y,
+                    width: obstacle.width,
+                    height: obstacle.height
+                };
+            }
+            
+            // Draw hitbox
+            ctx.strokeRect(hitbox.x, hitbox.y, hitbox.width, hitbox.height);
+            
+            // Add center cross
+            const centerX = hitbox.x + hitbox.width / 2;
+            const centerY = hitbox.y + hitbox.height / 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 3, centerY);
+            ctx.lineTo(centerX + 3, centerY);
+            ctx.moveTo(centerX, centerY - 3);
+            ctx.lineTo(centerX, centerY + 3);
+            ctx.stroke();
+            
+            // Add label
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+            ctx.font = '12px monospace';
+            ctx.fillText(obstacle.type, hitbox.x, hitbox.y - 5);
+        }
+    });
+    
+    // BULLET HITBOXES (YELLOW)
+    ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+    bulletsFired.forEach(bullet => {
+        const screenX = bullet.x - camera.x;
+        if (screenX > -50 && screenX < CANVAS.width + 50) {
+            ctx.strokeRect(screenX, bullet.y, 8, 4); // Bullet dimensions
+        }
+    });
+    
+    // BAT PROJECTILES (PURPLE)
+    if (window.batProjectiles) {
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)';
+        window.batProjectiles.forEach(projectile => {
+            const screenX = projectile.x - camera.x;
+            if (screenX > -50 && screenX < CANVAS.width + 50) {
+                ctx.strokeRect(screenX, projectile.y, projectile.size, projectile.size);
+            }
+        });
+    }
+    
+    ctx.restore();
+
 }
+    
+	window.debugPlayerHitbox = function(ctx) {
+    if (!window.showHitboxes) return;
+    ctx.strokeStyle = 'lime';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(player.x - camera.x, player.y, player.width, player.height);
+};
+	
+    gameState.needsRedraw = false;
+	renderHitboxes(ctx);
+}
+

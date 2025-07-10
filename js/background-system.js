@@ -1,4 +1,4 @@
-// js/background-system.js - IMPROVED VERSION (Independent Speed Control)
+// js/background-system.js - FIXED VERSION (Proper Parallax Tile Wrapping)
 
 import { CANVAS } from './core/constants.js';
 import { camera } from './core/camera.js';
@@ -18,16 +18,13 @@ class BackgroundSystem {
         this.backgroundLayer = {
             image: null,
             loaded: false,
-            x1: 0,
-            x2: 0,
             width: 0,
             height: 0,
             y: 0,
-            scrollSpeed: 0.3,     // Absolute speed (pixels per frame when camera moves 1 pixel)
+            scrollSpeed: 0.5,     // Default parallax speed (50% of camera speed)
             renderMode: 'parallax'
         };
         
-        this.lastCameraX = 0;
         this.initialized = false;
     }
     
@@ -62,10 +59,6 @@ class BackgroundSystem {
                 this.backgroundLayer.height = bgImg.height;
                 this.backgroundLayer.y = 0;
                 
-                // Initialize parallax positions
-                this.backgroundLayer.x1 = 0;
-                this.backgroundLayer.x2 = bgImg.width;
-                
                 console.log(`✅ Background layer loaded: ${bgImg.width}x${bgImg.height} (PARALLAX mode)`);
                 this.checkInitialization();
             };
@@ -83,7 +76,6 @@ class BackgroundSystem {
     checkInitialization() {
         if (!this.initialized && (this.groundLayer.loaded || this.backgroundLayer.loaded)) {
             this.initialized = true;
-            this.lastCameraX = camera.x;
             console.log('🎨 Background system initialized');
             console.log(`📐 Ground: STATIC (like original environment)`);
             console.log(`📐 Background: PARALLAX (speed ${this.backgroundLayer.scrollSpeed})`);
@@ -109,56 +101,7 @@ class BackgroundSystem {
     }
     
     update() {
-        if (!this.initialized) return;
-        
-        // For simple formula approach, we don't need complex position tracking
-        this.lastCameraX = camera.x;
-        
-        // The rendering handles everything with the simple formula
-    }
-    
-    updateBackgroundLayer(cameraMovement) {
-        // TRUE PARALLAX CALCULATION:
-        // For parallax effect, background should move LESS than camera
-        // scrollSpeed = 0: background static (no movement)
-        // scrollSpeed = 0.5: background moves 50% as much as camera (slower)
-        // scrollSpeed = 1.0: background moves same as camera (no parallax)
-        // scrollSpeed > 1.0: background moves faster than camera
-        
-        // Calculate how much the background should move relative to camera
-        const backgroundMovement = cameraMovement * this.backgroundLayer.scrollSpeed;
-        
-        // The background world position should lag behind camera movement
-        // We subtract the difference between camera movement and background movement
-        const parallaxOffset = cameraMovement - backgroundMovement;
-        
-        this.backgroundLayer.x1 -= parallaxOffset;
-        this.backgroundLayer.x2 -= parallaxOffset;
-        
-        // Wrap-around logic
-        const viewLeft = camera.x - 200;
-        const viewRight = camera.x + CANVAS.width + 200;
-        
-        if (this.backgroundLayer.x1 + this.backgroundLayer.width < viewLeft) {
-            this.backgroundLayer.x1 = this.backgroundLayer.x2 + this.backgroundLayer.width;
-        }
-        
-        if (this.backgroundLayer.x2 + this.backgroundLayer.width < viewLeft) {
-            this.backgroundLayer.x2 = this.backgroundLayer.x1 + this.backgroundLayer.width;
-        }
-        
-        if (this.backgroundLayer.x1 > viewRight) {
-            this.backgroundLayer.x1 = this.backgroundLayer.x2 - this.backgroundLayer.width;
-        }
-        if (this.backgroundLayer.x2 > viewRight) {
-            this.backgroundLayer.x2 = this.backgroundLayer.x1 - this.backgroundLayer.width;
-        }
-        
-        if (this.backgroundLayer.x1 > this.backgroundLayer.x2) {
-            const temp = this.backgroundLayer.x1;
-            this.backgroundLayer.x1 = this.backgroundLayer.x2;
-            this.backgroundLayer.x2 = temp;
-        }
+        // No complex update needed for simple parallax
     }
     
     render(ctx) {
@@ -211,36 +154,42 @@ class BackgroundSystem {
     }
     
     renderParallaxLayer(ctx, layer) {
-        // EXPERIMENTAL: Simple reverse parallax formula
-        // screenX = -camera.x / 2
-        
+        // FIXED PARALLAX RENDERING with proper tile wrapping
         const layerY = Math.round(layer.y);
         const layerWidth = Math.round(layer.width);
         const layerHeight = Math.round(layer.height);
         
-        // Test the simple formula
-        const baseScreenX = Math.round(-camera.x / 2);
+        // Calculate parallax offset
+        // For scrollSpeed < 1: background moves slower than camera (parallax effect)
+        // For scrollSpeed = 1: background moves with camera (no parallax)
+        // For scrollSpeed > 1: background moves faster than camera
+        const parallaxOffset = camera.x * layer.scrollSpeed;
         
-        // Draw multiple tiles to ensure coverage
-        const tilesNeeded = Math.ceil(CANVAS.width / layerWidth) + 4;
-        const startTile = Math.floor(baseScreenX / layerWidth) - 2;
+        // Calculate the starting tile position
+        // We need to find which tile should be drawn first based on the parallax offset
+        const firstTileIndex = Math.floor(parallaxOffset / layerWidth);
+        const firstTileOffset = parallaxOffset % layerWidth;
         
-        for (let i = 0; i < tilesNeeded; i++) {
-            const screenX = baseScreenX + (i + startTile) * layerWidth;
+        // Calculate how many tiles we need to draw to cover the screen
+        // Add extra tiles on both sides to ensure smooth scrolling
+        const tilesNeeded = Math.ceil(CANVAS.width / layerWidth) + 3;
+        
+        // Draw tiles starting from the calculated position
+        for (let i = -1; i < tilesNeeded; i++) {
+            const tileX = -firstTileOffset + (i * layerWidth);
             
-            // Only draw if visible on screen
-            if (screenX > -layerWidth && screenX < CANVAS.width + layerWidth) {
-                ctx.drawImage(layer.image, screenX, layerY, layerWidth, layerHeight);
+            // Only draw if the tile is visible on screen
+            if (tileX > -layerWidth && tileX < CANVAS.width + layerWidth) {
+                ctx.drawImage(layer.image, Math.round(tileX), layerY, layerWidth, layerHeight);
             }
         }
         
-        // Debug info
+        // Debug rendering (optional)
         if (window.debugBackgroundRendering) {
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-            ctx.fillRect(baseScreenX, layerY, 10, 10);
-            ctx.fillStyle = 'white';
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
             ctx.font = '12px monospace';
-            ctx.fillText(`camera: ${Math.round(camera.x)}, screenX: ${baseScreenX}`, 10, 30);
+            ctx.fillText(`Camera: ${Math.round(camera.x)}, Parallax: ${Math.round(parallaxOffset)}, Speed: ${layer.scrollSpeed}`, 10, 30);
+            ctx.fillText(`First tile: ${firstTileIndex}, Offset: ${Math.round(firstTileOffset)}`, 10, 45);
         }
     }
     
@@ -252,7 +201,7 @@ class BackgroundSystem {
         ctx.fillRect(0, 0, CANVAS.width, CANVAS.groundY);
     }
     
-    // NEW: Set background absolute scroll speed
+    // Set background scroll speed
     setBackgroundScrollSpeed(speed) {
         this.backgroundLayer.scrollSpeed = Math.max(0, speed);
         console.log(`🔧 Background scroll speed: ${this.backgroundLayer.scrollSpeed}`);
@@ -268,19 +217,7 @@ class BackgroundSystem {
         console.log(`📐 Camera moves 100px → Background moves ${this.backgroundLayer.scrollSpeed * 100}px`);
     }
     
-    // DEPRECATED: Keep for compatibility but redirect to new method
-    setBackgroundParallaxSpeed(ratio) {
-        console.log(`⚠️ setBackgroundParallaxSpeed() is deprecated. Use setBackgroundScrollSpeed() instead.`);
-        this.setBackgroundScrollSpeed(ratio);
-    }
-    
-    // Ground speed is ignored (always static)
-    setGroundSpeed(speed) {
-        console.log(`⚠️ Ground speed ignored - ground is always static (like original environment)`);
-        console.log(`💡 Use setBackgroundScrollSpeed() to control background movement`);
-    }
-    
-    // NEW: Preset speed configurations
+    // Preset speed configurations
     setBackgroundPreset(preset) {
         switch (preset) {
             case 'static':
@@ -288,8 +225,8 @@ class BackgroundSystem {
                 console.log('🔧 Background preset: STATIC (no movement)');
                 break;
             case 'slow':
-                this.setBackgroundScrollSpeed(0.2);
-                console.log('🔧 Background preset: SLOW (20% camera speed)');
+                this.setBackgroundScrollSpeed(0.3);
+                console.log('🔧 Background preset: SLOW (30% camera speed)');
                 break;
             case 'medium':
                 this.setBackgroundScrollSpeed(0.5);
@@ -321,8 +258,7 @@ class BackgroundSystem {
             groundRenderMode: this.groundLayer.renderMode,
             backgroundRenderMode: this.backgroundLayer.renderMode,
             backgroundScrollSpeed: this.backgroundLayer.scrollSpeed,
-            backgroundX1: Math.round(this.backgroundLayer.x1),
-            backgroundX2: Math.round(this.backgroundLayer.x2)
+            parallaxOffset: camera.x * this.backgroundLayer.scrollSpeed
         };
     }
 }
@@ -330,9 +266,7 @@ class BackgroundSystem {
 export const backgroundSystem = new BackgroundSystem();
 
 export function initBackgroundSystem(groundImagePath = 'assets/ground.png', backgroundImagePath = 'assets/background.png') {
-    console.log('🌄 Initializing IMPROVED background system');
-    console.log('📐 Ground: STATIC (like original environment)');
-    console.log('📐 Background: PARALLAX (absolute speed control)');
+    console.log('🌄 Initializing background system with proper parallax');
     backgroundSystem.loadImages(groundImagePath, backgroundImagePath);
 }
 
@@ -341,10 +275,12 @@ export function configureBackground(backgroundScrollSpeed = 0.5) {
     backgroundSystem.configure(backgroundScrollSpeed);
 }
 
-// LEGACY SUPPORT: Keep configureBackground working with new system
-export function configureBackgroundSpeed(speed) {
-    console.log(`🔧 Configuring background scroll speed: ${speed}`);
+export function setBackgroundScrollSpeed(speed) {
     backgroundSystem.setBackgroundScrollSpeed(speed);
+}
+
+export function setBackgroundPreset(preset) {
+    backgroundSystem.setBackgroundPreset(preset);
 }
 
 export function updateBackground() {
@@ -359,28 +295,8 @@ export function renderBackground(ctx) {
     }
 }
 
-// NEW: Improved background speed control
-export function setBackgroundScrollSpeed(speed) {
-    backgroundSystem.setBackgroundScrollSpeed(speed);
-}
-
-// NEW: Preset configurations
-export function setBackgroundPreset(preset) {
-    backgroundSystem.setBackgroundPreset(preset);
-}
-
-// DEPRECATED: Keep for compatibility
-export function setBackgroundParallaxSpeed(ratio) {
-    backgroundSystem.setBackgroundParallaxSpeed(ratio);
-}
-
-// Ground speed is ignored (always static)
-export function setGroundSpeed(speed) {
-    backgroundSystem.setGroundSpeed(speed);
-}
-
 export function debugBackground() {
-    console.log('=== IMPROVED BACKGROUND DEBUG ===');
+    console.log('=== BACKGROUND SYSTEM DEBUG ===');
     const info = backgroundSystem.getDebugInfo();
     console.table(info);
     console.log('================================');
@@ -392,6 +308,4 @@ window.initBackgroundSystem = initBackgroundSystem;
 window.configureBackground = configureBackground;
 window.setBackgroundScrollSpeed = setBackgroundScrollSpeed;
 window.setBackgroundPreset = setBackgroundPreset;
-window.setBackgroundParallaxSpeed = setBackgroundParallaxSpeed;
-window.setGroundSpeed = setGroundSpeed;
 window.debugBackground = debugBackground;

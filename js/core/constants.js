@@ -254,9 +254,9 @@ export const SPAWN_INTERVAL_DISTANCE = 1;
 
 // Canvas dimensions (will be set by main.js)
 export const CANVAS = {
-    width: 1024,
-    height: 600,
-    groundY: 340
+    width: 960,
+    height: 540,
+    groundY: 380
 };
 
 // Enemy spawn chances by level - MIT SPECIAL HAZARD SYSTEM
