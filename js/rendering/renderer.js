@@ -6,12 +6,15 @@ import { player } from '../core/player.js';
 import { obstacles, bulletsFired, drops } from '../entities.js';
 import { CANVAS } from '../core/constants.js';
 
-import { drawEnvironment } from './environment.js';
+// UPDATED: Import background system instead of environment
+import { renderBackground } from '../background-system.js';
 import { drawPlayer } from './player.js';
 import { drawEnemy } from './enemies.js';
 import { drawEffects, drawBullet, drawDrop } from './effects.js';
 import { createDamageNumber } from '../ui-enhancements.js';
 import { renderEnhancedProjectiles } from '../enhanced-projectile-system.js';
+
+
 
 
 
@@ -26,8 +29,8 @@ export function render(ctx) {
         ctx.fillRect(0, 0, CANVAS.width, CANVAS.height);
     }
     
-    // 1. Draw environment (background, ground, torches)
-    drawEnvironment(ctx, gameState.camera);
+    // 1. UPDATED: Draw background system instead of environment
+    renderBackground(ctx);
     
     // 2. Draw drops
     for (const drop of drops) {
@@ -93,13 +96,13 @@ export function render(ctx) {
     // Rendere in der korrekten Reihenfolge:
     // 1. Background Obstacles (Rocks, BoltBoxes) - IMMER HINTEN
     for (const item of backgroundObjects) {
-        drawEnemy(item.object, ctx, gameState); // ✅ FIXED: gameState parameter added!
+        drawEnemy(item.object, ctx, gameState);
     }
 
     // 2. Dynamic Objects (Player + alle Enemies inkl. Skelette) - Y-SORTING
     for (const item of dynamicObjects) {
         if (item.type === 'obstacle') {
-            drawEnemy(item.object, ctx, gameState); // ✅ FIXED: gameState parameter added!
+            drawEnemy(item.object, ctx, gameState);
         } else if (item.type === 'player') {
             drawPlayer(ctx, item.screenX, item.object.y, item.object, gameState);
         }
@@ -107,21 +110,21 @@ export function render(ctx) {
 
     // 3. Foreground Obstacles (Tesla, Frankenstein) - IMMER VORNE
     for (const item of foregroundObjects) {
-        drawEnemy(item.object, ctx, gameState); // ✅ FIXED: gameState parameter added!
+        drawEnemy(item.object, ctx, gameState);
     }
     
     // 4. Draw bullets (appear in front of everything)
     for (const bullet of bulletsFired) {
         const screenX = getScreenX(bullet.x);
         if (screenX > -20 && screenX < CANVAS.width + 20) {
-            // Zeile ~95 in renderer.js
-			drawBullet(ctx, screenX, bullet.y, bullet.enhanced, gameState.hasPiercingBullets, bullet);
+            drawBullet(ctx, screenX, bullet.y, bullet.enhanced, gameState.hasPiercingBullets, bullet);
         }
-		
-		renderEnhancedProjectiles(ctx);
     }
     
-    // 5. Draw all effects (particles, explosions, etc.)
+    // 5. Draw enhanced projectiles
+    renderEnhancedProjectiles(ctx);
+    
+    // 6. Draw all effects (particles, explosions, etc.)
     drawEffects(ctx, {
         bloodParticles: window.bloodParticles || [],
         lightningEffects: window.lightningEffects || [],

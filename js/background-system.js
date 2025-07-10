@@ -1,24 +1,18 @@
-// js/background-system.js - Complete 2-Layer Endless Parallax Background System
+// js/background-system.js - FINAL FIX (Ground as Static, Background as Parallax)
 
 import { CANVAS } from './core/constants.js';
 import { camera } from './core/camera.js';
 import { gameState } from './core/gameState.js';
-
-// ========================================
-// BACKGROUND SYSTEM CLASS
-// ========================================
 
 class BackgroundSystem {
     constructor() {
         this.groundLayer = {
             image: null,
             loaded: false,
-            x1: 0,
-            x2: 0,
-            speed: 1.0,        // Moves at same speed as camera
             width: 0,
             height: 0,
-            y: 0
+            y: 0,
+            renderMode: 'static'  // Ground always renders like original environment
         };
         
         this.backgroundLayer = {
@@ -26,17 +20,17 @@ class BackgroundSystem {
             loaded: false,
             x1: 0,
             x2: 0,
-            speed: 0.3,        // Moves slower than camera (parallax effect)
             width: 0,
             height: 0,
-            y: 0
+            y: 0,
+            cameraRatio: 0.5,     // Background moves slower than camera
+            renderMode: 'parallax'
         };
         
         this.lastCameraX = 0;
         this.initialized = false;
     }
     
-    // Load background images
     async loadImages(groundImagePath, backgroundImagePath) {
         console.log('🖼️ Loading background images...');
         
@@ -50,15 +44,11 @@ class BackgroundSystem {
                 this.groundLayer.height = groundImg.height;
                 this.groundLayer.y = CANVAS.groundY;
                 
-                // Initialize positions
-                this.groundLayer.x1 = 0;
-                this.groundLayer.x2 = groundImg.width;
-                
-                console.log(`✅ Ground layer loaded: ${groundImg.width}x${groundImg.height}`);
+                console.log(`✅ Ground layer loaded: ${groundImg.width}x${groundImg.height} (STATIC mode)`);
                 this.checkInitialization();
             };
             groundImg.onerror = () => {
-                console.warn('⚠️ Ground image failed to load, using fallback');
+                console.error('❌ Ground image failed to load:', groundImagePath);
                 this.groundLayer.loaded = false;
             };
             groundImg.src = groundImagePath;
@@ -72,15 +62,15 @@ class BackgroundSystem {
                 this.backgroundLayer.height = bgImg.height;
                 this.backgroundLayer.y = 0;
                 
-                // Initialize positions
+                // Initialize parallax positions
                 this.backgroundLayer.x1 = 0;
                 this.backgroundLayer.x2 = bgImg.width;
                 
-                console.log(`✅ Background layer loaded: ${bgImg.width}x${bgImg.height}`);
+                console.log(`✅ Background layer loaded: ${bgImg.width}x${bgImg.height} (PARALLAX mode)`);
                 this.checkInitialization();
             };
             bgImg.onerror = () => {
-                console.warn('⚠️ Background image failed to load, using fallback');
+                console.error('❌ Background image failed to load:', backgroundImagePath);
                 this.backgroundLayer.loaded = false;
             };
             bgImg.src = backgroundImagePath;
@@ -93,188 +83,220 @@ class BackgroundSystem {
     checkInitialization() {
         if (!this.initialized && (this.groundLayer.loaded || this.backgroundLayer.loaded)) {
             this.initialized = true;
+            this.lastCameraX = camera.x;
             console.log('🎨 Background system initialized');
+            console.log(`📐 Ground: STATIC (like original environment)`);
+            console.log(`📐 Background: PARALLAX (ratio ${this.backgroundLayer.cameraRatio})`);
         }
     }
     
-    // Update background positions based on camera movement
+    configure(backgroundCameraRatio) {
+        this.backgroundLayer.cameraRatio = Math.max(0, Math.min(1, backgroundCameraRatio));
+        
+        console.log(`🔧 Background configured:`);
+        console.log(`   Ground: STATIC (stays with world objects)`);
+        console.log(`   Background: PARALLAX ratio ${this.backgroundLayer.cameraRatio}`);
+        console.log(`📐 Example: Camera moves 100px → Background moves ${this.backgroundLayer.cameraRatio * 100}px`);
+    }
+    
     update() {
         if (!this.initialized) return;
         
         const cameraMovement = camera.x - this.lastCameraX;
         this.lastCameraX = camera.x;
         
-        // Update ground layer (moves with camera)
-        if (this.groundLayer.loaded) {
-            this.updateLayer(this.groundLayer, cameraMovement);
-        }
+        if (Math.abs(cameraMovement) < 0.1) return;
         
-        // Update background layer (parallax effect)
+        // Ground layer doesn't need updates (static rendering)
+        
+        // Update background layer (parallax)
         if (this.backgroundLayer.loaded) {
-            this.updateLayer(this.backgroundLayer, cameraMovement);
+            this.updateBackgroundLayer(cameraMovement);
         }
     }
     
-    updateLayer(layer, cameraMovement) {
-        // Move the layer based on its speed multiplier
-        const layerMovement = cameraMovement * layer.speed;
+    updateBackgroundLayer(cameraMovement) {
+        const parallaxMovement = cameraMovement * this.backgroundLayer.cameraRatio;
         
-        layer.x1 -= layerMovement;
-        layer.x2 -= layerMovement;
+        this.backgroundLayer.x1 -= parallaxMovement;
+        this.backgroundLayer.x2 -= parallaxMovement;
         
-        // Wrap around when images move off screen
-        if (layer.x1 + layer.width <= -camera.x) {
-            layer.x1 = layer.x2 + layer.width;
-        }
-        if (layer.x2 + layer.width <= -camera.x) {
-            layer.x2 = layer.x1 + layer.width;
+        // Wrap-around logic
+        const viewLeft = camera.x - 200;
+        const viewRight = camera.x + CANVAS.width + 200;
+        
+        if (this.backgroundLayer.x1 + this.backgroundLayer.width < viewLeft) {
+            this.backgroundLayer.x1 = this.backgroundLayer.x2 + this.backgroundLayer.width;
         }
         
-        // Handle reverse scrolling (if camera moves backward)
-        if (layer.x1 > camera.x + CANVAS.width) {
-            layer.x1 = layer.x2 - layer.width;
+        if (this.backgroundLayer.x2 + this.backgroundLayer.width < viewLeft) {
+            this.backgroundLayer.x2 = this.backgroundLayer.x1 + this.backgroundLayer.width;
         }
-        if (layer.x2 > camera.x + CANVAS.width) {
-            layer.x2 = layer.x1 - layer.width;
+        
+        if (this.backgroundLayer.x1 > viewRight) {
+            this.backgroundLayer.x1 = this.backgroundLayer.x2 - this.backgroundLayer.width;
+        }
+        if (this.backgroundLayer.x2 > viewRight) {
+            this.backgroundLayer.x2 = this.backgroundLayer.x1 - this.backgroundLayer.width;
+        }
+        
+        if (this.backgroundLayer.x1 > this.backgroundLayer.x2) {
+            const temp = this.backgroundLayer.x1;
+            this.backgroundLayer.x1 = this.backgroundLayer.x2;
+            this.backgroundLayer.x2 = temp;
         }
     }
     
-    // Render both layers
     render(ctx) {
         if (!this.initialized || !ctx) return;
         
-        // Render background layer first (behind everything)
+        ctx.imageSmoothingEnabled = false;
+        ctx.webkitImageSmoothingEnabled = false;
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.msImageSmoothingEnabled = false;
+        
+        // Render background first (parallax)
         if (this.backgroundLayer.loaded) {
-            this.renderLayer(ctx, this.backgroundLayer);
+            this.renderParallaxLayer(ctx, this.backgroundLayer);
         }
         
-        // Render ground layer second (in front of background)
+        // Render ground second (static like original environment)
         if (this.groundLayer.loaded) {
-            this.renderLayer(ctx, this.groundLayer);
+            this.renderStaticLayer(ctx, this.groundLayer);
+        }
+        
+        ctx.imageSmoothingEnabled = true;
+        ctx.webkitImageSmoothingEnabled = true;
+        ctx.mozImageSmoothingEnabled = true;
+        ctx.msImageSmoothingEnabled = true;
+    }
+    
+    renderStaticLayer(ctx, layer) {
+        // STATIC RENDERING: Like original environment system
+        // Ground tiles based on camera position, stays with world objects
+        
+        const layerWidth = Math.round(layer.width);
+        const layerHeight = Math.round(layer.height);
+        const layerY = Math.round(layer.y);
+        
+        // Calculate how many tiles we need to cover the screen
+        const tilesNeeded = Math.ceil(CANVAS.width / layerWidth) + 2;
+        
+        // Start position based on camera (like original environment)
+        const startX = Math.floor(camera.x / layerWidth) * layerWidth;
+        
+        // Draw tiles to cover the screen
+        for (let i = 0; i < tilesNeeded; i++) {
+            const worldX = startX + (i * layerWidth);
+            const screenX = Math.round(worldX - camera.x);
+            
+            if (screenX > -layerWidth && screenX < CANVAS.width + layerWidth) {
+                ctx.drawImage(layer.image, screenX, layerY, layerWidth, layerHeight);
+            }
         }
     }
     
-    renderLayer(ctx, layer) {
-        const screenX1 = layer.x1 - camera.x;
-        const screenX2 = layer.x2 - camera.x;
+    renderParallaxLayer(ctx, layer) {
+        // PARALLAX RENDERING: Moving background
         
-        // Draw both image segments
-        if (screenX1 + layer.width > 0 && screenX1 < CANVAS.width) {
-            ctx.drawImage(
-                layer.image,
-                screenX1,
-                layer.y,
-                layer.width,
-                layer.height
-            );
+        const screenX1 = Math.round(layer.x1 - camera.x);
+        const screenX2 = Math.round(layer.x2 - camera.x);
+        const layerY = Math.round(layer.y);
+        const layerWidth = Math.round(layer.width);
+        const layerHeight = Math.round(layer.height);
+        const overlap = 1;
+        
+        if (screenX1 > -layerWidth - overlap && screenX1 < CANVAS.width + overlap) {
+            ctx.drawImage(layer.image, screenX1, layerY, layerWidth + overlap, layerHeight);
         }
         
-        if (screenX2 + layer.width > 0 && screenX2 < CANVAS.width) {
-            ctx.drawImage(
-                layer.image,
-                screenX2,
-                layer.y,
-                layer.width,
-                layer.height
-            );
+        if (screenX2 > -layerWidth - overlap && screenX2 < CANVAS.width + overlap) {
+            ctx.drawImage(layer.image, screenX2 - overlap, layerY, layerWidth + overlap, layerHeight);
         }
     }
     
-    // Render fallback backgrounds when images aren't loaded
     renderFallback(ctx) {
-        // Fallback ground
         ctx.fillStyle = '#2F2F2F';
         ctx.fillRect(0, CANVAS.groundY, CANVAS.width, CANVAS.height - CANVAS.groundY);
         
-        // Fallback background
         ctx.fillStyle = '#1A1A1A';
         ctx.fillRect(0, 0, CANVAS.width, CANVAS.groundY);
     }
     
-    // Set parallax speed for background layer
-    setParallaxSpeed(speed) {
-        this.backgroundLayer.speed = Math.max(0, Math.min(1, speed));
-        console.log(`🎨 Background parallax speed set to: ${this.backgroundLayer.speed}`);
+    // Set background parallax ratio (only setting that matters)
+    setBackgroundParallaxSpeed(ratio) {
+        this.backgroundLayer.cameraRatio = Math.max(0, Math.min(1, ratio));
+        console.log(`🔧 Background parallax ratio: ${this.backgroundLayer.cameraRatio}`);
+        console.log(`📐 Camera moves 100px → Background moves ${this.backgroundLayer.cameraRatio * 100}px`);
     }
     
-    // Set ground layer speed (normally 1.0)
+    // REMOVED: setGroundSpeed() - ground is always static
     setGroundSpeed(speed) {
-        this.groundLayer.speed = Math.max(0, Math.min(2, speed));
-        console.log(`🎨 Ground layer speed set to: ${this.groundLayer.speed}`);
+        console.log(`⚠️ Ground speed ignored - ground is always static (like original environment)`);
+        console.log(`💡 Use setBackgroundParallaxSpeed() to control parallax effect`);
     }
     
-    // Debug info
     getDebugInfo() {
         return {
             initialized: this.initialized,
             groundLoaded: this.groundLayer.loaded,
             backgroundLoaded: this.backgroundLayer.loaded,
-            groundSpeed: this.groundLayer.speed,
-            backgroundSpeed: this.backgroundLayer.speed,
             cameraX: camera.x,
-            groundX1: this.groundLayer.x1,
-            groundX2: this.groundLayer.x2,
-            backgroundX1: this.backgroundLayer.x1,
-            backgroundX2: this.backgroundLayer.x2
+            groundRenderMode: this.groundLayer.renderMode,
+            backgroundRenderMode: this.backgroundLayer.renderMode,
+            backgroundCameraRatio: this.backgroundLayer.cameraRatio,
+            backgroundX1: Math.round(this.backgroundLayer.x1),
+            backgroundX2: Math.round(this.backgroundLayer.x2)
         };
     }
 }
 
-// ========================================
-// EXPORTED FUNCTIONS
-// ========================================
-
-// Create global background system instance
 export const backgroundSystem = new BackgroundSystem();
 
-// Initialize background system with your image paths
 export function initBackgroundSystem(groundImagePath = 'assets/ground.png', backgroundImagePath = 'assets/background.png') {
+    console.log('🌄 Initializing FINAL background system');
+    console.log('📐 Ground: STATIC (like original environment)');
+    console.log('📐 Background: PARALLAX (configurable speed)');
     backgroundSystem.loadImages(groundImagePath, backgroundImagePath);
 }
 
-// Update function to be called in main game loop
+export function configureBackground(backgroundParallaxRatio = 0.5) {
+    console.log(`🔧 Configuring background parallax: ${backgroundParallaxRatio}`);
+    backgroundSystem.configure(backgroundParallaxRatio);
+}
+
 export function updateBackground() {
     backgroundSystem.update();
 }
 
-// Render function to be called in main render loop
 export function renderBackground(ctx) {
     if (backgroundSystem.initialized) {
         backgroundSystem.render(ctx);
     } else {
-        // Render fallback until images load
         backgroundSystem.renderFallback(ctx);
     }
 }
 
-// Adjust parallax speed (0.0 = static, 1.0 = moves with camera)
-export function setBackgroundParallaxSpeed(speed) {
-    backgroundSystem.setParallaxSpeed(speed);
+// Only background speed matters now
+export function setBackgroundParallaxSpeed(ratio) {
+    backgroundSystem.setBackgroundParallaxSpeed(ratio);
 }
 
-// Adjust ground speed (normally 1.0 to match camera movement)
+// Ground speed is ignored (always static)
 export function setGroundSpeed(speed) {
     backgroundSystem.setGroundSpeed(speed);
 }
 
-// Debug function
 export function debugBackground() {
-    console.log('=== BACKGROUND SYSTEM DEBUG ===');
+    console.log('=== FINAL BACKGROUND DEBUG ===');
     const info = backgroundSystem.getDebugInfo();
-    console.log('Initialized:', info.initialized);
-    console.log('Ground loaded:', info.groundLoaded);
-    console.log('Background loaded:', info.backgroundLoaded);
-    console.log('Ground speed:', info.groundSpeed);
-    console.log('Background speed:', info.backgroundSpeed);
-    console.log('Camera X:', info.cameraX);
-    console.log('Ground positions:', info.groundX1, info.groundX2);
-    console.log('Background positions:', info.backgroundX1, info.backgroundX2);
-    console.log('==============================');
+    console.table(info);
+    console.log('=============================');
 }
 
-// Make functions available globally
 window.backgroundSystem = backgroundSystem;
 window.initBackgroundSystem = initBackgroundSystem;
+window.configureBackground = configureBackground;
 window.setBackgroundParallaxSpeed = setBackgroundParallaxSpeed;
 window.setGroundSpeed = setGroundSpeed;
 window.debugBackground = debugBackground;

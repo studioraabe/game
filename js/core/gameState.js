@@ -1,7 +1,7 @@
 // core/gameState.js - Game State Management - FPS KORRIGIERT
 
 import { GameState, GAME_CONSTANTS, DUNGEON_THEME, calculatePlayerMaxHP, calculatePlayerDamage, calculatePlayerMaxBullets, calculateEnemyHP } from './constants.js';
-
+import { updateBackground } from '../background-system.js';
 
 import { resetCamera } from './camera.js';
 import { resetPlayer } from './player.js';
@@ -10,6 +10,8 @@ import { clearArrays, obstacleTimer, bulletBoxesFound } from '../entities.js';
 import { loadHighScore, checkAchievements, activeDropBuffs, loadAchievements, loadGlobalHighscores, updateDropBuffs } from '../systems.js';
 import { updateDamageEffects, resetDamageEffects, triggerDamageEffects } from '../enhanced-damage-system.js';
 import { updateEnhancedProjectiles } from '../enhanced-projectile-system.js';
+
+
 
 
 
@@ -242,6 +244,9 @@ export function updatePlayerStatsForLevel(level) {
 
 
 
+
+
+
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
     
@@ -251,8 +256,6 @@ export function update() {
     
     const frameTime = now - gameState.lastFrameTime;
     gameState.lastFrameTime = now;
-	
-	
 
     // Clamp delta time to avoid extreme jumps
     const clampedFrameTime = Math.min(frameTime, 33.33); // Max 30 FPS minimum
@@ -272,11 +275,9 @@ export function update() {
     window.updateEnvironmentElements();
     window.updateDrops();
     window.updateEffects();
-	
-	window.update = () => {
-    update();
-    updateBackground(); // Now this will work
-};
+    
+    // NEW: Update background system
+    updateBackground();
     
     // FIXED: Health regeneration from playerStats
     if (gameState.playerStats && gameState.playerStats.healthRegen > 0) {
@@ -392,7 +393,6 @@ export function update() {
     window.updateUI();
     gameState.needsRedraw = true;
 }
-
 
 export function checkLevelComplete() {
     if (gameState.levelProgress >= GAME_CONSTANTS.MAX_LEVEL_PROGRESS) {

@@ -16,6 +16,15 @@ import { spriteManager } from './rendering/sprite-system.js';
 import { initRoguelikeIntegration, createStatDisplay, startStatsUpdateLoop } from './roguelike-integration.js';
 import './projectile-buff-integration.js';
 
+import { 
+    initBackgroundSystem, 
+    updateBackground, 
+    renderBackground,
+    setBackgroundParallaxSpeed,
+    setGroundSpeed,
+    debugBackground
+} from './background-system.js';
+
 
 
 import { 
@@ -190,11 +199,13 @@ window.updateDamageEffects = updateDamageEffects;
 window.resetDamageEffects = resetDamageEffects;
 
 // Initialize game
+
+
 async function init() {
     console.log('🎮 Dungeon Runner V1.0 - Enhanced Edition with Controller Support');
     
     // Initialize systems
-    initInput(); // Now includes controller support
+    initInput(); 
     applyTheme();
     loadGame();
     initEnvironmentElements();
@@ -209,6 +220,11 @@ async function init() {
     // IMPORTANT: Add Roguelike System Integration
     initRoguelikeIntegration();
     
+    // NEW: Initialize background system
+    console.log('🌄 Initializing background system...');
+    initBackgroundSystem('assets/ground.png', 'assets/background.png');
+	// FIXED: Adjust speeds for same-width images
+	configureBackground(0.5); 
     // Load sprite system
     console.log('🎨 Loading sprite system...');
     try {
@@ -216,7 +232,6 @@ async function init() {
         console.log('✅ Sprite system loaded successfully!');
     } catch (error) {
         console.warn('⚠️ Sprite system failed to load, using pixel art fallback:', error.message);
-        // Game continues with pixel art rendering - no disruption
     }
     
     // Container setup
@@ -251,10 +266,20 @@ async function init() {
     console.log('🔊 Audio System: Ready');
     console.log('🎨 Enhanced UI: Ready');
     console.log('🖼️ Sprite System: Active');
+    console.log('🌄 Background System: Active');
     console.log('✨ Game initialization complete!');
 }
 
-		
+// Update the global functions to include background system
+window.update = () => {
+    update();
+    updateBackground(); // Now this will work
+};
+
+// Make background system functions available globally
+window.setBackgroundParallaxSpeed = setBackgroundParallaxSpeed;
+window.setGroundSpeed = setGroundSpeed;
+window.debugBackground = debugBackground;		
 
 		
 
