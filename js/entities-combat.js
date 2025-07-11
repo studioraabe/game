@@ -1106,16 +1106,24 @@ export function checkCollisions(gameStateParam) {
         // Tesla Coil collision (special case - active zapping)
         if (obstacle.type === 'teslaCoil') {
             if (obstacle.state === 'zapping' && obstacle.zapActive) {
-                const zapX = obstacle.x + obstacle.width/2 - 8;
-                const zapY = obstacle.y + obstacle.height;
-                const zapWidth = 16;
-                const zapHeight = CANVAS.groundY - zapY;
+                // Tesla hangs from ceiling at y=0, height is 60*2 = 120
+                // The visual beam starts at bottom of extended coil
+                const extendedHeight = obstacle.height * 2; // Matches drawing code
+                const actualY = 0; // Tesla starts at ceiling
                 
-                if (player.x < zapX + zapWidth &&
-                    player.x + player.width > zapX &&
-                    player.y < zapY + zapHeight &&
-                    player.y + player.height > zapY) {
+                // Match the exact beam position from drawTeslaCoil
+                const beamX = obstacle.x + obstacle.width/2 - 10; // Matches beamX in drawing
+                const beamY = actualY + extendedHeight; // Bottom of the extended coil
+                const beamWidth = 20; // Matches visual beam width
+                const beamHeight = CANVAS.height - beamY; // To the bottom of screen
+                
+                // Check if player overlaps with the zap beam
+                if (player.x < beamX + beamWidth &&
+                    player.x + player.width > beamX &&
+                    player.y < beamY + beamHeight &&
+                    player.y + player.height > beamY) {
                     
+                    // Player is in the zap beam - take damage
                     return handlePlayerDamage(gameStateParam, 'teslaCoil');
                 }
             }
@@ -1130,11 +1138,13 @@ export function checkCollisions(gameStateParam) {
                 const zapWidth = 24;
                 const zapHeight = obstacle.y;
                 
+                // FIXED: Actually check if player is in the zap beam area
                 if (player.x < zapX + zapWidth &&
                     player.x + player.width > zapX &&
                     player.y < zapY + zapHeight &&
                     player.y + player.height > zapY) {
                     
+                    // Player is in the zap beam - take damage
                     return handlePlayerDamage(gameStateParam, 'frankensteinTable');
                 }
             }
