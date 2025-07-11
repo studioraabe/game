@@ -358,11 +358,13 @@
         </div>
     </wrap>
     
-    <!-- Load JavaScript as ES6 Module -->
-    <script type="module">
-        // Import and start the game
-        import './js/main.js';
-    </script>
+<script type="module">
+  // First import the weapon systems
+  import './js/weapon-hotkey-system.js';
+  import './js/weapon-system-integration.js';
+  // Then import main
+  import './js/main.js';
+</script>
     
 </body>
 </html>

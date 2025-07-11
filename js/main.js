@@ -16,6 +16,11 @@ import { spriteManager } from './rendering/sprite-system.js';
 import { initRoguelikeIntegration, createStatDisplay, startStatsUpdateLoop } from './roguelike-integration.js';
 import './projectile-buff-integration.js';
 
+
+import { integrateWeaponSystem } from './weapon-system-integration.js';
+import { initWeaponHotkeySystem } from './weapon-hotkey-system.js';
+
+
 import { 
     initBackgroundSystem, 
     updateBackground, 
@@ -219,6 +224,24 @@ async function init() {
     
     // IMPORTANT: Add Roguelike System Integration
     initRoguelikeIntegration();
+	
+	
+	   console.log('🌄 Initializing background system...');
+    initBackgroundSystem('assets/ground.png', 'assets/background.png');
+    
+    // NEW: Initialize weapon hotkey system
+    console.log('🔫 Initializing weapon hotkey system...');
+    initWeaponHotkeySystem();
+    
+    // Load sprite system
+    console.log('🎨 Loading sprite system...');
+    try {
+        await spriteManager.loadSprites();
+        console.log('✅ Sprite system loaded successfully!');
+    } catch (error) {
+        console.warn('⚠️ Sprite system failed to load, using pixel art fallback:', error.message);
+    }
+    
     
     // NEW: Initialize background system
     console.log('🌄 Initializing background system...');
@@ -293,3 +316,6 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+		
+		
+		integrateWeaponSystem();

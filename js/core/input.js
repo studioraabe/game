@@ -359,15 +359,10 @@ function handleKeyDown(e) {
     if (inputSettings.inputMode === 'controller') return; // Ignore keyboard when controller is active
 
 
- if (e.code === 'KeyQ' && gameState.gameRunning) {
-        e.preventDefault();
-        cycleProjectileType(-1); // Previous weapon
-        return;
-    }
-
-    if (e.code === 'KeyE' && gameState.gameRunning) {
-        e.preventDefault();
-        cycleProjectileType(1); // Next weapon
+   if ((e.code === 'KeyQ' || e.code === 'KeyW' || 
+         e.code === 'KeyE' || e.code === 'KeyR') && 
+        gameState.gameRunning) {
+        // Let the weapon system handle these keys
         return;
     }
 
