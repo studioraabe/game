@@ -1,4 +1,4 @@
-// js/ui-hud.js - Enhanced Multi-Container HUD System
+// js/ui-hud.js - Enhanced Multi-Container HUD System with Custom Weapon Styling
 
 import { gameState } from './core/gameState.js';
 import { projectileSystem, PROJECTILE_CONFIGS, ProjectileType } from './enhanced-projectile-system.js';
@@ -82,7 +82,7 @@ function createMultiHUD() {
         align-items: center;
         align-content: flex-end;
         padding: 10px;
-        gap: 10px 12px;
+        gap: 0px 0px;
         width: 374px;
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -119,13 +119,14 @@ function createMultiHUD() {
     energyContainer.style.cssText = `
         flex: 1;
         height: 32px;
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(60, 194, 253, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+
         border-radius: 12px;
         position: relative;
         overflow: hidden;
         display: flex;
         align-items: center;
+        justify-content: center;
         min-width: 120px;
     `;
     
@@ -136,13 +137,14 @@ function createMultiHUD() {
     healthContainer.style.cssText = `
         width: 100%;
         height: 32px;
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(0, 211, 112, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        
         border-radius: 12px;
         position: relative;
         overflow: hidden;
         display: flex;
         align-items: center;
+        justify-content: center;
         margin-top: 8px;
     `;
     
@@ -179,6 +181,15 @@ export function updateWeaponHUD() {
     
     const hotkeys = Object.keys(WEAPON_HOTKEYS);
     
+    // Get weapon background images
+    const weaponBackgrounds = {
+        [ProjectileType.NORMAL]: 'url("assets/weapon-bolt.png")',
+        [ProjectileType.LASER_BEAM]: 'url("assets/weapon-laser.png")',
+        [ProjectileType.ENERGY_SHOTGUN]: 'url("assets/weapon-shotgun.png")',
+        [ProjectileType.CHAIN_LIGHTNING]: 'url("assets/weapon-lightning.png")',
+        [ProjectileType.SEEKING_BOLT]: 'url("assets/weapon-seeking.png")'
+    };
+    
     // Create a weapon slot for each equipped weapon
     projectileSystem.equippedTypes.forEach((type, index) => {
         const hotkeyCode = hotkeys.find(key => WEAPON_HOTKEYS[key] === type) || '';
@@ -187,16 +198,18 @@ export function updateWeaponHUD() {
         const config = PROJECTILE_CONFIGS[type];
         if (!config) return;
         
+        const isActive = index === projectileSystem.currentTypeIndex;
+        
         // Create weapon slot
         const slot = document.createElement('div');
-        slot.className = `weapon-slot ${index === projectileSystem.currentTypeIndex ? 'active' : ''}`;
+        slot.className = `weapon-slot ${isActive ? 'active' : ''}`;
         slot.dataset.type = type;
         slot.dataset.index = index;
         slot.style.cssText = `
             width: 40px;
             height: 40px;
             background: rgba(0, 0, 0, 0.8);
-            border: 2px solid ${index === projectileSystem.currentTypeIndex ? '#3AC2FD' : '#444'};
+            border: 2px solid #444;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -204,30 +217,20 @@ export function updateWeaponHUD() {
             position: relative;
             transition: all 0.2s ease;
             cursor: pointer;
-            background-size: 24px 24px;
+            background-image: ${weaponBackgrounds[type] || 'none'};
+            background-size: 32px 32px;
             background-position: center;
             background-repeat: no-repeat;
+			background-size:cover;
         `;
         
-        // Weapon icon (fallback if no background image)
-        const iconMap = {
-            [ProjectileType.NORMAL]: '⚡',
-            [ProjectileType.LASER_BEAM]: '🔵',
-            [ProjectileType.ENERGY_SHOTGUN]: '💥',
-            [ProjectileType.CHAIN_LIGHTNING]: '⚡',
-            [ProjectileType.SEEKING_BOLT]: '🎯'
-        };
+        // Update active state styling
+        if (isActive) {
+            slot.style.borderColor = '#3AC2FD';
+            slot.style.boxShadow = '0 0 10px rgba(60, 194, 253, 0.5)';
+        }
         
-        const icon = document.createElement('div');
-        icon.className = 'weapon-icon';
-        icon.textContent = iconMap[type] || '⚡';
-        icon.style.cssText = `
-            font-size: 16px;
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
-			display:none;
-        `;
-        
-        // Hotkey badge (top)
+        // Hotkey badge (top) - with new styling
         const key = document.createElement('div');
         key.className = 'weapon-key';
         key.textContent = hotkeyChar || index + 1;
@@ -236,17 +239,18 @@ export function updateWeaponHUD() {
             top: -6px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #3AC2FD;
+            background: rgba(255, 255, 255, 0.03);
+            border: 0.5px solid rgba(49, 49, 49, 0.4);
+            backdrop-filter: blur(10.309px);
+            border-radius: 3px;
             color: white;
             font-size: 10px;
             width: 14px;
             height: 14px;
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            border: 1px solid #2A8BC7;
         `;
         
         // Cost badge (bottom)
@@ -255,10 +259,10 @@ export function updateWeaponHUD() {
         cost.textContent = config.cost || 1;
         cost.style.cssText = `
             position: absolute;
-            bottom: -6px;
+            bottom: -2px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #0066CC;
+    
             color: white;
             font-size: 9px;
             width: 14px;
@@ -268,31 +272,25 @@ export function updateWeaponHUD() {
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            border: 1px solid #004499;
+           
         `;
         
-        // Cooldown overlay
+        // Cooldown overlay - using border animation
         const cooldownOverlay = document.createElement('div');
         cooldownOverlay.className = 'weapon-cooldown-overlay';
         cooldownOverlay.style.cssText = `
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
             border-radius: 50%;
-            border: 2px solid #ff4757;
+            border: 2px solid transparent;
             display: none;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 71, 87, 0.2);
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
+            pointer-events: none;
         `;
         
         // Assemble the slot
-        slot.appendChild(icon);
         slot.appendChild(key);
         slot.appendChild(cost);
         slot.appendChild(cooldownOverlay);
@@ -315,6 +313,7 @@ function updateWeaponCooldowns() {
     
     slots.forEach(slot => {
         const type = slot.dataset.type;
+        const index = parseInt(slot.dataset.index);
         if (!type) return;
         
         const cooldownProperty = getCooldownProperty(type);
@@ -322,19 +321,41 @@ function updateWeaponCooldowns() {
         
         const currentCooldown = projectileSystem[cooldownProperty] || 0;
         const maxCooldown = PROJECTILE_CONFIGS[type]?.cooldown || 1;
+        const isActive = index === projectileSystem.currentTypeIndex;
+        
+        // Update active state
+        if (isActive) {
+            slot.classList.add('active');
+            slot.style.borderColor = '#3AC2FD';
+            slot.style.boxShadow = '0 0 10px rgba(60, 194, 253, 0.5)';
+        } else {
+            slot.classList.remove('active');
+            slot.style.borderColor = '#444';
+            slot.style.boxShadow = 'none';
+        }
         
         const cooldownOverlay = slot.querySelector('.weapon-cooldown-overlay');
         if (cooldownOverlay) {
             if (currentCooldown > 0) {
-                const remainingSeconds = Math.ceil(currentCooldown / 60); // Convert frames to seconds
-                cooldownOverlay.textContent = remainingSeconds;
-                cooldownOverlay.style.display = 'flex';
+                // Show cooldown with ring animation
+                const progress = 1 - (currentCooldown / maxCooldown);
+                const degrees = progress * 360;
                 
-                // Animated border
-                const progress = currentCooldown / maxCooldown;
-                cooldownOverlay.style.background = `conic-gradient(#ff4757 ${progress * 360}deg, transparent 0deg)`;
+                cooldownOverlay.style.display = 'block';
+                cooldownOverlay.style.background = `conic-gradient(
+                    from 0deg,
+                    #444 0deg,
+                    #444 ${degrees}deg,
+                    transparent ${degrees}deg,
+                    transparent 360deg
+                )`;
+                cooldownOverlay.style.borderColor = '#444';
+                
+                // Make the slot slightly dimmed during cooldown
+                slot.style.opacity = '0.6';
             } else {
                 cooldownOverlay.style.display = 'none';
+                slot.style.opacity = '1';
             }
         }
     });
@@ -375,24 +396,35 @@ export function updateBulletCounter() {
         top: 0;
         height: 100%;
         width: ${bulletPercent}%;
-        background: linear-gradient(to right, #0066CC, #3AC2FD);
-        border-radius: inherit;
-        transition: width 0.3s ease;
+            transition: width 0.3s ease;
+		/* Rectangle 5 */
+		background: #3AC2FD;
+		box-shadow: 0px 0px 30px #3AC2FD;
+		border-radius: 12px !important;
+		
+
+									
     `;
     
-    // Create bullet text
+    // Create bullet text - centered
     const bulletText = document.createElement('div');
     bulletText.className = 'bullet-text';
-    bulletText.textContent = gameState.isBerserker ? '∞' : `${gameState.bullets}/${gameState.maxBullets}`;
+    bulletText.textContent = gameState.isBerserker ? '∞' : `${gameState.bullets} / ${gameState.maxBullets}`;
     bulletText.style.cssText = `
         position: relative;
         z-index: 2;
-        color: white;
-        font-size: 14px;
+        font-size: 15px;
+        line-height: 19px;
+        color: rgba(255, 255, 255, 0.9);
         font-weight: bold;
         font-family: 'Rajdhani', monospace;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-        padding: 0 12px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+   
     `;
     
     // Handle regeneration indicator
@@ -437,11 +469,12 @@ export function updateHealthBar() {
         height: 100%;
         width: ${hpPercent}%;
         background: ${getHealthColor(hpPercent)};
+		box-shadow: 0px 0px 30px ${getHealthColor(hpPercent)};
         border-radius: inherit;
         transition: width 0.3s ease, background 0.3s ease;
     `;
     
-    // Create shield overlay
+    // Create shield overlay - more prominent
     const shieldOverlay = document.createElement('div');
     shieldOverlay.className = 'shield-overlay';
     shieldOverlay.style.cssText = `
@@ -450,27 +483,35 @@ export function updateHealthBar() {
         top: 0;
         height: 100%;
         width: 100%;
-        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.3)' : 'transparent'};
+        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.4)' : 'transparent'};
+        border: ${gameState.shieldCharges > 0 ? '2px solid rgba(60, 194, 253, 0.8)' : 'none'};
         border-radius: inherit;
-        transition: background 0.3s ease;
+        transition: all 0.3s ease;
+        ${gameState.shieldCharges > 0 ? 'box-shadow: inset 0 0 20px rgba(60, 194, 253, 0.3);' : ''}
     `;
     
-    // Create HP text
+    // Create HP text - centered
     const hpText = document.createElement('div');
     hpText.className = 'hp-text';
     hpText.textContent = `${gameState.currentHP} / ${gameState.maxHP}`;
     hpText.style.cssText = `
-        position: relative;
+     
         z-index: 3;
-        color: white;
-        font-size: 14px;
+        font-size: 15px;
+        line-height: 19px;
+        color: rgba(255, 255, 255, 0.9);
         font-weight: bold;
         font-family: 'Rajdhani', monospace;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-        padding: 0 12px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      
     `;
     
-    // Create shield counter
+    // Create shield counter - more prominent
     const shieldCounter = document.createElement('div');
     shieldCounter.className = 'shield-counter';
     shieldCounter.style.cssText = `
@@ -482,19 +523,23 @@ export function updateHealthBar() {
         align-items: center;
         gap: 4px;
         z-index: 4;
-        ${gameState.shieldCharges > 0 ? 'opacity: 1' : 'opacity: 0.5'};
+        opacity: ${gameState.shieldCharges > 0 ? '1' : '0.5'};
         transition: opacity 0.3s ease;
+        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.8)' : 'rgba(0, 0, 0, 0.6)'};
+        padding: 2px 6px;
+        border-radius: 8px;
+        border: 1px solid ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 1)' : 'rgba(255, 255, 255, 0.2)'};
     `;
     
     const shieldIcon = document.createElement('span');
     shieldIcon.textContent = '🛡️';
-    shieldIcon.style.fontSize = '12px';
+    shieldIcon.style.fontSize = '15px';
     
     const shieldCount = document.createElement('span');
     shieldCount.textContent = gameState.shieldCharges || 0;
     shieldCount.style.cssText = `
         color: white;
-        font-size: 12px;
+        font-size: 15px;
         font-weight: bold;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
     `;
@@ -532,11 +577,11 @@ export function updateHealthBar() {
 
 function getHealthColor(hpPercent) {
     if (hpPercent <= 20) {
-        return 'linear-gradient(to right, #ff4757, #ff6b7a)';
+        return '#ff4757';
     } else if (hpPercent <= 50) {
-        return 'linear-gradient(to right, #ffa502, #ff6348)';
+        return '#ffa502)';
     } else {
-        return 'linear-gradient(to right, #00d170, #00ff88)';
+        return '#00E076)';
     }
 }
 
@@ -567,10 +612,6 @@ function addHUDStyles() {
             border-color: #3AC2FD !important;
         }
         
-        .weapon-slot.active {
-            box-shadow: 0 0 10px rgba(60, 194, 253, 0.5);
-        }
-        
         .critical-health {
             border-color: #ff4757 !important;
         }
@@ -581,6 +622,16 @@ function addHUDStyles() {
         
         .recharging {
             border-color: #3AC2FD !important;
+        }
+        
+        .shield-overlay {
+            animation: ${gameState && gameState.shieldCharges > 0 ? 'shieldPulse 2s infinite' : 'none'};
+        }
+        
+        @keyframes shieldPulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.4; }
         }
     `;
     document.head.appendChild(style);
