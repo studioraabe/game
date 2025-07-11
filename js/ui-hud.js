@@ -305,6 +305,65 @@ export function updateWeaponHUD() {
     });
 }
 
+
+
+function setupWeaponSlots() {
+    const weaponsContainer = document.getElementById('weaponsContainer');
+    if (!weaponsContainer) return;
+    
+    // Find all weapon slots
+    const slots = weaponsContainer.querySelectorAll('.weapon-slot');
+    
+    // For each slot, ensure it has a static cooldown display already set up
+    slots.forEach(slot => {
+        // Skip if already set up
+        if (slot.dataset.cooldownSetup === 'true') return;
+        
+        // Create a cooldown overlay that will always exist
+        const cooldownOverlay = document.createElement('div');
+        cooldownOverlay.className = 'static-cooldown-overlay';
+        cooldownOverlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 3;
+        `;
+        
+        // Create a static cooldown text element
+        const cooldownText = document.createElement('div');
+        cooldownText.className = 'static-cooldown-text';
+        cooldownText.style.cssText = `
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 4px black, 0 0 4px black, 0 0 4px black;
+        `;
+        cooldownText.textContent = '0';
+        
+        // Add the text to the overlay
+        cooldownOverlay.appendChild(cooldownText);
+        
+        // Add the overlay to the slot
+        slot.appendChild(cooldownOverlay);
+        
+        // Mark as set up
+        slot.dataset.cooldownSetup = 'true';
+    });
+}
+
+
+// Complete replacement for the weapon cooldown function
+// Add this to js/ui-hud.js replacing the existing updateWeaponCooldowns function
+
 function updateWeaponCooldowns() {
     const weaponsContainer = document.getElementById('weaponsContainer');
     if (!weaponsContainer || !projectileSystem) return;
@@ -316,14 +375,8 @@ function updateWeaponCooldowns() {
         const index = parseInt(slot.dataset.index);
         if (!type) return;
         
-        const cooldownProperty = getCooldownProperty(type);
-        if (!cooldownProperty) return;
-        
-        const currentCooldown = projectileSystem[cooldownProperty] || 0;
-        const maxCooldown = PROJECTILE_CONFIGS[type]?.cooldown || 1;
+        // Update active state (selected weapon)
         const isActive = index === projectileSystem.currentTypeIndex;
-        
-        // Update active state
         if (isActive) {
             slot.classList.add('active');
             slot.style.borderColor = '#3AC2FD';
@@ -334,32 +387,67 @@ function updateWeaponCooldowns() {
             slot.style.boxShadow = 'none';
         }
         
+        // Get cooldown information
+        const cooldownProperty = getCooldownProperty(type);
+        if (!cooldownProperty) return;
+        
+        const currentCooldown = projectileSystem[cooldownProperty] || 0;
+        
+        // Simple cooldown display using CSS properties only
+        if (currentCooldown > 0) {
+            // Calculate seconds for display
+            const seconds = Math.ceil(currentCooldown / 60);
+            
+            // Apply grayscale and reduced opacity
+            slot.style.filter = 'grayscale(80%)';
+            slot.style.opacity = '0.8';
+            
+            // Update or create the number display
+            let cooldownNumber = slot.querySelector('.cooldown-number');
+            if (!cooldownNumber) {
+                cooldownNumber = document.createElement('div');
+                cooldownNumber.className = 'cooldown-number';
+                cooldownNumber.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 16px;
+                    font-weight: bold;
+                    text-shadow: 0 0 4px #000, 0 0 4px #000, 0 0 4px #000;
+                    pointer-events: none;
+                `;
+                slot.appendChild(cooldownNumber);
+            }
+            
+            // Set the number text
+            cooldownNumber.textContent = seconds;
+        } else {
+            // Remove cooldown effects
+            slot.style.filter = 'none';
+            slot.style.opacity = '1';
+            
+            // Hide the number if it exists
+            const cooldownNumber = slot.querySelector('.cooldown-number');
+            if (cooldownNumber) {
+                cooldownNumber.textContent = '';
+            }
+        }
+        
+        // Hide the original cooldown overlay
         const cooldownOverlay = slot.querySelector('.weapon-cooldown-overlay');
         if (cooldownOverlay) {
-            if (currentCooldown > 0) {
-                // Show cooldown with ring animation
-                const progress = 1 - (currentCooldown / maxCooldown);
-                const degrees = progress * 360;
-                
-                cooldownOverlay.style.display = 'block';
-                cooldownOverlay.style.background = `conic-gradient(
-                    from 0deg,
-                    #444 0deg,
-                    #444 ${degrees}deg,
-                    transparent ${degrees}deg,
-                    transparent 360deg
-                )`;
-                cooldownOverlay.style.borderColor = '#444';
-                
-                // Make the slot slightly dimmed during cooldown
-                slot.style.opacity = '0.6';
-            } else {
-                cooldownOverlay.style.display = 'none';
-                slot.style.opacity = '1';
-            }
+            cooldownOverlay.style.display = 'none';
         }
     });
 }
+
+
 
 function getCooldownProperty(projectileType) {
     const cooldownMap = {

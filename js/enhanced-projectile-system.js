@@ -419,12 +419,13 @@ function updateEnhancedProjectiles(gameStateParam) {
 function updateProjectileCooldowns(gameStateParam) {
     const cooldownKeys = ['normalCooldown', 'laserCooldown', 'shotgunCooldown', 'lightningCooldown', 'seekingCooldown'];
     
+    // Only update cooldowns every 3 frames to reduce flickering
+    if (gameStateParam.frameCount % 3 !== 0) return;
+    
     cooldownKeys.forEach(key => {
         if (projectileSystem[key] > 0) {
-            projectileSystem[key] -= gameStateParam.deltaTime || 1;
-            if (projectileSystem[key] < 0) {
-                projectileSystem[key] = 0;
-            }
+            // Using Math.max to ensure we don't go below zero
+            projectileSystem[key] = Math.max(0, projectileSystem[key] - gameStateParam.deltaTime);
         }
     });
 }

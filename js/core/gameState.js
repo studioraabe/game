@@ -149,6 +149,7 @@ export function resetGame() {
         selectedBuffs: []
     };
     
+	gameState.frameCount = 0;
     
     // Initialize roguelike system if available
     if (window.initRoguelikeSystem) {
