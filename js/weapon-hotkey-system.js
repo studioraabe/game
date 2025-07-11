@@ -216,8 +216,7 @@ export function initWeaponHotkeySystem() {
     // Replace the original projectile buffs with weapon enhancement buffs
     replaceProjectileBuffsWithWeaponBuffs();
     
-    // Create weapon HUD
-    createWeaponHUD();
+    // Weapon HUD is now created by ui-hud.js
     
     console.log('🔫 Weapon Hotkey System Initialized');
 }
@@ -252,8 +251,10 @@ function unlockAllWeapons() {
         console.log(`🔫 Unlocked and equipped: ${PROJECTILE_CONFIGS[type].name}`);
     });
     
-    // Force update the weapon HUD
-    setTimeout(updateWeaponHUD, 100);
+    // Force update the weapon HUD (now provided by ui-hud.js)
+    if (window.updateWeaponHUD) {
+        setTimeout(window.updateWeaponHUD, 100);
+    }
 }
 
 // Add key listeners for weapon hotkeys
@@ -299,8 +300,10 @@ function handleWeaponHotkeys(event) {
                 `${config.name} [${event.key}]`
             );
             
-            // Update the weapon HUD
-            updateWeaponHUD();
+            // Update the weapon HUD (now provided by ui-hud.js)
+            if (window.updateWeaponHUD) {
+                window.updateWeaponHUD();
+            }
             
             console.log(`🔫 Switched to: ${config.name} (${event.key})`);
         }
@@ -343,241 +346,11 @@ function replaceProjectileBuffsWithWeaponBuffs() {
 }
 
 // ========================================
-// WEAPON HUD FUNCTIONS
-// ========================================
-
-// Create the weapon HUD
-function createWeaponHUD() {
-    // Check if it already exists
-    if (document.getElementById('weaponHUD')) {
-        return;
-    }
-    
-    // Create the weapon HUD container
-    const weaponHUD = document.createElement('div');
-    weaponHUD.id = 'weaponHUD';
-    weaponHUD.className = 'weapon-hud';
-    weaponHUD.style.cssText = `
-        position: absolute;
-        top: 70px;
-        left: 16px;
-        display: flex;
-        gap: 10px;
-        z-index: 100;
-    `;
-    
-    // Add it to the game container
-    document.getElementById('gameContainer').appendChild(weaponHUD);
-    
-    // Add CSS for the weapon HUD
-    if (!document.getElementById('weaponHUDStyles')) {
-        const style = document.createElement('style');
-        style.id = 'weaponHUDStyles';
-        style.textContent = `
-            .weapon-slot {
-                width: 40px;
-                height: 40px;
-                background-color: rgba(0, 0, 0, 0.6);
-                border: 2px solid #444;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                transition: all 0.2s ease;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            }
-            
-            .weapon-slot.active {
-                border-color: #00ff88;
-                box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
-                transform: scale(1.1);
-            }
-            
-            .weapon-icon {
-                font-size: 20px;
-                text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
-            }
-            
-            .weapon-key {
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background-color: #444;
-                color: white;
-                font-size: 10px;
-                width: 16px;
-                height: 16px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                border: 1px solid #555;
-            }
-            
-            .weapon-cooldown {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 3px;
-                background-color: #00ff88;
-                transform-origin: left;
-                transform: scaleX(0);
-                transition: transform 0.1s linear;
-            }
-            
-            @keyframes cooldownPulse {
-                0% { opacity: 0.7; }
-                50% { opacity: 1; }
-                100% { opacity: 0.7; }
-            }
-            
-            .weapon-slot.cooldown .weapon-cooldown {
-                background-color: #ff4757;
-                animation: cooldownPulse 0.5s infinite;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // Initial update
-    updateWeaponHUD();
-    
-    // Start the update loop for cooldowns
-    setInterval(updateWeaponCooldowns, 50);
-}
-
-// Update the weapon HUD
-function updateWeaponHUD() {
-    const weaponHUD = document.getElementById('weaponHUD');
-    if (!weaponHUD) {
-        return;
-    }
-    
-    // Clear the current HUD
-    weaponHUD.innerHTML = '';
-    
-    // Get the list of hotkeys
-    const hotkeys = Object.keys(WEAPON_HOTKEYS);
-    
-    // Create a slot for each equipped weapon
-    projectileSystem.equippedTypes.forEach((type, index) => {
-        // Get the hotkey for this weapon
-        const hotkeyCode = hotkeys.find(key => WEAPON_HOTKEYS[key] === type) || '';
-        const hotkeyChar = hotkeyCode.replace('Key', '');
-        
-        // Get the weapon config
-        const config = PROJECTILE_CONFIGS[type];
-        if (!config) return;
-        
-        // Create weapon slot
-        const slot = document.createElement('div');
-        slot.className = `weapon-slot ${index === projectileSystem.currentTypeIndex ? 'active' : ''}`;
-        slot.dataset.type = type;
-        slot.dataset.index = index;
-        
-        // Weapon icon
-        const iconMap = {
-            [ProjectileType.NORMAL]: '⚡',
-            [ProjectileType.LASER_BEAM]: '🔵',
-            [ProjectileType.ENERGY_SHOTGUN]: '💥',
-            [ProjectileType.CHAIN_LIGHTNING]: '⚡',
-            [ProjectileType.SEEKING_BOLT]: '🎯'
-        };
-        
-        const icon = document.createElement('div');
-        icon.className = 'weapon-icon';
-        icon.textContent = iconMap[type] || '⚡';
-        
-        // Hotkey badge
-        const key = document.createElement('div');
-        key.className = 'weapon-key';
-        key.textContent = hotkeyChar || index + 1;
-        
-        // Cooldown indicator
-        const cooldown = document.createElement('div');
-        cooldown.className = 'weapon-cooldown';
-        
-        // Assemble the slot
-        slot.appendChild(icon);
-        slot.appendChild(key);
-        slot.appendChild(cooldown);
-        
-        // Add click handler to switch weapons
-        slot.addEventListener('click', () => {
-            projectileSystem.currentTypeIndex = index;
-            updateWeaponHUD();
-        });
-        
-        weaponHUD.appendChild(slot);
-    });
-}
-
-// Update weapon cooldowns
-function updateWeaponCooldowns() {
-    const weaponHUD = document.getElementById('weaponHUD');
-    if (!weaponHUD) {
-        return;
-    }
-    
-    // Get all weapon slots
-    const slots = weaponHUD.querySelectorAll('.weapon-slot');
-    
-    // Update each slot's cooldown indicator
-    slots.forEach(slot => {
-        const type = slot.dataset.type;
-        if (!type) return;
-        
-        // Get the cooldown property for this weapon type
-        const cooldownProperty = getCooldownProperty(type);
-        if (!cooldownProperty) return;
-        
-        // Get the current cooldown value
-        const currentCooldown = projectileSystem[cooldownProperty] || 0;
-        
-        // Get the max cooldown for this weapon
-        const maxCooldown = PROJECTILE_CONFIGS[type]?.cooldown || 1;
-        
-        // Calculate the cooldown percentage
-        const cooldownPercent = currentCooldown / maxCooldown;
-        
-        // Update the cooldown indicator
-        const cooldownIndicator = slot.querySelector('.weapon-cooldown');
-        if (cooldownIndicator) {
-            if (currentCooldown > 0) {
-                slot.classList.add('cooldown');
-                cooldownIndicator.style.transform = `scaleX(${cooldownPercent})`;
-            } else {
-                slot.classList.remove('cooldown');
-                cooldownIndicator.style.transform = 'scaleX(0)';
-            }
-        }
-    });
-}
-
-// Helper function to get the cooldown property for a weapon type
-function getCooldownProperty(projectileType) {
-    // Map weapon types to their cooldown properties
-    const cooldownMap = {
-        [ProjectileType.NORMAL]: 'normalCooldown',
-        [ProjectileType.LASER_BEAM]: 'laserCooldown',
-        [ProjectileType.ENERGY_SHOTGUN]: 'shotgunCooldown',
-        [ProjectileType.CHAIN_LIGHTNING]: 'lightningCooldown',
-        [ProjectileType.SEEKING_BOLT]: 'seekingCooldown'
-    };
-    
-    return cooldownMap[projectileType] || null;
-}
-
-// ========================================
 // EXPORT FUNCTIONS
 // ========================================
 
 export {
     unlockAllWeapons,
-    updateWeaponHUD,
     handleWeaponHotkeys
 };
 
@@ -588,7 +361,7 @@ export {
 // Make these functions available globally
 window.initWeaponHotkeySystem = initWeaponHotkeySystem;
 window.unlockAllWeapons = unlockAllWeapons;
-window.updateWeaponHUD = updateWeaponHUD;
+// window.updateWeaponHUD is now provided by ui-hud.js
 window.WEAPON_BUFFS = WEAPON_BUFFS;
 
 // Auto-initialize when loaded

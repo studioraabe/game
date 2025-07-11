@@ -33,7 +33,7 @@ import {
 import './direct-weapon-hotkeys.js';
 
 
-
+import { initHUD, updateHUD } from './ui-hud.js';
 
 import { 
     soundManager, 
@@ -189,6 +189,8 @@ window.updateEnhancedDisplays = () => {
     if (!enhancedDisplaysInitialized) {
         if (!document.getElementById('enhancedBuffs') || !document.getElementById('comboDisplay')) {
             initEnhancedContainers();
+			initHUD();
+
         }
         enhancedDisplaysInitialized = true;
     }
@@ -215,6 +217,7 @@ async function init() {
     // Initialize systems
     initInput(); 
     applyTheme();
+	initHUD();
     loadGame();
     initEnvironmentElements();
     initDamageEffects();

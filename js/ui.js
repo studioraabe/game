@@ -170,17 +170,29 @@ function showUniversalCountdown(type = 'resume', callback = null) {
 
 // HUD Updates
 export function updateUI() {
-    document.getElementById('score').textContent = gameState.score.toLocaleString();
-    document.getElementById('level').textContent = gameState.level;
+    // Update score and level displays
+    const scoreElement = document.getElementById('score');
+    const levelElement = document.getElementById('level');
+    const highscoreElement = document.getElementById('highscoreValue');
     
-    // NEW: Show current/max bullets
-    const bulletDisplay = gameState.isBerserker ? '∞' : `${gameState.bullets}/${gameState.maxBullets}`;
-    document.getElementById('bullets').textContent = bulletDisplay;
+    if (scoreElement) {
+        scoreElement.textContent = gameState.score.toLocaleString();
+    }
     
-    document.getElementById('highscoreValue').textContent = gameState.highScore;
+    if (levelElement) {
+        levelElement.textContent = gameState.level;
+    }
     
-    updateHealthBar();
+    if (highscoreElement) {
+        highscoreElement.textContent = gameState.highScore;
+    }
     
+    // Update HUD elements (health, bullets, weapons) through the centralized HUD system
+    if (window.updateHUD) {
+        window.updateHUD();
+    }
+    
+    // Update buff selection screen if needed
     if (gameState.currentState === GameState.LEVEL_COMPLETE) {
         updateBuffButtons();
     }
@@ -526,7 +538,9 @@ export function startGame() {
         gameState.currentState = GameState.PLAYING;
         gameState.gameRunning = true;
         resetGame();
-        
+        if (window.initHUD) {
+    window.initHUD();
+}
         soundManager.startBackgroundMusic();
         initEnhancedContainers();
         updateUI();

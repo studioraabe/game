@@ -13,22 +13,7 @@
         <div id="gameContainer">
        
 
-            <!-- Health Bar - Links Oben -->
-            <div id="healthBar" class="ui-panel">
-                <div class="health-container" id="healthContainer">
-                    <div class="health-segment"></div>
-                    <div class="health-segment"></div>
-                    <div class="health-segment"></div>
-                    <div class="health-segment"></div>
-                    <div class="health-segment"></div>
-                </div>
-            </div>
 
-            <!-- Bullet Count - Rechts Oben -->
-            <div id="bulletCount" class="ui-panel">
-                <span class="bulletcountValue" id="bullets">0</span>
-                <span class="ui-label pulse" id="bulletsLabel" style="font-size: 24px; margin-top: -10px; color:#00d4ff">🗲</span>
-            </div>
 
             <!-- Score/Level Panel - Oben Mitte -->
             <div id="scorePanel" class="ui-panel">
@@ -362,6 +347,7 @@
   // First import the weapon systems
   import './js/weapon-hotkey-system.js';
   import './js/weapon-system-integration.js';
+	import './js/ui-hud.js';
   // Then import main
   import './js/main.js';
 </script>
