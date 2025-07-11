@@ -396,17 +396,7 @@ function handleKeyDown(e) {
         }
     }
     
-    // Shoot controls (S or Space)
-    if (e.code === 'KeyS' || e.code === 'Space') {
-        e.preventDefault();
-        if (!keys.s) {
-            keys.s = true;
-            if (gameState.gameRunning) {
-                shoot(gameState);
-            }
-        }
-    }
-    
+
     // Movement controls
     if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
         e.preventDefault();

@@ -30,6 +30,9 @@ import {
     debugBackground
 } from './background-system.js';
 
+import './direct-weapon-hotkeys.js';
+
+
 
 
 import { 
