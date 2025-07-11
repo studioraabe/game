@@ -449,13 +449,16 @@ function updateLaserBeams(gameStateParam) {
 }
 
 function updateSeekingBolts(gameStateParam) {
+    // Define a list of environmental objects that should not be hit by player attacks
+    const environmentalTypes = ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'];
+    
     for (let i = projectileSystem.seekingBolts.length - 1; i >= 0; i--) {
         const bolt = projectileSystem.seekingBolts[i];
         
         bolt.life -= gameStateParam.deltaTime;
         bolt.age += gameStateParam.deltaTime;
         
-        // FIXED: Update trail more frequently for better visibility
+        // Update trail more frequently for better visibility
         if (bolt.age % 2 === 0) { // Was % 3, now % 2 for more trail particles
             bolt.trail.push({ x: bolt.x, y: bolt.y, life: 20 }); // Increased life from 15 to 20
         }
@@ -468,8 +471,8 @@ function updateSeekingBolts(gameStateParam) {
             }
         }
         
-        // Seeking behavior
-        if (bolt.target && bolt.target.health > 0) {
+        // Seeking behavior - only target non-environmental objects
+        if (bolt.target && bolt.target.health > 0 && !environmentalTypes.includes(bolt.target.type)) {
             const dx = (bolt.target.x + bolt.target.width/2) - bolt.x;
             const dy = (bolt.target.y + bolt.target.height/2) - bolt.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -491,7 +494,9 @@ function updateSeekingBolts(gameStateParam) {
         let hit = false;
         for (let j = obstacles.length - 1; j >= 0; j--) {
             const obstacle = obstacles[j];
-            if (obstacle.type === 'boltBox' || obstacle.type === 'rock') continue;
+            
+            // Skip environmental objects
+            if (environmentalTypes.includes(obstacle.type)) continue;
             
             if (bolt.x < obstacle.x + obstacle.width &&
                 bolt.x + 8 > obstacle.x &&
@@ -512,7 +517,7 @@ function updateSeekingBolts(gameStateParam) {
                 
                 createLightningEffect(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
                 
-                // FIXED: Check for enemy death and handle it properly
+                // Check for enemy death and handle it properly
                 if (obstacle.health <= 0) {
                     handleProjectileEnemyDeath(obstacle, gameStateParam, damage);
                 } else {
@@ -565,11 +570,16 @@ function updateEnhancedBullets(gameStateParam) {
 // SPECIAL PROJECTILE LOGIC
 // ========================================
 
+
 function processLaserHits(laser, gameStateParam) {
     const hitEnemies = [];
     
+    // Define a list of environmental objects that should not be hit by player attacks
+    const environmentalTypes = ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'];
+    
     for (const obstacle of obstacles) {
-        if (obstacle.type === 'boltBox' || obstacle.type === 'rock') continue;
+        // Skip environmental objects and already hit targets
+        if (environmentalTypes.includes(obstacle.type)) continue;
         if (laser.hitTargets.has(obstacle)) continue;
         
         // Check if enemy intersects with laser line
@@ -602,12 +612,13 @@ function processLaserHits(laser, gameStateParam) {
         
         createLightningEffect(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
         
-        // FIXED: Check for enemy death and handle it properly
+        // Check for enemy death and handle it properly
         if (enemy.health <= 0) {
             handleProjectileEnemyDeath(enemy, gameStateParam, damage);
         }
     });
 }
+
 
 function handleProjectileEnemyDeath(enemy, gameStateParam, damage) {
     // Calculate score
@@ -673,6 +684,9 @@ function handleProjectileEnemyDeath(enemy, gameStateParam, damage) {
 function processChainLightning(bullet, gameStateParam) {
     if (!bullet.chainedTargets) bullet.chainedTargets = new Set();
     
+    // Define a list of environmental objects that should not be hit by player attacks
+    const environmentalTypes = ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'];
+    
     let chainCount = 0;
     let currentX = bullet.x;
     let currentY = bullet.y;
@@ -682,7 +696,8 @@ function processChainLightning(bullet, gameStateParam) {
         let nearestDistance = bullet.chainRange;
         
         for (const obstacle of obstacles) {
-            if (obstacle.type === 'boltBox' || obstacle.type === 'rock') continue;
+            // Skip environmental objects and already chained targets
+            if (environmentalTypes.includes(obstacle.type)) continue;
             if (bullet.chainedTargets.has(obstacle)) continue;
             
             const dx = (obstacle.x + obstacle.width/2) - currentX;
@@ -714,7 +729,7 @@ function processChainLightning(bullet, gameStateParam) {
         // Create lightning effect between current position and enemy
         createLightningEffect(nearestEnemy.x + nearestEnemy.width/2, nearestEnemy.y + nearestEnemy.height/2);
         
-        // FIXED: Check for enemy death and handle it properly
+        // Check for enemy death and handle it properly
         if (nearestEnemy.health <= 0) {
             handleProjectileEnemyDeath(nearestEnemy, gameStateParam, damage);
         }
@@ -724,7 +739,6 @@ function processChainLightning(bullet, gameStateParam) {
         chainCount++;
     }
 }
-
 // ========================================
 // PROJECTILE UNLOCKING SYSTEM
 // ========================================
