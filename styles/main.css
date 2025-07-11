@@ -119,18 +119,7 @@ body {
     pointer-events: none;
 }
 
-/* Combo display positioning fix */
-.combo-display-enhanced {
-    position: absolute !important;
-    bottom: 80px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    text-align: center;
-    z-index: 15 !important;
-    pointer-events: none;
-    transition: all 0.1s ease;
-    padding: 4px !important;
-}
+
 
 /* Ensure visibility */
 .enhanced-buffs-container,
@@ -527,10 +516,14 @@ position: absolute;
 #scorePanel {
 position: absolute;
     top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex
-;
+    right: 20px;
+    display: flex;
+	 background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(10.309px) !important;
+        border-radius: 20px;
+	z-index:10;
+	
     gap: 0px;
     padding: 10px 0px;
     align-items: center;

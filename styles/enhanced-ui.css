@@ -8,13 +8,16 @@
 /* 1. ENHANCED COMBO DISPLAY - UNTEN MITTE */
 .combo-display-enhanced {
     position: absolute !important;
-    bottom: 20px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
+    top: 20px !important;
+    left: 20px;
+
     text-align: center;
     z-index: 15 !important;
     pointer-events: none;
     transition: all 0.1s ease;
+
+
+
     
     /* WICHTIG: Standardmäßig komplett unsichtbar */
     background: none !important;
@@ -657,9 +660,10 @@
     min-width: 80px;
     min-height: 40px;
     padding: 8px 12px !important;
-    background: rgba(0, 0, 0, 0.7) !important;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(10.309px) !important;
+        border-radius: 20px;
 }
 
 /* Combo Nummer - dezenter */
@@ -697,8 +701,8 @@
 
 @keyframes comboWiggle {
     0% { transform: scale(1) rotate(0deg); }
-    25% { transform: scale(1.15) rotate(-2deg); }
-    50% { transform: scale(1.15) rotate(2deg); }
+    25% { transform: scale(1.1) rotate(-1deg); }
+    50% { transform: scale(1.1) rotate(1deg); }
     75% { transform: scale(1.1) rotate(-1deg); }
     100% { transform: scale(1) rotate(0deg); }
 }
