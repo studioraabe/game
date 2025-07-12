@@ -358,7 +358,9 @@ export function updateBullets(gameStateParam) {
 // Enhanced function to handle Chain Lightning jumps with clear visual effects
 
 
-// Enhanced function to handle Chain Lightning jumps with clear visual effects
+// FIXED: Chain Lightning implementation with slow effect
+// Replace the executeChainLightning function in entities-combat.js
+
 function executeChainLightning(bullet, firstTarget, gameStateParam) {
     // Environmental objects to skip
     const environmentalTypes = ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'];
@@ -366,6 +368,9 @@ function executeChainLightning(bullet, firstTarget, gameStateParam) {
     // Start chain from the first hit enemy
     let currentX = firstTarget.x + firstTarget.width/2;
     let currentY = firstTarget.y + firstTarget.height/2;
+    
+    // FIXED: Apply slow effect to the initial target
+    applySlowEffect(firstTarget);
     
     // Maximum jumps (default to 2 additional enemies after the first hit)
     const maxChains = bullet.maxChains || 2;
@@ -411,6 +416,9 @@ function executeChainLightning(bullet, firstTarget, gameStateParam) {
         
         // Apply damage
         nextTarget.health -= damage;
+        
+        // FIXED: Apply slow effect to the chained target
+        applySlowEffect(nextTarget);
         
         // Show damage number
         if (window.createDamageNumber) {
@@ -460,16 +468,65 @@ function executeChainLightning(bullet, firstTarget, gameStateParam) {
         }
         
         // Create a small delay between chain jumps for better visibility
-        // This is a visual delay only, using a timeout
         setTimeout(() => {
-            // This ensures each chain jump has a slight delay for better visibility
-            console.log(`⚡ Chain Lightning jumped to ${nextTarget.type}! Chain #${chainCount+1}`);
+            console.log(`⚡ Chain Lightning jumped to ${nextTarget.type}! Chain #${chainCount+1} - SLOWED`);
         }, chainCount * 50);
     }
 }
 
+// FIXED: Ensure the applySlowEffect function exists in entities-combat.js
+function applySlowEffect(enemy) {
+    // Skip if already slowed
+    if (enemy.isSlowed) return;
+    
+    // FIXED: Use speedMultiplier instead of modifying speed directly
+    enemy.isSlowed = true;
+    enemy.slowDuration = 180; // 3 seconds at 60fps
+    enemy.speedMultiplier = 0.6; // 40% speed reduction
+    
+    // Visual indicator for slowed enemies
+    if (!enemy.effects) enemy.effects = [];
+    enemy.effects.push({
+        type: 'slow',
+        duration: 180
+    });
+    
+    // Create visual slow effect
+    createSlowEffect(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+    
+    console.log(`❄️ Applied slow effect to ${enemy.type}: speed reduced to ${(enemy.speedMultiplier * 100).toFixed(0)}%`);
+}
 
 
+// FIXED: Ensure the createSlowEffect function exists
+function createSlowEffect(x, y) {
+    // Create slow particles with ice-blue color
+    for (let i = 0; i < 8; i++) { // More particles for better visibility
+        if (window.dropParticles) {
+            window.dropParticles.push({
+                x: x + (Math.random() - 0.5) * 30,
+                y: y + (Math.random() - 0.5) * 30,
+                velocityX: (Math.random() - 0.5) * 3,
+                velocityY: (Math.random() - 0.5) * 3,
+                life: 90, // Longer life for better visibility
+                maxLife: 90,
+                color: '#87CEEB', // Sky blue for slow effect
+                size: 2 + Math.random() * 2
+            });
+        }
+    }
+    
+    // Create a score popup to indicate slowing
+    if (window.createScorePopup) {
+        window.createScorePopup(x, y - 25, '❄️ SLOWED!');
+    }
+    
+    // Add lightning effect for chain lightning visual
+    if (window.createLightningEffect) {
+        window.createLightningEffect(x, y);
+    }
+}
+// Make sure to also update the createChainLightningEffect function for better visuals
 function createChainLightningEffect(startX, startY, endX, endY) {
     // First create regular lightning effect at the target
     if (window.createLightningEffect) {
@@ -511,7 +568,8 @@ function createChainLightningEffect(startX, startY, endX, endY) {
         });
     }
 }
-// Add lifesteal function
+
+
 function applyLifesteal(damage, gameStateParam) {
     if (gameStateParam.playerStats.lifeSteal <= 0) return 0;
     
@@ -607,17 +665,14 @@ const comboMultiplier = getComboPointsMultiplier();
     }
 }
 
+// FIXED: Enemy movement system that respects individual enemy speeds
+// Replace the updateObstacles function in entities-combat.js
+
 export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, gameStateParam) {
     const speed = gameSpeed * enemySlowFactor * 0.7;
-	
-	
-
-	
     
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
-		
-		
         
         if (obstacle.type === 'skeleton' && obstacle.isDead) {
             obstacle.deathTimer += gameState.deltaTime;
@@ -631,41 +686,40 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             }
             continue;
         }
-		
-		
-		
-		
-		    if (obstacle.isSlowed && obstacle.slowDuration > 0) {
-        obstacle.slowDuration -= gameState.deltaTime || 1;
         
-        // When slow effect expires, restore original speed
-        if (obstacle.slowDuration <= 0) {
-            obstacle.isSlowed = false;
-            obstacle.speed = obstacle.originalSpeed;
-            delete obstacle.originalSpeed;
+        // FIXED: Handle slow effect processing with better logic
+        if (obstacle.isSlowed && obstacle.slowDuration > 0) {
+            obstacle.slowDuration -= gameState.deltaTime || 1;
+            
+            // When slow effect expires, restore original speed multiplier
+            if (obstacle.slowDuration <= 0) {
+                obstacle.isSlowed = false;
+                obstacle.speedMultiplier = 1.0; // Reset to normal speed
+                console.log(`❄️ Slow effect expired on ${obstacle.type} - speed restored`);
+            }
         }
-    }
-    
-		
-		
+        
+        // FIXED: Calculate individual enemy speed with multiplier
+        const individualSpeedMultiplier = obstacle.speedMultiplier || 1.0;
+        const effectiveSpeed = speed * individualSpeedMultiplier;
         
         // SKELETON-SPECIFIC LOGIC
         if (obstacle.type === 'skeleton') {
-            obstacle.velocityX = -speed;
+            // FIXED: Apply speed multiplier to skeleton movement
+            obstacle.velocityX = -effectiveSpeed;
             
             if (obstacle.damageResistance > 0) {
                 obstacle.damageResistance -= gameState.deltaTime;
             }
-            
-          //  obstacle.y += Math.sin(Date.now() * 0.002 * enemySlowFactor + i) * 0.2 * gameState.deltaTime;
         }
         
         const isStationary = obstacle.type === 'boltBox' || obstacle.type === 'rock' || 
                             obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable' ||
                             obstacle.type === 'sarcophagus';
         
+        // FIXED: Apply individual speed to non-stationary enemies
         if (!isStationary || ((obstacle.type === 'teslaCoil' || obstacle.type === 'frankensteinTable') && !obstacle.isPermanent)) {
-            obstacle.x -= speed * gameState.deltaTime;
+            obstacle.x -= effectiveSpeed * gameState.deltaTime;
         }
         
         // Tesla Coil State Machine
@@ -683,9 +737,9 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             updateAlphaWolf(obstacle, level, gameStateParam);
         }
         
-        // BAT AI SYSTEM
+        // BAT AI SYSTEM - FIXED: Apply speed multiplier to bat movement
         if (obstacle.type === 'bat') {
-            updateBatAI(obstacle, gameStateParam);
+            updateBatAI(obstacle, gameStateParam, individualSpeedMultiplier);
         }
         
         // Ground enemy movement
@@ -713,14 +767,15 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
         }
         
         // Check if passed player
-if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
-    obstacle.passed = true;
-    
-    // Only give points for actual enemies
-    const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf', 'teslaCoil', 'frankensteinTable'];
-    if (!enemyTypes.includes(obstacle.type)) {
-        continue;
-    }    
+        if (!obstacle.passed && obstacle.x + obstacle.width < player.x) {
+            obstacle.passed = true;
+            
+            // Only give points for actual enemies
+            const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf', 'teslaCoil', 'frankensteinTable'];
+            if (!enemyTypes.includes(obstacle.type)) {
+                continue;
+            }    
+            
             // NEW: Enhanced combo point multiplier for avoidance
             const comboMultiplier = 1 + (gameStateParam.comboCount * 0.01);
             const basePoints = 10;

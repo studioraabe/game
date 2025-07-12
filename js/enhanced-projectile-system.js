@@ -78,18 +78,18 @@ const PROJECTILE_CONFIGS = {
     [ProjectileType.LASER_BEAM]: {
         name: "🔵 Laser Beam",
         desc: "Instant piercing beam",
-        cooldown: 120,
+        cooldown: 180,
         cost: 10,
         damage: 1.5,
         speed: 0, // Instant
         penetration: true,
-        range: 800
+        range: 600
     },
     
     [ProjectileType.ENERGY_SHOTGUN]: {
         name: "💥 Energy Shotgun",
         desc: "Spreads 5 bolts in a cone",
-        cooldown: 90,
+        cooldown: 120,
         cost: 5,
         damage: 0.8,
         speed: 22,
@@ -101,9 +101,9 @@ const PROJECTILE_CONFIGS = {
     [ProjectileType.CHAIN_LIGHTNING]: {
         name: "⚡ Chain Lightning",
         desc: "Jumps between 3 enemies",
-        cooldown: 120,
-        cost: 5,
-        damage: 1.2,
+        cooldown: 240,
+        cost: 15,
+        damage: 1.1,
         speed: 20,
         penetration: false,
         maxChains: 3,

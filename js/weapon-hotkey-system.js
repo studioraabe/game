@@ -135,13 +135,13 @@ export const WEAPON_BUFFS = [
     {
         id: 'energySaver',
         title: '💡 Energy Saver',
-        desc: '-25% energy cost for all weapons but +10% cooldown',
+        desc: '-20% energy cost for all weapons but +10% cooldown',
         effect: () => {
             // Apply to all weapons
             Object.values(ProjectileType).forEach(type => {
                 if (PROJECTILE_CONFIGS[type]) {
                     const config = PROJECTILE_CONFIGS[type];
-                    config.cost = Math.max(1, Math.floor(config.cost * 0.75));
+                    config.cost = Math.max(1, Math.floor(config.cost * 0.80));
                     config.cooldown = Math.ceil(config.cooldown * 1.1);
                 }
             });
@@ -157,14 +157,14 @@ export const WEAPON_BUFFS = [
     {
         id: 'overcharge',
         title: '⚠️ Overcharge',
-        desc: '+40% damage for all weapons but +25% energy cost',
+        desc: '+20% damage for all weapons but +20% energy cost',
         effect: () => {
             // Apply to all weapons
             Object.values(ProjectileType).forEach(type => {
                 if (PROJECTILE_CONFIGS[type]) {
                     const config = PROJECTILE_CONFIGS[type];
-                    config.damage = config.damage * 1.4;
-                    config.cost = Math.ceil(config.cost * 1.25);
+                    config.damage = config.damage * 1.2;
+                    config.cost = Math.ceil(config.cost * 1.20);
                 }
             });
             
