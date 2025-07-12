@@ -176,7 +176,6 @@ export function resetGame() {
     // FIXED: Initialize available buffs properly
     if (window.STAT_BUFFS) {
         gameState.availableBuffs = [...window.STAT_BUFFS];
-        console.log(`✅ Initialized ${gameState.availableBuffs.length} available buffs`);
     } else {
         // Fallback buffs if STAT_BUFFS not loaded yet
         gameState.availableBuffs = [
@@ -189,7 +188,6 @@ export function resetGame() {
             { id: 'criticalFocus', title: '🎯 Critical Focus', desc: '20% chance for critical hits (2x damage)' },
             { id: 'swiftDeath', title: '⚡ Swift Death', desc: '+20% movement and projectile speed' }
         ];
-        console.log(`⚠️ Using fallback buffs: ${gameState.availableBuffs.length}`);
     }
     
     Object.keys(activeDropBuffs).forEach(key => delete activeDropBuffs[key]);

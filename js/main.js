@@ -112,6 +112,32 @@ import {
     PROJECTILE_BUFFS
 } from './projectile-buff-integration.js';
 
+
+
+
+// Disable the old cooldown display systems
+if (window.cooldownDisplayInterval) {
+    clearInterval(window.cooldownDisplayInterval);
+    window.cooldownDisplayInterval = null;
+}
+
+if (window.projectileUIUpdateInterval) {
+    clearInterval(window.projectileUIUpdateInterval);
+    window.projectileUIUpdateInterval = null;
+}
+
+// Hide the old projectile UI elements
+const oldProjectileUI = document.getElementById('projectileUI');
+if (oldProjectileUI) {
+    oldProjectileUI.style.display = 'none';
+}
+
+const oldCooldownDisplay = document.getElementById('projectileCooldownDisplay');
+if (oldCooldownDisplay) {
+    oldCooldownDisplay.style.display = 'none';
+}
+
+
 // Initialize canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');

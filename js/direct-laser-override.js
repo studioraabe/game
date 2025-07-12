@@ -4,13 +4,11 @@
 (function() {
     // Wait a short time for everything to load
     setTimeout(function() {
-        console.log('🔵 DIRECTLY overriding laser beam functionality');
         integrateDirectLaserBeam();
     }, 1000);
     
     function integrateDirectLaserBeam() {
         if (!window.ProjectileType || !window.PROJECTILE_CONFIGS) {
-            console.error('❌ Required game objects not found. Make sure this script loads after your game scripts.');
             return;
         }
         
@@ -26,8 +24,6 @@
         // 1. Override the keyboard event handlers
         document.addEventListener('keydown', function(event) {
             if (event.code === 'KeyW') {
-                isWKeyDown = true;
-                console.log('🔵 W key DOWN detected');
                 
                 // Check if we should start the laser
                 checkLaserActivation();
@@ -37,7 +33,6 @@
         document.addEventListener('keyup', function(event) {
             if (event.code === 'KeyW') {
                 isWKeyDown = false;
-                console.log('🔵 W key UP detected');
                 
                 // Stop the laser if it's active
                 if (window.continuousLaserActive) {
@@ -62,11 +57,11 @@
         PROJECTILE_CONFIGS[ProjectileType.LASER_BEAM] = {
             name: "🔵 Continuous Laser",
             desc: "Hold W key to fire a continuous beam",
-            cooldown: 30,      // Cooldown after stopping
-            cost: 1,           // Energy cost per tick
-            costInterval: 10,  // Apply cost every 10 frames
-            damage: 0.3,       // Damage per tick
-            damageInterval: 6, // Apply damage every 6 frames
+            cooldown: 300,      // Cooldown after stopping
+            cost: 5,           // Energy cost per tick
+            costInterval: 1,  // Apply cost every 10 frames
+            damage: 5.8,       // Damage per tick
+            damageInterval: 1, // Apply damage every 6 frames
             speed: 0,
             penetration: true,
             range: 800,
@@ -97,7 +92,6 @@
         function startLaser() {
             if (!window.player || !window.projectileSystem) return;
             
-            console.log('🔵 Starting continuous laser beam');
             window.continuousLaserActive = true;
             
             // Clean up any existing laser beams
@@ -147,7 +141,6 @@
         
         // Function to stop the laser beam
         function stopLaser() {
-            console.log('🔵 Stopping continuous laser beam');
             window.continuousLaserActive = false;
             
             // Mark the laser for fadeout
@@ -417,7 +410,6 @@
             // Override fire function
             const originalFireLaserBeam = window.fireLaserBeam;
             window.fireLaserBeam = function(gameStateParam, config) {
-                console.log('🔵 Direct override: fireLaserBeam called');
                 
                 // If W key is down, start our continuous laser
                 if (isWKeyDown) {
@@ -439,8 +431,7 @@
             };
         }
         
-        console.log('🔵 Direct laser beam override complete!');
-        console.log('🔵 Press and hold W to fire a continuous laser beam');
+
         
         // Start checking for laser activation immediately
         if (isWKeyDown) {

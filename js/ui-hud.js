@@ -1,4 +1,4 @@
-// js/ui-hud.js - Enhanced Multi-Container HUD System with Custom Weapon Styling
+// js/ui-hud.js - Enhanced Multi-Container HUD System with Fixed Weapon Cooldown Display
 
 import { gameState } from './core/gameState.js';
 import { projectileSystem, PROJECTILE_CONFIGS, ProjectileType } from './enhanced-projectile-system.js';
@@ -12,12 +12,10 @@ let hudInitialized = false;
 export function initHUD() {
     if (hudInitialized) return;
     
-    console.log('🎮 Initializing Enhanced Multi-HUD System');
     
     // Check if game container exists
     const gameContainer = document.getElementById('gameContainer');
     if (!gameContainer) {
-        console.error('❌ Game container not found! Retrying in 100ms...');
         setTimeout(initHUD, 100);
         return;
     }
@@ -35,7 +33,7 @@ export function initHUD() {
     updateHUD();
     
     hudInitialized = true;
-    console.log('✅ Enhanced Multi-HUD System initialized');
+
 }
 
 function removeExistingHUD() {
@@ -62,7 +60,6 @@ function removeExistingHUD() {
 function createMultiHUD() {
     const gameContainer = document.getElementById('gameContainer');
     if (!gameContainer) {
-        console.error('❌ Cannot create multi-HUD - game container not found');
         return;
     }
     
@@ -157,7 +154,6 @@ function createMultiHUD() {
     
     gameContainer.appendChild(multiHUD);
     
-    console.log('✅ Multi-HUD container created');
 }
 
 // ========================================
@@ -361,8 +357,8 @@ function setupWeaponSlots() {
 }
 
 
-// Complete replacement for the weapon cooldown function
-// Add this to js/ui-hud.js replacing the existing updateWeaponCooldowns function
+// Fixed weapon cooldown function with separated visual updates
+let weaponSlotStates = new Map();
 
 function updateWeaponCooldowns() {
     const weaponsContainer = document.getElementById('weaponsContainer');
@@ -375,7 +371,7 @@ function updateWeaponCooldowns() {
         const index = parseInt(slot.dataset.index);
         if (!type) return;
         
-        // Update active state (selected weapon)
+        // Update active state (selected weapon) - always check this
         const isActive = index === projectileSystem.currentTypeIndex;
         if (isActive) {
             slot.classList.add('active');
@@ -392,18 +388,24 @@ function updateWeaponCooldowns() {
         if (!cooldownProperty) return;
         
         const currentCooldown = projectileSystem[cooldownProperty] || 0;
+        const isOnCooldown = currentCooldown > 0;
+        const seconds = Math.ceil(currentCooldown / 60);
         
-        // Simple cooldown display using CSS properties only
-        if (currentCooldown > 0) {
-            // Calculate seconds for display
-            const seconds = Math.ceil(currentCooldown / 60);
-            
-            // Apply grayscale and reduced opacity
-            slot.style.filter = 'grayscale(80%)';
-            slot.style.opacity = '0.8';
-            
-            // Update or create the number display
+        // Get or create slot state
+        const slotKey = `${type}_${index}`;
+        let slotState = weaponSlotStates.get(slotKey) || { 
+            hasElement: false, 
+            lastSeconds: -1 
+        };
+        
+        if (isOnCooldown) {
+            // Apply cooldown visual effects - always update these
+                      
+
+            // Find existing cooldown number
             let cooldownNumber = slot.querySelector('.cooldown-number');
+            
+            // Create element only if it doesn't exist
             if (!cooldownNumber) {
                 cooldownNumber = document.createElement('div');
                 cooldownNumber.className = 'cooldown-number';
@@ -421,31 +423,39 @@ function updateWeaponCooldowns() {
                     font-weight: bold;
                     text-shadow: 0 0 4px #000, 0 0 4px #000, 0 0 4px #000;
                     pointer-events: none;
+                    z-index: 10;
                 `;
                 slot.appendChild(cooldownNumber);
+                slotState.hasElement = true;
             }
             
-            // Set the number text
-            cooldownNumber.textContent = seconds;
+            // ALWAYS update the text content - this is what was missing!
+            if (cooldownNumber.textContent !== seconds.toString()) {
+                cooldownNumber.textContent = seconds;
+                slotState.lastSeconds = seconds;
+            }
+            
         } else {
-            // Remove cooldown effects
+            // Remove cooldown effects - always update these
             slot.style.filter = 'none';
             slot.style.opacity = '1';
             
-            // Hide the number if it exists
-            const cooldownNumber = slot.querySelector('.cooldown-number');
-            if (cooldownNumber) {
-                cooldownNumber.textContent = '';
+            // Only remove element if it exists to prevent unnecessary DOM changes
+            if (slotState.hasElement) {
+                const cooldownNumber = slot.querySelector('.cooldown-number');
+                if (cooldownNumber) {
+                    cooldownNumber.remove();
+                    slotState.hasElement = false;
+                    slotState.lastSeconds = -1;
+                }
             }
         }
         
-        // Hide the original cooldown overlay
-        const cooldownOverlay = slot.querySelector('.weapon-cooldown-overlay');
-        if (cooldownOverlay) {
-            cooldownOverlay.style.display = 'none';
-        }
+        // Update state tracking
+        weaponSlotStates.set(slotKey, slotState);
     });
 }
+
 
 
 
@@ -700,6 +710,14 @@ function addHUDStyles() {
             border-color: #3AC2FD !important;
         }
         
+        .weapon-slot {
+            transition: filter 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .cooldown-number {
+            transition: none !important;
+        }
+        
         .critical-health {
             border-color: #ff4757 !important;
         }
@@ -732,16 +750,23 @@ function addHUDStyles() {
 let weaponUpdateInterval = null;
 
 function startUpdateIntervals() {
-    // Start cooldown update loop
+    // Stop any existing interval
     if (weaponUpdateInterval) {
-        clearInterval(weaponUpdateInterval);
+        cancelAnimationFrame(weaponUpdateInterval);
     }
-    weaponUpdateInterval = setInterval(updateWeaponCooldowns, 50);
+    
+    // Use requestAnimationFrame for smooth updates
+    function updateLoop() {
+        updateWeaponCooldowns();
+        weaponUpdateInterval = requestAnimationFrame(updateLoop);
+    }
+    
+    updateLoop();
 }
 
 function stopUpdateIntervals() {
     if (weaponUpdateInterval) {
-        clearInterval(weaponUpdateInterval);
+        cancelAnimationFrame(weaponUpdateInterval);
         weaponUpdateInterval = null;
     }
 }

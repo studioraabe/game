@@ -56,10 +56,10 @@ const PROJECTILE_CONFIGS = {
     [ProjectileType.NORMAL]: {
         name: "⚡ Lightning Bolt",
         desc: "Standard energy projectile",
-        cooldown: 1,
+        cooldown: 10,
         cost: 1,
         damage: 1.0,
-        speed: 16,
+        speed: 18,
         penetration: false
     },
     
@@ -79,8 +79,8 @@ const PROJECTILE_CONFIGS = {
         desc: "Spreads 5 bolts in a cone",
         cooldown: 90,
         cost: 5,
-        damage: 0.7,
-        speed: 20,
+        damage: 0.8,
+        speed: 22,
         penetration: false,
         pellets: 5,
         spread: 0.2
@@ -163,7 +163,6 @@ function getCooldownProperty(projectileType) {
     
     soundManager.pickup();
     
-    console.log(`🔄 Switched to: ${config.name} (${projectileSystem.currentTypeIndex + 1}/${projectileSystem.equippedTypes.length})`);
 }
 
 function getCurrentProjectileType() {
@@ -264,23 +263,22 @@ function fireNormalBolt(gameStateParam, config) {
 
 function fireLaserBeam(gameStateParam, config) {
     // FIXED: Debug logging to track laser creation
-    console.log(`Creating laser beam. Current active: ${projectileSystem.laserBeams.length}`);
     
     // Create instant laser beam
-    const laserY = player.y + player.height / 2 - 2;
+    const laserY = player.y + player.height / 2 + 22;
     const startX = player.facingDirection === 1 ? player.x + player.width : player.x;
     const endX = player.facingDirection === 1 ? 
         Math.min(startX + config.range, camera.x + CANVAS.width + 200) :
         Math.max(startX - config.range, camera.x - 200);
     
     const laser = {
-        startX: startX,
+        startX: startX + 20,
         endX: endX,
         y: laserY,
         direction: player.facingDirection,
         damage: config.damage,
-        life: 45, // FIXED: Increased duration for better visibility
-        maxLife: 45,
+        life: 20, // FIXED: Increased duration for better visibility
+        maxLife: 30,
         piercing: config.penetration,
         type: ProjectileType.LASER_BEAM,
         hitTargets: new Set(),
@@ -288,7 +286,6 @@ function fireLaserBeam(gameStateParam, config) {
     };
     
     projectileSystem.laserBeams.push(laser);
-    console.log(`Laser created with ID: ${laser.id}, total active: ${projectileSystem.laserBeams.length}`);
     
     // Immediately check for hits along the laser path
     processLaserHits(laser, gameStateParam);
@@ -300,7 +297,7 @@ function fireEnergyShotgun(gameStateParam, config) {
     const projectileSpeedMultiplier = 1 + (gameStateParam.playerStats?.projectileSpeed || 0) / 100;
     const baseSpeed = config.speed * projectileSpeedMultiplier;
     const startX = player.facingDirection === 1 ? player.x + player.width + 24 : player.x - 24;
-    const startY = player.y + player.height / 2 - 2; // Lower the shotgun pellet height
+    const startY = player.y + player.height / 2 + 15; // Lower the shotgun pellet height
     
     // Create multiple pellets in a spread pattern
     for (let i = 0; i < config.pellets; i++) {
@@ -419,13 +416,11 @@ function updateEnhancedProjectiles(gameStateParam) {
 function updateProjectileCooldowns(gameStateParam) {
     const cooldownKeys = ['normalCooldown', 'laserCooldown', 'shotgunCooldown', 'lightningCooldown', 'seekingCooldown'];
     
-    // Only update cooldowns every 3 frames to reduce flickering
-    if (gameStateParam.frameCount % 3 !== 0) return;
-    
+    // Remove the frame-based throttling - update smoothly every frame
     cooldownKeys.forEach(key => {
         if (projectileSystem[key] > 0) {
-            // Using Math.max to ensure we don't go below zero
-            projectileSystem[key] = Math.max(0, projectileSystem[key] - gameStateParam.deltaTime);
+            // Smooth cooldown reduction using deltaTime
+            projectileSystem[key] = Math.max(0, projectileSystem[key] - (gameStateParam.deltaTime || 1));
         }
     });
 }
@@ -438,14 +433,12 @@ function updateLaserBeams(gameStateParam) {
         
         // FIXED: More thorough cleanup and debug logging
         if (laser.life <= 0) {
-            console.log(`Removing laser beam ${i}, remaining: ${projectileSystem.laserBeams.length - 1}`);
             projectileSystem.laserBeams.splice(i, 1);
         }
     }
     
     // FIXED: Debug logging to track laser beam state
     if (projectileSystem.laserBeams.length > 0) {
-        console.log(`Active laser beams: ${projectileSystem.laserBeams.length}`);
     }
 }
 
@@ -845,7 +838,6 @@ function renderLaserBeams(ctx) {
     
     // FIXED: Debug logging for laser rendering
     if (projectileSystem.laserBeams.length > 0) {
-        console.log(`Rendering ${projectileSystem.laserBeams.length} laser beams`);
     }
     
     for (let i = 0; i < projectileSystem.laserBeams.length; i++) {
@@ -856,7 +848,6 @@ function renderLaserBeams(ctx) {
         const startScreenX = getScreenX(laser.startX);
         const endScreenX = getScreenX(laser.endX);
         
-        console.log(`Laser ${laser.id}: life=${laser.life}/${laser.maxLife}, alpha=${alpha}, startX=${startScreenX}, endX=${endScreenX}`);
         
         // Save context state
         ctx.save();
