@@ -591,7 +591,8 @@ function applyLifesteal(damage, gameStateParam) {
 
 export function handleEnemyDeath(obstacle, index, gameStateParam) {
     const config = window.ENEMY_CONFIG?.[obstacle.type] || { points: 10 };
-    const basePoints = config.points || 10;
+    let basePoints = config.points || 10;
+
     const levelBonus = (gameStateParam.level - 1) * 5;
     
     // NEW: Enhanced combo point multiplier - 1% per combo level
@@ -599,6 +600,13 @@ const comboMultiplier = getComboPointsMultiplier();
     const points = Math.floor((basePoints + levelBonus) * gameStateParam.scoreMultiplier * comboMultiplier);
     
     gameStateParam.score += points;
+
+
+	if (obstacle.type === 'professor') {
+    basePoints = 100; // Boss-level points (same as alphaWolf)
+    gameStateParam.bossesKilled++; // Count as boss kill
+    console.log(`🔮 Professor defeated! Boss kill count: ${gameStateParam.bossesKilled}`);
+}
     
     // Show enhanced popup with combo indicator
     if (gameStateParam.comboCount >= 5) {
@@ -1496,101 +1504,95 @@ export function updateAllEntities(gameStateParam) {
 }
 
 
-
 function updateProfessorAI(obstacle, level, gameStateParam) {
-    // Initialize professor AI properties
-    if (obstacle.castingCooldown === undefined) {
-        obstacle.castingCooldown = Math.random() * 120 + 1; // Random initial cooldown
-        obstacle.isCasting = false;
-        obstacle.castingTime = 0;
-        obstacle.maxCastingTime = 120;
-        obstacle.hasTargeted = false;
-        obstacle.targetX = 0;
-        obstacle.targetY = 0;
+    // Initialize professor AI properties if not exists
+    if (obstacle.attackCooldown === undefined) {
+        obstacle.attackCooldown = 0; // Start ready to attack
+        obstacle.isAttacking = false;
         obstacle.facingDirection = -1;
-        obstacle.magicalPower = Math.floor(level / 3) + 1;
+        obstacle.detectionRange = 400;
+        obstacle.attackRange = 350;
+        obstacle.moveSpeed = 1.0;
+        obstacle.hasDetectedPlayer = false;
+        console.log(`🔮 Professor initialized at x:${obstacle.x}, y:${obstacle.y}`);
     }
     
-    // Floating movement
-    obstacle.y += Math.sin(Date.now() * 0.003 + obstacle.animationTime) * 0.8 * gameState.deltaTime;
+    // Floating movement (slight hover effect)
+    obstacle.y += Math.sin(Date.now() * 0.003 + obstacle.animationTime) * 0.5 * gameState.deltaTime;
     
-    obstacle.castingCooldown -= gameState.deltaTime;
+    const playerDistance = Math.abs(player.x - obstacle.x);
+    const playerVerticalDistance = Math.abs(player.y - obstacle.y);
+    const playerInDetectionRange = playerDistance < obstacle.detectionRange;
+    const playerInAttackRange = playerDistance < obstacle.attackRange && playerVerticalDistance < 200;
     
-    const horizontalDistance = Math.abs(player.x - obstacle.x);
-    const verticalDistance = Math.abs(player.y - obstacle.y);
-    const inRange = horizontalDistance < 400 && verticalDistance < 250;
-    
-    // Face the player when in range
-    if (inRange) {
+    // Face the player when detected
+    if (playerInDetectionRange) {
         obstacle.facingDirection = player.x < obstacle.x ? -1 : 1;
+        obstacle.hasDetectedPlayer = true;
     }
     
-    // Casting logic
-    if (obstacle.castingCooldown <= 0 && inRange && !obstacle.isDead) {
-        if (!obstacle.isCasting) {
-            // Start casting
-            obstacle.isCasting = true;
-            obstacle.castingTime = obstacle.maxCastingTime;
-            obstacle.hasTargeted = false;
-            obstacle.isAttacking = true; // Prevent damage during cast
-        }
-        
-        if (obstacle.isCasting && obstacle.castingTime > 0) {
-            obstacle.castingTime -= gameState.deltaTime;
-            
-            // Target the player halfway through casting
-            if (!obstacle.hasTargeted && obstacle.castingTime <= obstacle.maxCastingTime / 2) {
-                obstacle.hasTargeted = true;
-                
-                // Predict player movement
-                const predictedX = player.x + (player.velocityX * 30);
-                const predictedY = player.y + (player.velocityY * 15);
-                obstacle.targetX = predictedX + player.width/2;
-                obstacle.targetY = Math.max(predictedY + player.height/2, CANVAS.groundY - 50);
-            }
-            
-            // Release the spell
-            if (obstacle.castingTime <= 0) {
-                // Create magical projectile
-                createMagicalProjectile(
-                    obstacle.x + obstacle.width/2,
-                    obstacle.y + obstacle.height/2,
-                    obstacle.targetX,
-                    obstacle.targetY,
-                    obstacle.magicalPower
-                );
-                
-                obstacle.isCasting = false;
-                obstacle.isAttacking = false;
-                obstacle.hasTargeted = false;
-                
-                // Set cooldown based on level and distance
-                const baseCooldown = 180;
-                const distanceBonus = Math.max(0, (400 - horizontalDistance) / 400 * 60);
-                obstacle.castingCooldown = Math.random() * baseCooldown + (baseCooldown - distanceBonus);
-            }
-        }
+    // Movement behavior: Run until player detected, then stop and attack
+    if (!obstacle.hasDetectedPlayer) {
+        // Keep running until player is detected
+        obstacle.x -= obstacle.moveSpeed * gameState.deltaTime;
+    } else if (playerInDetectionRange && playerDistance > obstacle.attackRange) {
+        // Move closer to attack range
+        const direction = player.x > obstacle.x ? 1 : -1;
+        obstacle.x += (obstacle.moveSpeed * 0.25) * direction * gameState.deltaTime;
+    }
+    // If in attack range, stop moving and just attack
+    
+    // FIXED: Attack logic with better debugging
+    obstacle.attackCooldown -= gameState.deltaTime;
+    
+    // Debug output every 60 frames
+    if (Math.floor(obstacle.animationTime || 0) % 60 === 0) {
+        console.log(`🔮 Professor state: distance=${Math.round(playerDistance)}, cooldown=${Math.round(obstacle.attackCooldown)}, inRange=${playerInAttackRange}, detected=${obstacle.hasDetectedPlayer}`);
     }
     
-    // Slow movement towards player when not casting
-    if (inRange && !obstacle.isCasting) {
-        const moveSpeed = 0.2 * gameState.deltaTime;
+    if (obstacle.attackCooldown <= 0 && 
+        playerInAttackRange && 
+        !obstacle.isAttacking && 
+        obstacle.hasDetectedPlayer &&
+        !gameStateParam.isGhostWalking) { // Don't attack ghost walking player
         
-        const targetY = player.y + player.height/2;
-        const currentY = obstacle.y + obstacle.height/2;
-        const yDiff = targetY - currentY;
-        obstacle.y += Math.sign(yDiff) * Math.min(Math.abs(yDiff), 1) * moveSpeed;
+        console.log(`🔮 Professor ATTACKING! Player at distance: ${Math.round(playerDistance)}`);
         
-        // Slight horizontal movement
-        const targetX = player.x + player.width/2;
-        const currentX = obstacle.x + obstacle.width/2;
-        const xDiff = targetX - currentX;
-        obstacle.x += Math.sign(xDiff) * Math.min(Math.abs(xDiff), 0.3) * moveSpeed;
+        // Start attack
+        obstacle.isAttacking = true;
         
-        // Keep within bounds
-        obstacle.y = Math.max(80, Math.min(obstacle.y, CANVAS.groundY - 120));
+        // Predict player movement for better aim
+        const predictedX = player.x + (player.velocityX * 15);
+        const predictedY = player.y + (player.velocityY * 8);
+        const targetX = predictedX + player.width/2;
+        const targetY = Math.max(predictedY + player.height/2, CANVAS.groundY - 50);
+        
+        // FIXED: Ensure createMagicalProjectile function exists
+        if (typeof createMagicalProjectile === 'function') {
+            createMagicalProjectile(
+                obstacle.x + obstacle.width/2,
+                obstacle.y + obstacle.height/2,
+                targetX,
+                targetY,
+                1 // Fixed power level
+            );
+            console.log(`🔮 Magical projectile created!`);
+        } else {
+            console.error(`🔮 createMagicalProjectile function not found!`);
+        }
+        
+        // Reset attack state
+        obstacle.isAttacking = false;
+        obstacle.attackCooldown = 120; // 2 seconds at 60fps
+        
+        console.log(`🔮 Professor attack completed! Next attack in 2 seconds.`);
     }
 }
+
+
+
+
+
 
 // Add magical projectile creation function:
 function createMagicalProjectile(startX, startY, targetX, targetY, power) {
@@ -1598,26 +1600,30 @@ function createMagicalProjectile(startX, startY, targetX, targetY, power) {
     const dy = targetY - startY;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    const speed = 5 + (power * 0.5); // Slightly faster with more power
+    const speed = 5 + (power * 0.5);
     const velocityX = (dx / distance) * speed;
     const velocityY = (dy / distance) * speed;
     
-    // Add to bat projectiles array for now (similar behavior)
+    // FIXED: Start attack 60px higher
+    const adjustedStartY = startY - 60;
+    
     batProjectiles.push({
         x: startX,
-        y: startY,
+        y: adjustedStartY, // Use adjusted Y position
         velocityX: velocityX,
         velocityY: velocityY,
-        life: 300, // Longer life than bat projectiles
+        life: 300,
         maxLife: 300,
-        size: 14 + power, // Bigger with more power
+        size: 14 + power,
         magical: true,
         power: power,
         glowIntensity: 1.0,
         trailParticles: [],
         hasHitGround: false,
-        type: 'magical' // Distinguish from bat projectiles
+        type: 'magical'
     });
     
     console.log(`🔮 Professor cast spell with power ${power}!`);
 }
+
+

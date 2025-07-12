@@ -108,43 +108,47 @@ export function createDrop(x, y, type) {
             velocityY: (Math.random() - 0.5) * 4,
             life: 30,
             maxLife: 30,
-            color: dropInfo.color
         });
     }
 }
 
 export function rollForDrop(enemyType, x, y) {
-    const dropChanceBonus = ACHIEVEMENTS.firstBlood.unlocked ? 0.1 : 0;
+    let dropChance = 0;
+    let dropConfig = null;
     
-    // NEW: Enhanced combo bonus - 1% per combo level
-    const comboBonus = Math.min(gameState.comboCount * 0.01, 1.0); // Up to 100% bonus at 100 combo
-    
-    let dropConfig;
-    if (enemyType === 'alphaWolf') {
+    // FIXED: Professor gets 100% boss drop chance
+    if (enemyType === 'professor') {
+        dropChance = 1.0; // 100% chance
         dropConfig = DROP_CONFIG.boss;
-        
-        // Boss always drops at 20+ combo (unchanged)
-        if (gameState.comboCount >= 20) {
-            const items = dropConfig.items;
-            const selectedDrop = selectDropFromItems(items);
-            if (selectedDrop) {
-                createDrop(x, y, selectedDrop.type);
-            }
-            return;
-        }
+        console.log(`🔮 Professor killed - guaranteed boss drop!`);
+    } else if (enemyType === 'alphaWolf') {
+        dropChance = DROP_CONFIG.boss.chance;
+        dropConfig = DROP_CONFIG.boss;
     } else {
+        // Regular enemies
+        dropChance = DROP_CONFIG.common.chance;
         dropConfig = DROP_CONFIG.common;
+        
+        // Apply combo bonus
+        const comboBonus = getComboDropBonus();
+        dropChance += comboBonus;
+        
+        // Apply achievement bonus
+        if (window.ACHIEVEMENTS?.firstBlood?.unlocked) {
+            dropChance += 0.1; // +10% from achievement
+        }
     }
     
-    const finalChance = dropConfig.chance + dropChanceBonus + comboBonus;
+    // Cap drop chance at 90% (except professor which stays at 100%)
+    if (enemyType !== 'professor') {
+        dropChance = Math.min(dropChance, 0.9);
+    }
     
-    console.log(`🎯 Drop calculation: Base=${dropConfig.chance}, Achievement=${dropChanceBonus}, Combo=${comboBonus} (${gameState.comboCount}x), Final=${finalChance}`);
-    
-    if (Math.random() < finalChance) {
-        const selectedDrop = selectDropFromItems(dropConfig.items);
-        if (selectedDrop) {
-            createDrop(x, y, selectedDrop.type);
-        }
+    if (Math.random() < dropChance) {
+        const randomItem = dropConfig.items[Math.floor(Math.random() * dropConfig.items.length)];
+        createDrop(randomItem.type, x, y, randomItem.duration);
+        
+        
     }
 }
 

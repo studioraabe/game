@@ -789,6 +789,43 @@ export function drawEnemy(obstacle, ctx, gameState) {
         drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, 
                      obstacle.health, obstacle.maxHealth, obstacle.type);
     }
+	
+	
+if (obstacle.type === 'professor' && obstacle.health !== undefined && obstacle.maxHealth > 1) {
+    // Health bar for professor
+    const barWidth = 60;
+    const barHeight = 6;
+    const barX = screenX + (obstacle.width - barWidth) / 2;
+    const barY = obstacle.y - 15; // Above the professor
+    
+    const healthPercent = obstacle.health / obstacle.maxHealth;
+    
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+    
+    // Health fill
+    ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : 
+                   healthPercent > 0.25 ? '#ffff00' : '#ff0000';
+    ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+    
+    // Border
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
+    
+    // Health text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${obstacle.health}/${obstacle.maxHealth}`, 
+                 barX + barWidth/2, barY + barHeight + 12);
+}
+
+	
+	
+	
+	
 }
 
 

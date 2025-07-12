@@ -46,7 +46,7 @@ export const ENEMY_BASE_STATS = {
     frankensteinTable: { hp: 1, damage: 30 },
     sarcophagus: { hp: 1, damage: 0 },
     boltBox: { hp: 1, damage: 0 },
-	professor: { hp: 300, damage: 40 }
+    professor: { hp: 300, damage: 40 } // FIXED: Set to 300 HP, 40 damage
 };
 
 
@@ -387,7 +387,7 @@ export const ENEMY_CONFIG = {
 },
 	professor: {
     width: 64,
-    height: 96,
+    height: 140,
     health: 8,
     points: 75,
     timerBase: 150,

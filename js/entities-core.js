@@ -159,14 +159,19 @@ function createObstacle(type, x, y, width, height) {
         id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
     
-    // FIXED: Comprehensive health assignment for ALL enemy types
-    const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf'];
+    // FIXED: Comprehensive health assignment for ALL enemy types including professor
+    const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf', 'professor'];
     
     if (enemyTypes.includes(type)) {
         obstacle.maxHealth = calculateEnemyHP(type, gameState.level);
         obstacle.health = obstacle.maxHealth;
         
         console.log(`✅ Created ${type} with ${obstacle.health}/${obstacle.maxHealth} HP at level ${gameState.level}`);
+        
+        // EXTRA DEBUG FOR PROFESSOR
+        if (type === 'professor') {
+            console.log(`🔮 PROFESSOR CREATED: HP=${obstacle.health}/${obstacle.maxHealth}, Level=${gameState.level}`);
+        }
     } else {
         // Non-enemy objects (boltBox, rock, etc.) keep health = 1
         obstacle.health = 1;
@@ -190,8 +195,21 @@ function createObstacle(type, x, y, width, height) {
         obstacle.originalY = y;
     }
     
+    // ADDED: Professor-specific initialization
+    if (type === 'professor') {
+        obstacle.attackCooldown = 0;
+        obstacle.isAttacking = false;
+        obstacle.facingDirection = -1;
+        obstacle.detectionRange = 400;
+        obstacle.attackRange = 350;
+        obstacle.moveSpeed = 0.5;
+        obstacle.hasDetectedPlayer = false;
+        console.log(`🔮 Professor initialized with attack properties`);
+    }
+    
     return obstacle;
 }
+
 export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
     obstacleTimer -= gameState.deltaTime * timeSlowFactor;
     
@@ -254,12 +272,12 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
 				obstacleY = CANVAS.groundY - obstacleHeight - 20;
 				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
 			} else if (obstacleType < mediumChance + 0.08) {
-				// ADD PROFESSOR HERE - between wolf and vampire
+				// FIXED: Professor spawn - lowered by 40px
 				obstacleTypeStr = 'professor';
 				const config = ENEMY_CONFIG[obstacleTypeStr];
 				obstacleWidth = config.width;
 				obstacleHeight = config.height;
-				obstacleY = CANVAS.groundY - obstacleHeight - 30;
+				obstacleY = CANVAS.groundY - obstacleHeight +5; // Changed from -30 to -70
 				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
 			} else if (obstacleType < humanChance) {
 				obstacleTypeStr = 'vampire';

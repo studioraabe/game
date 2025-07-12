@@ -503,7 +503,7 @@ export function drawProfessorSprite(ctx, professor, gameState, screenX = null) {
     }
     
     const entityId = professor.id;
-    const scale = 0.4; // Slightly smaller than skeleton for variety
+    const scale = 0.3; // Slightly smaller than skeleton for variety
     const facingLeft = professor.facingDirection === 1;
     
     // Enhanced animation state determination
