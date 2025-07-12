@@ -741,7 +741,12 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
         if (obstacle.type === 'bat') {
             updateBatAI(obstacle, gameStateParam, individualSpeedMultiplier);
         }
-        
+		
+		
+				if (obstacle.type === 'professor') {
+			updateProfessorAI(obstacle, level, gameStateParam);
+		}
+
         // Ground enemy movement
         if (obstacle.type === 'spider') {
             obstacle.y += Math.sin(Date.now() * 0.004 * enemySlowFactor + i) * 0.4 * gameState.deltaTime;
@@ -953,7 +958,7 @@ function updateAlphaWolf(obstacle, level, gameStateParam) {
             obstacle.leapVelocityX = (dx / distance) * leapSpeed;
             obstacle.leapVelocityY = (dy / distance) * leapSpeed;
             
-            obstacle.furyAttackCooldown = 180;
+            obstacle.furyAttackCooldown = 120;
         }
     }
     
@@ -1488,4 +1493,131 @@ export function updateAllEntities(gameStateParam) {
     updateObstacles(gameStateParam.gameSpeed, gameStateParam.enemySlowFactor, gameStateParam.level, gameStateParam.magnetRange, gameStateParam);
     updateBullets(gameStateParam);
     updateBatProjectiles(gameStateParam);
+}
+
+
+
+function updateProfessorAI(obstacle, level, gameStateParam) {
+    // Initialize professor AI properties
+    if (obstacle.castingCooldown === undefined) {
+        obstacle.castingCooldown = Math.random() * 120 + 1; // Random initial cooldown
+        obstacle.isCasting = false;
+        obstacle.castingTime = 0;
+        obstacle.maxCastingTime = 120;
+        obstacle.hasTargeted = false;
+        obstacle.targetX = 0;
+        obstacle.targetY = 0;
+        obstacle.facingDirection = -1;
+        obstacle.magicalPower = Math.floor(level / 3) + 1;
+    }
+    
+    // Floating movement
+    obstacle.y += Math.sin(Date.now() * 0.003 + obstacle.animationTime) * 0.8 * gameState.deltaTime;
+    
+    obstacle.castingCooldown -= gameState.deltaTime;
+    
+    const horizontalDistance = Math.abs(player.x - obstacle.x);
+    const verticalDistance = Math.abs(player.y - obstacle.y);
+    const inRange = horizontalDistance < 400 && verticalDistance < 250;
+    
+    // Face the player when in range
+    if (inRange) {
+        obstacle.facingDirection = player.x < obstacle.x ? -1 : 1;
+    }
+    
+    // Casting logic
+    if (obstacle.castingCooldown <= 0 && inRange && !obstacle.isDead) {
+        if (!obstacle.isCasting) {
+            // Start casting
+            obstacle.isCasting = true;
+            obstacle.castingTime = obstacle.maxCastingTime;
+            obstacle.hasTargeted = false;
+            obstacle.isAttacking = true; // Prevent damage during cast
+        }
+        
+        if (obstacle.isCasting && obstacle.castingTime > 0) {
+            obstacle.castingTime -= gameState.deltaTime;
+            
+            // Target the player halfway through casting
+            if (!obstacle.hasTargeted && obstacle.castingTime <= obstacle.maxCastingTime / 2) {
+                obstacle.hasTargeted = true;
+                
+                // Predict player movement
+                const predictedX = player.x + (player.velocityX * 30);
+                const predictedY = player.y + (player.velocityY * 15);
+                obstacle.targetX = predictedX + player.width/2;
+                obstacle.targetY = Math.max(predictedY + player.height/2, CANVAS.groundY - 50);
+            }
+            
+            // Release the spell
+            if (obstacle.castingTime <= 0) {
+                // Create magical projectile
+                createMagicalProjectile(
+                    obstacle.x + obstacle.width/2,
+                    obstacle.y + obstacle.height/2,
+                    obstacle.targetX,
+                    obstacle.targetY,
+                    obstacle.magicalPower
+                );
+                
+                obstacle.isCasting = false;
+                obstacle.isAttacking = false;
+                obstacle.hasTargeted = false;
+                
+                // Set cooldown based on level and distance
+                const baseCooldown = 180;
+                const distanceBonus = Math.max(0, (400 - horizontalDistance) / 400 * 60);
+                obstacle.castingCooldown = Math.random() * baseCooldown + (baseCooldown - distanceBonus);
+            }
+        }
+    }
+    
+    // Slow movement towards player when not casting
+    if (inRange && !obstacle.isCasting) {
+        const moveSpeed = 0.2 * gameState.deltaTime;
+        
+        const targetY = player.y + player.height/2;
+        const currentY = obstacle.y + obstacle.height/2;
+        const yDiff = targetY - currentY;
+        obstacle.y += Math.sign(yDiff) * Math.min(Math.abs(yDiff), 1) * moveSpeed;
+        
+        // Slight horizontal movement
+        const targetX = player.x + player.width/2;
+        const currentX = obstacle.x + obstacle.width/2;
+        const xDiff = targetX - currentX;
+        obstacle.x += Math.sign(xDiff) * Math.min(Math.abs(xDiff), 0.3) * moveSpeed;
+        
+        // Keep within bounds
+        obstacle.y = Math.max(80, Math.min(obstacle.y, CANVAS.groundY - 120));
+    }
+}
+
+// Add magical projectile creation function:
+function createMagicalProjectile(startX, startY, targetX, targetY, power) {
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    const speed = 5 + (power * 0.5); // Slightly faster with more power
+    const velocityX = (dx / distance) * speed;
+    const velocityY = (dy / distance) * speed;
+    
+    // Add to bat projectiles array for now (similar behavior)
+    batProjectiles.push({
+        x: startX,
+        y: startY,
+        velocityX: velocityX,
+        velocityY: velocityY,
+        life: 300, // Longer life than bat projectiles
+        maxLife: 300,
+        size: 14 + power, // Bigger with more power
+        magical: true,
+        power: power,
+        glowIntensity: 1.0,
+        trailParticles: [],
+        hasHitGround: false,
+        type: 'magical' // Distinguish from bat projectiles
+    });
+    
+    console.log(`🔮 Professor cast spell with power ${power}!`);
 }

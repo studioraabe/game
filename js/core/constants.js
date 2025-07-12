@@ -45,7 +45,8 @@ export const ENEMY_BASE_STATS = {
     teslaCoil: { hp: 1, damage: 30 },
     frankensteinTable: { hp: 1, damage: 30 },
     sarcophagus: { hp: 1, damage: 0 },
-    boltBox: { hp: 1, damage: 0 }
+    boltBox: { hp: 1, damage: 0 },
+	professor: { hp: 300, damage: 40 }
 };
 
 
@@ -239,8 +240,8 @@ export const DUNGEON_THEME = {
         finalScore: 'Final Score'
     },
    
-    enemies: ['bat', 'vampire', 'spider', 'alphaWolf', 'skeleton', 'boltBox', 'rock', 'wolf', 'teslaCoil', 'frankensteinTable'],
-    groundColor: '#2F2F2F',
+	enemies: ['bat', 'vampire', 'spider', 'alphaWolf', 'skeleton', 'professor', 'boltBox', 'rock', 'wolf', 'teslaCoil', 'frankensteinTable'],    
+	groundColor: '#2F2F2F',
     floorDetailColor: '#1A1A1A',
     startButton: 'Begin Nightmare'
 };
@@ -383,7 +384,16 @@ export const ENEMY_CONFIG = {
     points: 0,
     timerBase: 100,
     timerMin: 25
+},
+	professor: {
+    width: 64,
+    height: 96,
+    health: 8,
+    points: 75,
+    timerBase: 150,
+    timerMin: 40
 }
+
 };
 
 // Drop visual configurations

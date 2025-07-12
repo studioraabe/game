@@ -88,6 +88,51 @@ export class SpriteManager {
                     }
                 }
             });
+			
+			
+			
+						await this.loadSprite('professor', {
+				imagePath: 'assets/sprites/professor.png',
+				frameWidth: 480,
+				frameHeight: 480,
+				animations: {
+					idle: { 
+						row: 0, 
+						frames: 1,
+						frameRate: 4,
+						loop: true,
+						smooth: false
+					},
+					walk: { 
+						row: 0, 
+						frames: 1,
+						frameRate: 6,
+						loop: true,
+						smooth: false
+					},
+					attack: { 
+						row: 0, 
+						frames: 1,
+						frameRate: 10,
+						loop: false,
+						smooth: false
+					},
+					hit: {
+						row: 0,
+						frames: 1,
+						frameRate: 12,
+						loop: false,
+						smooth: false
+					},
+					cast: {
+						row: 0,
+						frames: 1,
+						frameRate: 8,
+						loop: false,
+						smooth: false
+					}
+				}
+			});
             
             this.loaded = true;
             console.log('✅ All sprites loaded successfully!');
@@ -445,12 +490,129 @@ export function drawSkeletonSprite(ctx, skeleton, gameState, screenX = null) {
     return success;
 }
 
+
+
+export function drawProfessorSprite(ctx, professor, gameState, screenX = null) {
+    if (!spriteManager.loaded || !spriteManager.sprites.professor) {
+        console.warn('Professor sprite not available, using fallback');
+        return false;
+    }
+    
+    if (screenX === null) {
+        screenX = getScreenX(professor.x);
+    }
+    
+    const entityId = professor.id;
+    const scale = 0.4; // Slightly smaller than skeleton for variety
+    const facingLeft = professor.facingDirection === 1;
+    
+    // Enhanced animation state determination
+    let currentAnimation = 'idle';
+    
+    if (professor.isDead || professor.health <= 0) {
+        currentAnimation = 'cast'; // Use cast animation for dramatic death
+        professor.canDamagePlayer = false;
+    } else if (professor.damageResistance > 25) {
+        currentAnimation = 'hit';
+        professor.canDamagePlayer = true;
+    } else if (professor.isCasting) {
+        currentAnimation = 'cast';
+        professor.canDamagePlayer = false;
+    } else if (professor.isAttacking) {
+        currentAnimation = 'attack';
+        professor.canDamagePlayer = false;
+    } else if (Math.abs(professor.velocityX || 0) > 0.1) {
+        currentAnimation = 'walk';
+        professor.canDamagePlayer = true;
+    } else {
+        currentAnimation = 'idle';
+        professor.canDamagePlayer = true;
+    }
+    
+    // Handle animation transitions
+    if (professor.lastAnimation !== currentAnimation) {
+        spriteManager.setAnimation('professor', entityId, currentAnimation);
+        professor.lastAnimation = currentAnimation;
+    }
+    
+    ctx.save();
+    
+    // Death fade effect
+    if (professor.isDead || professor.health <= 0) {
+        const fadeProgress = Math.min((professor.deathTimer || 10) / 30, 1);
+        ctx.globalAlpha = Math.max(0.1, 1 - fadeProgress);
+        ctx.filter = 'sepia(100%) hue-rotate(45deg)'; // Golden death effect
+    }
+    
+    // Professor-specific magical aura (GREEN ENERGY)
+    if (!professor.isDead && professor.health > 0) {
+        const magicalPulse = 0.3 + Math.sin(Date.now() * 0.005) * 0.2;
+        const gradient = ctx.createRadialGradient(
+            screenX + professor.width/2, professor.y + professor.height/2, 0,
+            screenX + professor.width/2, professor.y + professor.height/2, 40 * scale
+        );
+        gradient.addColorStop(0, `rgba(0, 255, 0, ${magicalPulse * 0.2})`);
+        gradient.addColorStop(0.5, `rgba(0, 200, 0, ${magicalPulse * 0.1})`);
+        gradient.addColorStop(1, 'rgba(0, 150, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(screenX - 20, professor.y - 20, professor.width + 40, professor.height + 40);
+    }
+    
+    // Casting spell effect (GREEN ENERGY)
+    if (professor.isCasting) {
+        const castingIntensity = (professor.castingTime || 0) / (professor.maxCastingTime || 120);
+        const sparkleAlpha = 0.8 * castingIntensity;
+        
+        // Green magical sparkles around professor
+        for (let i = 0; i < 8; i++) {
+            const angle = (Date.now() * 0.003 + i * 0.785) % (Math.PI * 2);
+            const radius = 30 * scale * (1 + Math.sin(Date.now() * 0.01) * 0.2);
+            const sparkleX = screenX + professor.width/2 + Math.cos(angle) * radius;
+            const sparkleY = professor.y + professor.height/2 + Math.sin(angle) * radius;
+            
+            ctx.fillStyle = `rgba(0, 255, 0, ${sparkleAlpha})`;
+            ctx.fillRect(sparkleX - 2, sparkleY - 2, 4, 4);
+        }
+    }
+    
+    // Align sprite positioning (same as skeleton)
+    const spriteWidth = 480 * scale;
+    const spriteHeight = 480 * scale;
+    const spriteX = screenX - (spriteWidth - professor.width) / 2;
+    const spriteY = professor.y + professor.height - spriteHeight + 5;
+    
+    // Draw the professor sprite
+    const success = spriteManager.drawSprite(
+        ctx, 'professor', currentAnimation,
+        spriteX, spriteY, scale, facingLeft,
+        gameState.deltaTime, entityId
+    );
+    
+    ctx.restore();
+    return success;
+}
+
+
+
+
+
+
+
+
 // Cleanup function
 export function cleanupSkeletonEntity(skeletonId) {
     if (spriteManager && spriteManager.cleanupEntity) {
         spriteManager.cleanupEntity('skeleton', skeletonId);
     }
 }
+
+
+export function cleanupProfessorEntity(professorId) {
+    if (spriteManager && spriteManager.cleanupEntity) {
+        spriteManager.cleanupEntity('professor', professorId);
+    }
+}
+
 
 // Utility Functions
 export async function addSpriteType(name, config) {

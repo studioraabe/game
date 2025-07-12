@@ -113,16 +113,83 @@ function drawExplosion(ctx, x, y, frame) {
     ctx.fillRect(x - 2, y - 2, 4, 4);
 }
 
+
 export function drawBatProjectiles(ctx) {
-    // Zugriff auf das globale batProjectiles Array
+    // Access the global batProjectiles array
     const batProjectiles = window.batProjectiles || [];
     
     for (const projectile of batProjectiles) {
+        // Handle magical projectiles (from Professor) - GREEN ENERGY
+        if (projectile.type === 'magical') {
+            const screenX = getScreenX(projectile.x);
+            const alpha = projectile.life / projectile.maxLife;
+            const magicalPulse = 0.8 + Math.sin(Date.now() * 0.012) * 0.2;
+            
+            // MAGICAL AURA - Green energy
+            const auraSize = projectile.size + 8;
+            ctx.fillStyle = `rgba(0, 255, 0, ${alpha * magicalPulse * 0.4})`;
+            ctx.fillRect(screenX - auraSize/2, projectile.y - auraSize/2, auraSize, auraSize);
+            
+            // OUTER GLOW - Bright green
+            const glowSize = projectile.size + 4;
+            ctx.fillStyle = `rgba(0, 255, 100, ${alpha * magicalPulse * 0.6})`;
+            ctx.fillRect(screenX - glowSize/2, projectile.y - glowSize/2, glowSize, glowSize);
+            
+            // MAIN ORB - Green magical energy
+            ctx.fillStyle = `rgba(0, 200, 0, ${alpha})`;
+            ctx.fillRect(screenX - projectile.size/2, projectile.y - projectile.size/2, 
+                         projectile.size, projectile.size);
+            
+            // BRIGHT CENTER - Light green core
+            ctx.fillStyle = `rgba(100, 255, 100, ${alpha * magicalPulse})`;
+            const centerSize = projectile.size - 4;
+            ctx.fillRect(screenX - centerSize/2, projectile.y - centerSize/2, 
+                         centerSize, centerSize);
+            
+            // WHITE HOT CORE - Very bright center
+            ctx.fillStyle = `rgba(200, 255, 200, ${alpha * magicalPulse * 0.9})`;
+            const coreSize = Math.max(2, projectile.size - 6);
+            ctx.fillRect(screenX - coreSize/2, projectile.y - coreSize/2, 
+                         coreSize, coreSize);
+            
+            // MAGICAL SPARKLES - Green sparkles around orb
+            if (Math.sin(Date.now() * 0.015 + projectile.x * 0.1) > 0.6) {
+                for (let s = 0; s < 5; s++) {
+                    const sparkleX = screenX + (Math.random() - 0.5) * 20;
+                    const sparkleY = projectile.y + (Math.random() - 0.5) * 20;
+                    ctx.fillStyle = `rgba(0, 255, 0, ${magicalPulse})`;
+                    ctx.fillRect(sparkleX, sparkleY, 2, 2);
+                }
+            }
+            
+            // MAGICAL TRAIL - Green energy trail
+            if (projectile.trailParticles) {
+                for (const trail of projectile.trailParticles) {
+                    const trailScreenX = getScreenX(trail.x);
+                    ctx.fillStyle = `rgba(0, 200, 0, ${trail.alpha * 0.5})`;
+                    ctx.fillRect(trailScreenX - 3, trail.y - 3, 6, 6);
+                }
+            }
+            
+            // GROUND IMPACT EFFECT
+            if (projectile.hasHitGround && projectile.life < 60) {
+                const impactAlpha = (60 - projectile.life) / 60;
+                const impactRadius = 25 * impactAlpha;
+                
+                ctx.fillStyle = `rgba(0, 255, 0, ${impactAlpha * 0.4})`;
+                ctx.fillRect(screenX - impactRadius, CANVAS.groundY - 8, 
+                             impactRadius * 2, 16);
+            }
+            
+            continue; // Skip normal bat projectile rendering
+        }
+        
+        // Handle regular bat projectiles (blood curse)
         const screenX = getScreenX(projectile.x);
         const alpha = projectile.life / projectile.maxLife;
         const pulse = 0.7 + Math.sin(Date.now() * 0.015) * 0.3;
         
-        // TRAIL EFFECT - Blutspur zeichnen
+        // TRAIL EFFECT - Blood trail
         if (projectile.trailParticles) {
             for (const trail of projectile.trailParticles) {
                 const trailScreenX = getScreenX(trail.x);
@@ -131,42 +198,42 @@ export function drawBatProjectiles(ctx) {
             }
         }
         
-        // CORRUPTION AURA - größer und bedrohlicher
+        // CORRUPTION AURA - Purple/lilac corruption energy
         const auraSize = projectile.size + 12;
         ctx.fillStyle = `rgba(139, 0, 139, ${alpha * pulse * 0.4})`;
         ctx.fillRect(screenX - auraSize/2, projectile.y - auraSize/2, auraSize, auraSize);
         
-        // OUTER GLOW - Rot
+        // OUTER GLOW - Red blood glow
         const glowSize = projectile.size + 6;
         ctx.fillStyle = `rgba(255, 0, 0, ${alpha * pulse * 0.5})`;
         ctx.fillRect(screenX - glowSize/2, projectile.y - glowSize/2, glowSize, glowSize);
         
-        // MAIN BLOOD DROP - Größer und sichtbarer
+        // MAIN BLOOD DROP - Dark red blood
         ctx.fillStyle = `rgba(139, 0, 0, ${alpha})`;
         ctx.fillRect(screenX - projectile.size/2, projectile.y - projectile.size/2, 
                      projectile.size, projectile.size);
         
-        // BRIGHT CENTER - Weißer Kern
+        // BRIGHT CENTER - Red core
         ctx.fillStyle = `rgba(255, 0, 0, ${alpha * pulse})`;
         const centerSize = projectile.size - 2;
         ctx.fillRect(screenX - centerSize/2, projectile.y - centerSize/2, 
                      centerSize, centerSize);
         
-        // WHITE HOT CORE - Sehr heller Kern
+        // WHITE HOT CORE - Very bright center
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha * pulse * 0.8})`;
         const coreSize = Math.max(2, projectile.size - 4);
         ctx.fillRect(screenX - coreSize/2, projectile.y - coreSize/2, 
                      coreSize, coreSize);
         
-        // DRIPPING EFFECT - Tropfen-Form
-        if (projectile.velocityY > 2) { // Nur wenn fallend
+        // DRIPPING EFFECT - Blood droplet shape
+        if (projectile.velocityY > 2) { // Only when falling
             ctx.fillStyle = `rgba(139, 0, 0, ${alpha * 0.8})`;
-            // Tropfen-Schweif
+            // Blood drip tail
             ctx.fillRect(screenX - 1, projectile.y + projectile.size/2, 2, 
                          Math.min(6, projectile.velocityY));
         }
         
-        // CORRUPTION SPARKLES - Lila Funken
+        // CORRUPTION SPARKLES - Purple corruption particles
         if (Math.sin(Date.now() * 0.02 + projectile.x * 0.1) > 0.7) {
             for (let s = 0; s < 3; s++) {
                 const sparkleX = screenX + (Math.random() - 0.5) * 16;
@@ -187,6 +254,8 @@ export function drawBatProjectiles(ctx) {
         }
     }
 }
+
+
 // Bullets
 export function drawBullet(ctx, x, y, enhanced = false, hasPiercingBullets = false, bullet = null) {
     // If no bullet object, use simple rendering

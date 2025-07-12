@@ -246,21 +246,30 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight + 10;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < mediumChance + 0.05) {
-            obstacleTypeStr = 'wolf';
-            const config = ENEMY_CONFIG[obstacleTypeStr];
-            obstacleWidth = config.width;
-            obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight - 20;
-            timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < humanChance) {
-            obstacleTypeStr = 'vampire';
-            const config = ENEMY_CONFIG[obstacleTypeStr];
-            obstacleWidth = config.width;
-            obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight - 30;
-            timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < skeletonChance) {
+		} else if (obstacleType < mediumChance + 0.03) {
+				obstacleTypeStr = 'wolf';
+				const config = ENEMY_CONFIG[obstacleTypeStr];
+				obstacleWidth = config.width;
+				obstacleHeight = config.height;
+				obstacleY = CANVAS.groundY - obstacleHeight - 20;
+				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+			} else if (obstacleType < mediumChance + 0.08) {
+				// ADD PROFESSOR HERE - between wolf and vampire
+				obstacleTypeStr = 'professor';
+				const config = ENEMY_CONFIG[obstacleTypeStr];
+				obstacleWidth = config.width;
+				obstacleHeight = config.height;
+				obstacleY = CANVAS.groundY - obstacleHeight - 30;
+				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+			} else if (obstacleType < humanChance) {
+				obstacleTypeStr = 'vampire';
+				const config = ENEMY_CONFIG[obstacleTypeStr];
+				obstacleWidth = config.width;
+				obstacleHeight = config.height;
+				obstacleY = CANVAS.groundY - obstacleHeight - 30;
+				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+			}				
+				else if (obstacleType < skeletonChance) {
             obstacleTypeStr = 'skeleton';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
@@ -302,7 +311,7 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        }
+        } 
         
         // Try to find valid spawn position
         while (attemptCount < maxAttempts && !isSpawnPositionValid(spawnX, obstacleWidth)) {
@@ -351,8 +360,12 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             newObstacle.stateTimer = newObstacle.chargeTime;
             newObstacle.zapActive = false;
             newObstacle.isPermanent = true;
-            newObstacle.isIndestructible = true;
+          	newObstacle.isIndestructible = true;
         }
+		
+		
+		
+			
         
         obstacles.push(newObstacle);
         

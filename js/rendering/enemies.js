@@ -3,7 +3,7 @@
 import { getScreenX } from '../core/camera.js';
 import { gameState } from '../core/gameState.js';
 import { CANVAS } from '../core/constants.js';
-import { spriteManager, drawSkeletonSprite } from './sprite-system.js';
+import { spriteManager, drawSkeletonSprite, drawProfessorSprite } from './sprite-system.js';
 
 
 
@@ -762,7 +762,10 @@ export function drawEnemy(obstacle, ctx, gameState) {
                 break;
             case 'rock': 
                 drawRock(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, animTime); 
-                break;
+                break;				
+				case 'professor':
+            drawProfessorSprite(ctx, obstacle, gameState, screenX);
+            break;
             case 'sarcophagus': 
                 drawSarcophagus(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, animTime); 
                 break;
@@ -775,6 +778,7 @@ export function drawEnemy(obstacle, ctx, gameState) {
             case 'frankensteinTable': 
                 drawFrankensteinTable(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, obstacle); 
                 break;
+		
         }
     }
     
