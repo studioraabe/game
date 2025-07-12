@@ -26,7 +26,7 @@ export function initEnhancedContainers() {
     buffContainer.className = 'enhanced-buffs-container';
     buffContainer.style.cssText = `
         position: absolute !important;
-        bottom: 12px !important;
+        
         left: 16px !important;
         z-index: 20 !important;
     `;

@@ -1352,7 +1352,7 @@
     align-items: center;
    background: rgba(255, 255, 255, 0.03) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 12px;
+    border-radius: 20px;
     padding: 8px 12px;
     margin-bottom: 8px;
     transition: all 0.3s ease;

@@ -1,4 +1,4 @@
-// js/ui-hud.js - Enhanced Multi-Container HUD System with Fixed Weapon Cooldown Display
+// js/ui-hud.js - Enhanced Multi-Container HUD System with Top Stats Bar
 
 import { gameState } from './core/gameState.js';
 import { projectileSystem, PROJECTILE_CONFIGS, ProjectileType } from './enhanced-projectile-system.js';
@@ -33,13 +33,12 @@ export function initHUD() {
     updateHUD();
     
     hudInitialized = true;
-
 }
 
 function removeExistingHUD() {
     // Remove all old HUD elements
     const elementsToRemove = [
-        'healthBar', 'bulletCount', 'weaponHUD', 'multiHUD',
+        'healthBar', 'bulletCount', 'weaponHUD', 'multiHUD', 'topStatsBar',
         'healthContainer', 'bulletContainer', 'weaponContainer'
     ];
     
@@ -62,6 +61,9 @@ function createMultiHUD() {
     if (!gameContainer) {
         return;
     }
+    
+    // Create top stats bar first
+    createTopStatsBar();
     
     // Create main multi-HUD container
     const multiHUD = document.createElement('div');
@@ -154,7 +156,166 @@ function createMultiHUD() {
     multiHUD.appendChild(healthContainer);
     
     gameContainer.appendChild(multiHUD);
+}
+
+// ========================================
+// TOP STATS BAR CREATION
+// ========================================
+
+function createTopStatsBar() {
+    const gameContainer = document.getElementById('gameContainer');
+    if (!gameContainer) return;
     
+    // Remove existing stats bar if it exists
+    const existingStatsBar = document.getElementById('topStatsBar');
+    if (existingStatsBar) existingStatsBar.remove();
+    
+    // Create top stats bar container
+    const topStatsBar = document.createElement('div');
+    topStatsBar.id = 'topStatsBar';
+    topStatsBar.className = 'top-stats-bar';
+    topStatsBar.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 24px;
+        background: rgba(255, 255, 255, 0.03);
+        border-width: 0px 1px 1px 1px;
+        border-style: solid;
+        border-color: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10.309px);
+        border-radius: 0px 0px 20px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 0 10px;
+        z-index: 10;
+        visibility: visible !important;
+        min-width: 520px;
+		flex-direction:row;
+    `;
+    
+    gameContainer.appendChild(topStatsBar);
+}
+
+// ========================================
+// TOP STATS BAR SYSTEM
+// ========================================
+
+export function updateTopStatsBar() {
+    const topStatsBar = document.getElementById('topStatsBar');
+    if (!topStatsBar || !gameState) return;
+    
+    // Clear existing content
+    topStatsBar.innerHTML = '';
+    
+    // Calculate values and determine colors
+    const stats = [
+        {
+            label: 'DMG',
+            value: `${gameState.playerStats?.damageBonus || 0}%`,
+            color: getStatColor(gameState.playerStats?.damageBonus || 0, 0)
+        },
+        {
+            label: 'Crit',
+            value: `x${(gameState.playerStats?.critDamage || 1.5).toFixed(1)}`,
+            color: getStatColor(gameState.playerStats?.critDamage || 1.5, 1.5)
+        },
+        {
+            label: 'Chance',
+            value: `${gameState.playerStats?.critChance || 0}%`,
+            color: getStatColor(gameState.playerStats?.critChance || 0, 0)
+        },
+        {
+            label: 'Move Spd',
+            value: `${gameState.playerStats?.moveSpeed || 0}%`,
+            color: getStatColor(gameState.playerStats?.moveSpeed || 0, 0)
+        },
+        {
+            label: 'Health Regen',
+            value: `${(gameState.playerStats?.healthRegen || 0).toFixed(1)}/s`,
+            color: getStatColor(gameState.playerStats?.healthRegen || 0, 0.5)
+        },
+        {
+            label: 'Energy Regen',
+            value: `${(gameState.playerStats?.bulletRegen || 0).toFixed(1)}/s`,
+            color: getStatColor(gameState.playerStats?.bulletRegen || 0, 0.5)
+        },
+        {
+            label: 'Life Steal',
+            value: `${gameState.playerStats?.lifeSteal || 0}%`,
+            color: getStatColor(gameState.playerStats?.lifeSteal || 0, 0)
+        }
+    ];
+    
+    // Create stat items
+    stats.forEach((stat, index) => {
+        const statItem = document.createElement('div');
+        statItem.className = 'stat-item';
+        statItem.style.cssText = `
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 4px;
+        `;
+        
+        // Create label
+        const label = document.createElement('div');
+        label.className = 'stat-label';
+        label.textContent = stat.label;
+        label.style.cssText = `
+            font-family: 'Rajdhani';
+            font-style: normal;
+            font-weight: 600;
+            font-size: 10px;
+            line-height: 12px;
+            color: #d0d0d0;
+            text-align: center;
+        `;
+        
+        // Create value
+        const value = document.createElement('div');
+        value.className = 'stat-value';
+        value.textContent = stat.value;
+        value.style.cssText = `
+            font-family: 'Rajdhani';
+            font-style: normal;
+            font-weight: 600;
+            font-size: 10px;
+            line-height: 12px;
+            color: ${stat.color};
+            text-align: center;
+        `;
+        
+        statItem.appendChild(label);
+        statItem.appendChild(value);
+        topStatsBar.appendChild(statItem);
+        
+        // Add separator (except for last item)
+        if (index < stats.length - 1) {
+            const separator = document.createElement('div');
+            separator.style.cssText = `
+                width: 0px;
+                height: 12px;
+                background: rgba(255, 255, 255, 0.1);
+                margin: 0 2px;
+            `;
+            topStatsBar.appendChild(separator);
+        }
+    });
+}
+
+// Helper function to determine stat color based on value and baseline
+function getStatColor(currentValue, baselineValue) {
+    if (currentValue > baselineValue) {
+        return '#6AE0A8'; // Increased
+    } else if (currentValue < baselineValue) {
+        return '#CF393B'; // Decreased
+    } else {
+        return '#d0d0d0'; // Neutral
+    }
 }
 
 // ========================================
@@ -302,8 +463,6 @@ export function updateWeaponHUD() {
     });
 }
 
-
-
 function setupWeaponSlots() {
     const weaponsContainer = document.getElementById('weaponsContainer');
     if (!weaponsContainer) return;
@@ -356,7 +515,6 @@ function setupWeaponSlots() {
         slot.dataset.cooldownSetup = 'true';
     });
 }
-
 
 // Fixed weapon cooldown function with separated visual updates
 let weaponSlotStates = new Map();
@@ -456,9 +614,6 @@ function updateWeaponCooldowns() {
         weaponSlotStates.set(slotKey, slotState);
     });
 }
-
-
-
 
 function getCooldownProperty(projectileType) {
     const cooldownMap = {
@@ -780,6 +935,7 @@ export function updateHUD() {
     updateHealthBar();
     updateBulletCounter();
     updateWeaponHUD();
+    updateTopStatsBar();
     
     // Start update intervals if not already running
     if (!weaponUpdateInterval) {
@@ -805,4 +961,5 @@ window.updateHUD = updateHUD;
 window.updateHealthBar = updateHealthBar;
 window.updateBulletCounter = updateBulletCounter;
 window.updateWeaponHUD = updateWeaponHUD;
+window.updateTopStatsBar = updateTopStatsBar;
 window.cleanupHUD = cleanupHUD;

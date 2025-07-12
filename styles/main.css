@@ -20,8 +20,8 @@
     --text-accent: #00ff88;
     --shadow-lg: 0 25px 50px -12px rgba(0, 211, 112, 0.10);
     --shadow-xl: 0 35px 56px -12px rgba(0, 211, 112, 0.15);
-    --border-radius: 12px;
-    --border-radius-lg: 20px;
+    --border-radius: 20px;
+    --border-radius-lg: 32px;
 }
 
 * {
@@ -954,10 +954,15 @@ h3 {
 .stat-label {
     font-size: 12px;
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
+    text-transform: none;
+    letter-spacing: 0.1px;
+    margin-bottom: 0px;
 }
+
+.stat-display {
+  display:none !important;
+}
+
 
 .stat-value {
     font-size: 24px;
