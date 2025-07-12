@@ -565,7 +565,7 @@ function updateWeaponCooldowns() {
             let cooldownNumber = slot.querySelector('.cooldown-number');
             
             // Create element only if it doesn't exist
-            if (!cooldownNumber) {
+         if (!cooldownNumber) {
                 cooldownNumber = document.createElement('div');
                 cooldownNumber.className = 'cooldown-number';
                 cooldownNumber.style.cssText = `
@@ -583,6 +583,8 @@ function updateWeaponCooldowns() {
                     text-shadow: 0 0 4px #000, 0 0 4px #000, 0 0 4px #000;
                     pointer-events: none;
                     z-index: 10;
+                    background-color: rgba(0, 0, 0, 0.3);
+                    border-radius: 50%;
                 `;
                 slot.appendChild(cooldownNumber);
                 slotState.hasElement = true;
