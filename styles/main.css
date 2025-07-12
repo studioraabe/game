@@ -213,8 +213,13 @@ body::before {
     transition: all 0.3s ease;
     position: relative;
     border-radius: 6px;
-    background: #00E076;
-	    box-shadow: rgb(58, 194, 253) 0px 0px 30px;
+    background: #00BA62;
+	box-shadow: 0px 0px 30px #00E076;	
+
+
+
+
+
 
     z-index: 1;
 }
@@ -661,7 +666,7 @@ position: absolute;
     display: flex;
     justify-content: space-between;
     padding: 5px 0;
-    border-bottom: 1px solid #1a4833;
+    border-bottom: 1px solid rgb(255 255 255 / 10%);
     width:200px;
 }
 

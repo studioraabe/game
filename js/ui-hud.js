@@ -723,34 +723,54 @@ export function updateHealthBar() {
         height: 100%;
         width: ${hpPercent}%;
         background: ${getHealthColor(hpPercent)};
-		box-shadow: 0px 0px 30px ${getHealthColor(hpPercent)};
+box-shadow: 0px 0px 30px #00E076;
         border-radius: inherit;
         transition: width 0.3s ease, background 0.3s ease;
+	z-index:2;
     `;
     
     // Create shield overlay - more prominent
-    const shieldOverlay = document.createElement('div');
-    shieldOverlay.className = 'shield-overlay';
-    shieldOverlay.style.cssText = `
-        position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
-        width: 100%;
-        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.0)' : 'transparent'};
-        border: ${gameState.shieldCharges > 0 ? '2px solid rgba(60, 194, 253, 0.0)' : 'none'};
-        border-radius: inherit;
-        transition: all 0.3s ease;
-        ${gameState.shieldCharges > 0 ? 'box-shadow: inset 0 0 20px rgba(60, 194, 253, 0.0);' : ''}
-    `;
+const shieldOverlay = document.createElement('div');
+shieldOverlay.className = 'shield-overlay';
+shieldOverlay.style.cssText = `
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: transparent;
+    border-radius: inherit;
+    transition: all 0.3s ease;
+    opacity: 0;
+    z-index: 20;
+    display: none;
+`;
+
+if (gameState.shieldCharges > 0) {
+    shieldOverlay.style.display = 'block';
+    shieldOverlay.style.opacity = '0.8';
+    shieldOverlay.style.background = 'linear-gradient(135deg, #4169E1 0%, #1E90FF 100%)';
+    shieldOverlay.style.animation = 'energyFlow 2s linear infinite';
+    shieldOverlay.style.zIndex = '3'; // Ensure it's above the health fill
     
+    // Also reduce the health fill visibility when shielded
+    hpFill.style.opacity = '0.8'; // Dim the green health bar behind shields
+} else {
+    shieldOverlay.style.display = 'none';
+    shieldOverlay.style.opacity = '0';
+    shieldOverlay.style.background = 'transparent';
+    shieldOverlay.style.animation = 'none';
+    
+    // Restore full health bar visibility when no shields
+    hpFill.style.opacity = '1';
+}
     // Create HP text - centered
     const hpText = document.createElement('div');
     hpText.className = 'hp-text';
     hpText.textContent = `${gameState.currentHP} / ${gameState.maxHP}`;
     hpText.style.cssText = `
      
-        z-index: 3;
+        z-index: 21;
         font-size: 15px;
         line-height: 19px;
         color: rgba(255, 255, 255, 0.9);
@@ -770,14 +790,14 @@ export function updateHealthBar() {
     shieldCounter.className = 'shield-counter';
     shieldCounter.style.cssText = `
         position: absolute;
-        right: 8px;
+        left: 2px;
         top: 50%;
         transform: translateY(-50%);
         display: flex;
         align-items: center;
-        gap: 2px;
-        z-index: 4;
-        opacity: ${gameState.shieldCharges > 0 ? '1' : '0.5'};
+        gap: 0px;
+        z-index: 21;
+        opacity: ${gameState.shieldCharges > 0 ? '1' : '0.0'};
         transition: opacity 0.3s ease;
         background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.0)' : 'rgba(0, 0, 0, 0.0)'};
         padding: 2px 6px;
