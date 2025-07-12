@@ -31,8 +31,20 @@ const projectileSystem = {
         ProjectileType.CHAIN_LIGHTNING,
         ProjectileType.SEEKING_BOLT
     ],
-    unlockedTypes: [ProjectileType.NORMAL], // Player starts with normal
-    equippedTypes: [ProjectileType.NORMAL], // Max 3 equipped
+    // FIXED: Start with all weapons unlocked and equipped
+    unlockedTypes: [
+        ProjectileType.NORMAL,
+        ProjectileType.LASER_BEAM,
+        ProjectileType.ENERGY_SHOTGUN,
+        ProjectileType.CHAIN_LIGHTNING
+    ],
+    // FIXED: Start with all weapons equipped (remove SEEKING_BOLT for now)
+    equippedTypes: [
+        ProjectileType.NORMAL,
+        ProjectileType.LASER_BEAM,
+        ProjectileType.ENERGY_SHOTGUN,
+        ProjectileType.CHAIN_LIGHTNING
+    ],
     currentTypeIndex: 0,
     
     // Projectile arrays
@@ -46,7 +58,7 @@ const projectileSystem = {
     shotgunCooldown: 0,
     lightningCooldown: 0,
     seekingCooldown: 0
-};
+}
 
 // ========================================
 // PROJECTILE CONFIGS
@@ -89,13 +101,13 @@ const PROJECTILE_CONFIGS = {
     [ProjectileType.CHAIN_LIGHTNING]: {
         name: "⚡ Chain Lightning",
         desc: "Jumps between 3 enemies",
-        cooldown: 60,
-        cost: 4,
+        cooldown: 120,
+        cost: 5,
         damage: 1.2,
-        speed: 18,
+        speed: 20,
         penetration: false,
         maxChains: 3,
-        chainRange: 120
+        chainRange: 400
     },
     
     [ProjectileType.SEEKING_BOLT]: {
@@ -675,20 +687,43 @@ function handleProjectileEnemyDeath(enemy, gameStateParam, damage) {
     }
 }
 
+
+
 function processChainLightning(bullet, gameStateParam) {
+    // Initialize chainedTargets if it doesn't exist
     if (!bullet.chainedTargets) bullet.chainedTargets = new Set();
     
     // Define a list of environmental objects that should not be hit by player attacks
     const environmentalTypes = ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'];
     
-    let chainCount = 0;
+    // Track the current position of the lightning
     let currentX = bullet.x;
     let currentY = bullet.y;
+    let chainCount = 0;
     
+    // First, add the initially hit target to the chainedTargets
+    // This ensures we don't chain back to the first target
+    for (const obstacle of obstacles) {
+        if (environmentalTypes.includes(obstacle.type)) continue;
+        
+        if (bullet.x < obstacle.x + obstacle.width &&
+            bullet.x + 8 > obstacle.x &&
+            bullet.y < obstacle.y + obstacle.height &&
+            bullet.y + 4 > obstacle.y) {
+            
+            bullet.chainedTargets.add(obstacle);
+            currentX = obstacle.x + obstacle.width/2;
+            currentY = obstacle.y + obstacle.height/2;
+            break;
+        }
+    }
+    
+    // Now find and chain to additional targets
     while (chainCount < bullet.maxChains) {
         let nearestEnemy = null;
         let nearestDistance = bullet.chainRange;
         
+        // Find the nearest enemy that hasn't been hit yet
         for (const obstacle of obstacles) {
             // Skip environmental objects and already chained targets
             if (environmentalTypes.includes(obstacle.type)) continue;
@@ -704,14 +739,17 @@ function processChainLightning(bullet, gameStateParam) {
             }
         }
         
+        // No more valid targets in range
         if (!nearestEnemy) break;
         
         // Chain to this enemy
         bullet.chainedTargets.add(nearestEnemy);
         
+        // Apply damage to the enemy
         const damage = Math.floor(bullet.damage * (gameStateParam.baseDamage || 20));
         nearestEnemy.health -= damage;
         
+        // Show damage number
         if (window.createDamageNumber) {
             window.createDamageNumber(
                 nearestEnemy.x + nearestEnemy.width/2,
@@ -721,18 +759,37 @@ function processChainLightning(bullet, gameStateParam) {
         }
         
         // Create lightning effect between current position and enemy
-        createLightningEffect(nearestEnemy.x + nearestEnemy.width/2, nearestEnemy.y + nearestEnemy.height/2);
+        createLightningEffect(currentX, currentY, 
+                             nearestEnemy.x + nearestEnemy.width/2, 
+                             nearestEnemy.y + nearestEnemy.height/2);
         
         // Check for enemy death and handle it properly
         if (nearestEnemy.health <= 0) {
-            handleProjectileEnemyDeath(nearestEnemy, gameStateParam, damage);
+            if (window.handleProjectileEnemyDeath) {
+                window.handleProjectileEnemyDeath(nearestEnemy, gameStateParam, damage);
+            } else {
+                const index = obstacles.indexOf(nearestEnemy);
+                if (index > -1) {
+                    obstacles.splice(index, 1);
+                }
+            }
         }
         
+        // Update the current position to the chained target for the next iteration
         currentX = nearestEnemy.x + nearestEnemy.width/2;
         currentY = nearestEnemy.y + nearestEnemy.height/2;
+        
         chainCount++;
     }
+    
+    // Create visual effects for the chains
+    function createLightningEffect(startX, startY, endX, endY) {
+        if (window.createLightningEffect) {
+            window.createLightningEffect(endX, endY);
+        }
+    }
 }
+
 // ========================================
 // PROJECTILE UNLOCKING SYSTEM
 // ========================================

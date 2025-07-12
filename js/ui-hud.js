@@ -134,7 +134,7 @@ function createMultiHUD() {
     healthContainer.id = 'healthContainer';
     healthContainer.className = 'health-container';
     healthContainer.style.cssText = `
-        width: 177px;
+        width: 163px;
         height: 32px;
         background: rgba(255, 255, 255, 0.1);
         

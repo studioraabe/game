@@ -32,12 +32,12 @@ export const WEAPON_BUFFS = [
     {
         id: 'boltMastery',
         title: '⚡ Bolt Mastery',
-        desc: '-25% cooldown and +20% damage for Lightning Bolt',
+        desc: '-20% cooldown and +20% damage for Lightning Bolt',
         effect: () => {
             // Optimize normal bolts
             if (PROJECTILE_CONFIGS[ProjectileType.NORMAL]) {
                 const config = PROJECTILE_CONFIGS[ProjectileType.NORMAL];
-                config.cooldown = Math.floor(config.cooldown * 0.75);
+                config.cooldown = Math.floor(config.cooldown * 0.80);
                 config.damage = config.damage * 1.2;
                 
                 // Add to playerStats selected buffs
@@ -72,13 +72,13 @@ export const WEAPON_BUFFS = [
     {
         id: 'shotgunSpread',
         title: '💥 Shotgun Spread',
-        desc: '+2 pellets and +15% damage for Energy Shotgun',
+        desc: '+1 pellets and +10% damage for Energy Shotgun',
         effect: () => {
             // Optimize shotgun
             if (PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN]) {
                 const config = PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN];
-                config.pellets = (config.pellets || 5) + 2; // Add 2 more pellets
-                config.damage = config.damage * 1.15;
+                config.pellets = (config.pellets || 5) + 1; // Add 2 more pellets
+                config.damage = config.damage * 1.10;
                 
                 // Add to playerStats selected buffs
                 if (gameState && gameState.playerStats) {

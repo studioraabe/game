@@ -191,9 +191,37 @@ export function resetGame() {
     }
     
     Object.keys(activeDropBuffs).forEach(key => delete activeDropBuffs[key]);
-    
-    resetCamera();
+	
+	
+	
+	   // ADDED: Ensure weapons remain equipped after reset
+    if (window.projectileSystem && window.ProjectileType) {
+        const { ProjectileType } = window;
+        
+        // Make sure all main weapons are still equipped
+        const requiredWeapons = [
+            ProjectileType.NORMAL,
+            ProjectileType.LASER_BEAM,
+            ProjectileType.ENERGY_SHOTGUN,
+            ProjectileType.CHAIN_LIGHTNING
+        ];
+        
+        // Only reset if weapons are missing
+        const missingWeapons = requiredWeapons.filter(weapon => 
+            !window.projectileSystem.equippedTypes.includes(weapon)
+        );
+        
+        if (missingWeapons.length > 0) {
+            console.log('🔫 Re-equipping missing weapons after reset');
+            window.projectileSystem.unlockedTypes = [...requiredWeapons];
+            window.projectileSystem.equippedTypes = [...requiredWeapons];
+            window.projectileSystem.currentTypeIndex = 0;
+        }
+    }
+	
+	    resetCamera();
     resetPlayer();
+    
     clearArrays();
     window.obstacleTimer = 0;
     window.bulletBoxesFound = 0;
@@ -201,6 +229,9 @@ export function resetGame() {
     resetDamageEffects();
     gameState.needsRedraw = true;
 }
+	
+    
+
 
 export function takeDamage(damage) {
     const actualDamage = Math.min(damage, gameState.currentHP);

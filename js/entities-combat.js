@@ -152,135 +152,17 @@ export function updateBatProjectiles(gameStateParam) {
 // ... keep all existing SHOOTING SYSTEM code ...
 
 
-export function updateBullets(gameStateParam) {
-    let anyBulletHit = false;
-    
-    for (let i = bulletsFired.length - 1; i >= 0; i--) {
-        const bullet = bulletsFired[i];
-        
-        bullet.age++;
-        
-        if (!bullet.hit) {
-            bullet.x += bullet.speed * gameState.deltaTime;
-            
-            if (bullet.age < 10) {
-                bullet.currentLength = bullet.baseLength + (bullet.maxStretch * (bullet.age / 10));
-            } else {
-                bullet.currentLength = bullet.baseLength + bullet.maxStretch;
-            }
-            
-            const tailDelay = bullet.currentLength / Math.abs(bullet.speed);
-            if (bullet.age > tailDelay) {
-                bullet.tailX += bullet.speed * gameState.deltaTime;
-            }
-        } else {
-            bullet.hitTime++;
-            
-            if (bullet.hitTime < 8) {
-                bullet.tailX += bullet.speed * 3 * gameState.deltaTime;
-                bullet.currentLength = Math.max(4, bullet.currentLength - 10);
-            } else {
-                bulletsFired.splice(i, 1);
-                continue;
-            }
-        }
-        
-        let bulletHitSomething = false;
-        
-        for (let j = obstacles.length - 1; j >= 0; j--) {
-            const obstacle = obstacles[j];
-            
-            if (obstacle.type !== 'teslaCoil' && 
-                obstacle.type !== 'frankensteinTable' && 
-                obstacle.type !== 'boltBox' && 
-                !(obstacle.type === 'skeleton' && obstacle.isDead)) {
-                
-                if (bullet.x < obstacle.x + obstacle.width &&
-                    bullet.x + 8 > obstacle.x &&
-                    bullet.y < obstacle.y + obstacle.height &&
-                    bullet.y + 4 > obstacle.y) {
-                    
-                    bullet.hit = true;
-                    bullet.hitTime = 0;
-                    
-                    // FIXED: Calculate base damage with proper scaling
-                    const baseDamage = gameStateParam.baseDamage || calculatePlayerDamage(gameStateParam.level);
-                    let damage = bullet.enhanced ? baseDamage * 3 : baseDamage;
-                    
-                    // FIXED: Apply player stat bonuses
-                    damage = damage * (1 + (gameStateParam.playerStats?.damageBonus || 0) / 100);
-                    
-                    // FIXED: Critical hit calculation
-                    let isCritical = false;
-                    const critChance = gameStateParam.playerStats?.critChance || 0;
-                    if (Math.random() * 100 < critChance) {
-                        isCritical = true;
-                        const critMultiplier = gameStateParam.playerStats?.critDamage || 1.5;
-                        damage *= critMultiplier;
-                    }
-                    
-                    damage = Math.floor(damage);
-                    
-                    // FIXED: Ensure obstacle has proper health before damage
-                    if (!obstacle.maxHealth || obstacle.maxHealth <= 0) {
-                        const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf'];
-                        if (enemyTypes.includes(obstacle.type)) {
-                            obstacle.maxHealth = calculateEnemyHP(obstacle.type, gameStateParam.level);
-                            obstacle.health = obstacle.maxHealth;
-                        }
-                    }
-                    
-                    obstacle.health -= damage;
-                    
-                    console.log(`💥 ${obstacle.type} hit for ${damage} damage${isCritical ? ' (CRIT!)' : ''}. Health: ${obstacle.health}/${obstacle.maxHealth}`);
-                    
-                    // Show damage number with critical indication
-                    if (window.createDamageNumber) {
-                        window.createDamageNumber(
-                            obstacle.x + obstacle.width/2, 
-                            obstacle.y + obstacle.height/4, 
-                            damage, 
-                            isCritical
-                        );
-                    }
-                    
-                    if (obstacle.type === 'skeleton') {
-                        obstacle.damageResistance = 30;
-                        
-                        if (obstacle.health <= 0) {
-                            obstacle.isDead = true;
-                            obstacle.deathTimer = 0;
-                            handleEnemyDeathWithLifesteal(obstacle, j, gameStateParam, damage);
-                        }
-                    }
-                    
-                    createLightningEffect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
-                    
-                    gameStateParam.consecutiveHits++;
-                    bulletHitSomething = true;
-                    anyBulletHit = true;
-                    
-                    if (obstacle.health <= 0 && obstacle.type !== 'skeleton') {
-                        handleEnemyDeathWithLifesteal(obstacle, j, gameStateParam, damage);
-                    }
-                    
-                    if (!bullet.piercing || !gameStateParam.hasPiercingBullets) {
-                        bulletsFired.splice(i, 1);
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // Clean up off-screen bullets
-        if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100)) {
-            if (!bulletHitSomething) {
-                gameStateParam.consecutiveHits = 0;
-            }
-            bulletsFired.splice(i, 1);
-        }
-    }
-}
+
+
+
+
+
+
+
+
+
+
+
 
 
 function handleEnemyDeathWithLifesteal(obstacle, index, gameStateParam, damage) {
@@ -316,9 +198,323 @@ export { enhancedShoot as shoot };
 
 
 
+export function updateBullets(gameStateParam) {
+    let anyBulletHit = false;
+    
+    for (let i = bulletsFired.length - 1; i >= 0; i--) {
+        const bullet = bulletsFired[i];
+        
+        bullet.age++;
+        
+        if (!bullet.hit) {
+            bullet.x += bullet.speed * gameState.deltaTime;
+            
+            if (bullet.age < 10) {
+                bullet.currentLength = bullet.baseLength + (bullet.maxStretch * (bullet.age / 10));
+            } else {
+                bullet.currentLength = bullet.baseLength + bullet.maxStretch;
+            }
+            
+            const tailDelay = bullet.currentLength / Math.abs(bullet.speed);
+            if (bullet.age > tailDelay) {
+                bullet.tailX += bullet.speed * gameState.deltaTime;
+            }
+        } else {
+            bullet.hitTime++;
+            
+            if (bullet.hitTime < 8) {
+                bullet.tailX += bullet.speed * 3 * gameState.deltaTime;
+                bullet.currentLength = Math.max(4, bullet.currentLength - 10);
+            } else {
+                // Don't remove Chain Lightning bullets immediately after hit
+                // This allows time for the chain effect to process
+                if (bullet.type !== 'chainLightning' || bullet.chainProcessed) {
+                    bulletsFired.splice(i, 1);
+                }
+                continue;
+            }
+        }
+        
+        let bulletHitSomething = false;
+        
+        for (let j = obstacles.length - 1; j >= 0; j--) {
+            const obstacle = obstacles[j];
+            
+            if (obstacle.type !== 'teslaCoil' && 
+                obstacle.type !== 'frankensteinTable' && 
+                obstacle.type !== 'boltBox' && 
+                !(obstacle.type === 'skeleton' && obstacle.isDead)) {
+                
+                if (bullet.x < obstacle.x + obstacle.width &&
+                    bullet.x + 8 > obstacle.x &&
+                    bullet.y < obstacle.y + obstacle.height &&
+                    bullet.y + 4 > obstacle.y) {
+                    
+                    bullet.hit = true;
+                    bullet.hitTime = 0;
+                    
+                    // Get base damage - keep existing damage calculation
+                    const baseDamage = gameStateParam.baseDamage || 20;
+                    let damage = bullet.enhanced ? baseDamage * 3 : baseDamage;
+                    
+                    // Apply player stat bonuses
+                    const damageBonus = gameStateParam.playerStats?.damageBonus || 0;
+                    damage = damage * (1 + (damageBonus / 100));
+                    
+                    // Critical hit calculation
+                    let isCritical = false;
+                    const critChance = gameStateParam.playerStats?.critChance || 0;
+                    if (Math.random() * 100 < critChance) {
+                        isCritical = true;
+                        const critMultiplier = gameStateParam.playerStats?.critDamage || 1.5;
+                        damage *= critMultiplier;
+                    }
+                    
+                    damage = Math.floor(damage);
+                    
+                    // Ensure obstacle has proper health before damage
+                    if (!obstacle.maxHealth || obstacle.maxHealth <= 0) {
+                        const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf'];
+                        if (enemyTypes.includes(obstacle.type)) {
+                            if (window.calculateEnemyHP) {
+                                obstacle.maxHealth = window.calculateEnemyHP(obstacle.type, gameStateParam.level);
+                            } else {
+                                obstacle.maxHealth = 100; // fallback
+                            }
+                            obstacle.health = obstacle.maxHealth;
+                        }
+                    }
+                    
+                    // Apply damage
+                    obstacle.health -= damage;
+                    
+                    console.log(`💥 ${obstacle.type} hit for ${damage} damage. Health: ${obstacle.health}/${obstacle.maxHealth}`);
+                    
+                    // Show damage number with critical indication
+                    if (window.createDamageNumber) {
+                        window.createDamageNumber(
+                            obstacle.x + obstacle.width/2, 
+                            obstacle.y + obstacle.height/4, 
+                            damage, 
+                            isCritical
+                        );
+                    }
+                    
+                    // For Chain Lightning, process the chain effect immediately
+                    if (bullet.type === 'chainLightning') {
+                        // Initialize the chain properties if not already set
+                        if (!bullet.chainedTargets) {
+                            bullet.chainedTargets = new Set();
+                        }
+                        bullet.chainedTargets.add(obstacle); // Add the first hit enemy
+                        
+                        // Execute the chain lightning effect immediately
+                        executeChainLightning(bullet, obstacle, gameStateParam);
+                        
+                        // Mark as processed
+                        bullet.chainProcessed = true;
+                    }
+                    
+                    if (obstacle.type === 'skeleton') {
+                        obstacle.damageResistance = 30;
+                        
+                        if (obstacle.health <= 0) {
+                            obstacle.isDead = true;
+                            obstacle.deathTimer = 0;
+                            handleEnemyDeath(obstacle, j, gameStateParam, damage);
+                        }
+                    }
+                    
+                    if (window.createLightningEffect) {
+                        window.createLightningEffect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
+                    }
+                    
+                    gameStateParam.consecutiveHits++;
+                    bulletHitSomething = true;
+                    anyBulletHit = true;
+                    
+                    if (obstacle.health <= 0 && obstacle.type !== 'skeleton') {
+                        handleEnemyDeath(obstacle, j, gameStateParam, damage);
+                    }
+                    
+                    if (!bullet.piercing || !gameStateParam.hasPiercingBullets) {
+                        bulletsFired.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Clean up off-screen bullets
+        if (bullet && (bullet.x > camera.x + CANVAS.width + 100 || bullet.x < camera.x - 100)) {
+            if (!bulletHitSomething) {
+                gameStateParam.consecutiveHits = 0;
+            }
+            bulletsFired.splice(i, 1);
+        }
+    }
+}
+
+// Enhanced function to handle Chain Lightning jumps with clear visual effects
 
 
+// Enhanced function to handle Chain Lightning jumps with clear visual effects
+function executeChainLightning(bullet, firstTarget, gameStateParam) {
+    // Environmental objects to skip
+    const environmentalTypes = ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'];
+    
+    // Start chain from the first hit enemy
+    let currentX = firstTarget.x + firstTarget.width/2;
+    let currentY = firstTarget.y + firstTarget.height/2;
+    
+    // Maximum jumps (default to 2 additional enemies after the first hit)
+    const maxChains = bullet.maxChains || 2;
+    
+    // Chain jump range
+    const chainRange = bullet.chainRange || 120;
+    
+    // Process chain jumps
+    for (let chainCount = 0; chainCount < maxChains; chainCount++) {
+        let nextTarget = null;
+        let nextDistance = chainRange;
+        
+        // Find nearest enemy that hasn't been hit yet
+        for (const obstacle of obstacles) {
+            // Skip environmental objects and already hit targets
+            if (environmentalTypes.includes(obstacle.type)) continue;
+            if (bullet.chainedTargets.has(obstacle)) continue;
+            
+            const dx = (obstacle.x + obstacle.width/2) - currentX;
+            const dy = (obstacle.y + obstacle.height/2) - currentY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < nextDistance) {
+                nextTarget = obstacle;
+                nextDistance = distance;
+            }
+        }
+        
+        // No more targets in range
+        if (!nextTarget) break;
+        
+        // Add to chained targets
+        bullet.chainedTargets.add(nextTarget);
+        
+        // Calculate damage (using same calculation as the first hit)
+        const baseDamage = gameStateParam.baseDamage || 20;
+        let damage = bullet.damage * baseDamage;
+        
+        // Apply player stat bonuses
+        const damageBonus = gameStateParam.playerStats?.damageBonus || 0;
+        damage = damage * (1 + (damageBonus / 100));
+        damage = Math.floor(damage);
+        
+        // Apply damage
+        nextTarget.health -= damage;
+        
+        // Show damage number
+        if (window.createDamageNumber) {
+            window.createDamageNumber(
+                nextTarget.x + nextTarget.width/2,
+                nextTarget.y + nextTarget.height/4,
+                damage
+            );
+        }
+        
+        // Create enhanced visual effect for chain lightning jump
+        createChainLightningEffect(
+            currentX, currentY,
+            nextTarget.x + nextTarget.width/2,
+            nextTarget.y + nextTarget.height/2
+        );
+        
+        // Handle enemy death if needed
+        if (nextTarget.health <= 0) {
+            const index = obstacles.indexOf(nextTarget);
+            if (index > -1) {
+                if (window.handleEnemyDeath) {
+                    window.handleEnemyDeath(nextTarget, index, gameStateParam, damage);
+                } else if (window.handleProjectileEnemyDeath) {
+                    window.handleProjectileEnemyDeath(nextTarget, gameStateParam, damage);
+                } else {
+                    obstacles.splice(index, 1);
+                }
+            }
+        }
+        
+        // Update current position to this target for next jump
+        currentX = nextTarget.x + nextTarget.width/2;
+        currentY = nextTarget.y + nextTarget.height/2;
+        
+        // Update combo counter for each chain hit
+        if (gameStateParam.comboCount !== undefined) {
+            gameStateParam.comboCount++;
+            if (gameStateParam.comboCount >= 2) {
+                gameStateParam.comboTimer = 300;
+            }
+        }
+        
+        // Update consecutive hits
+        if (gameStateParam.consecutiveHits !== undefined) {
+            gameStateParam.consecutiveHits++;
+        }
+        
+        // Create a small delay between chain jumps for better visibility
+        // This is a visual delay only, using a timeout
+        setTimeout(() => {
+            // This ensures each chain jump has a slight delay for better visibility
+            console.log(`⚡ Chain Lightning jumped to ${nextTarget.type}! Chain #${chainCount+1}`);
+        }, chainCount * 50);
+    }
+}
 
+// Enhanced visual effect for chain lightning jumps
+function createChainLightningEffect(startX, startY, endX, endY) {
+    // First create regular lightning effect at the target
+    if (window.createLightningEffect) {
+        window.createLightningEffect(endX, endY);
+    }
+    
+    // Then create multiple lightning effects along the path for the chain visual
+    const segments = 3; // Number of visual segments for the chain
+    for (let i = 0; i < segments; i++) {
+        const t = (i + 1) / (segments + 1); // position along the path (0 to 1)
+        const segX = startX + (endX - startX) * t;
+        const segY = startY + (endY - startY) * t;
+        
+        // Add random offset for zigzag lightning effect
+        const offsetMagnitude = 10;
+        const randOffsetX = (Math.random() - 0.5) * offsetMagnitude;
+        const randOffsetY = (Math.random() - 0.5) * offsetMagnitude;
+        
+        // Create small lightning effect at each segment point with slight delay
+        setTimeout(() => {
+            if (window.createLightningEffect) {
+                window.createLightningEffect(segX + randOffsetX, segY + randOffsetY);
+            }
+        }, i * 30); // Stagger the effect for more dynamic visuals
+    }
+    
+    // Create a chain-specific effect by adding to lightningEffects array if it exists
+    if (window.lightningEffects) {
+        try {
+            // Create a chain-specific lightning effect that connects two points
+            window.lightningEffects.push({
+                startX: startX,
+                startY: startY,
+                endX: endX,
+                endY: endY,
+                life: 12, // Short life for chain effect
+                maxLife: 12,
+                branches: 2,
+                isChain: true // Mark as chain lightning for special rendering
+            });
+        } catch (e) {
+            // Fallback if pushing to array fails
+            console.log("Error adding chain lightning effect:", e);
+        }
+    }
+}
 
 
 // Add lifesteal function

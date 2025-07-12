@@ -16,7 +16,7 @@ const ENHANCED_BUFF_EFFECTS = {
         const gameState = window.gameState;
         if (gameState && gameState.playerStats) {
             // Add 0.333 to baseline 0.5 = 0.833 HP/sec total
-            gameState.playerStats.healthRegen += 0.333;
+            gameState.playerStats.healthRegen += 0.66;
             gameState.playerStats.selectedBuffs.push('survivalInstinct');
             
             console.log(`✅ Survival Instinct applied! Health regen: ${gameState.playerStats.healthRegen.toFixed(3)}/sec`);
@@ -32,7 +32,7 @@ const ENHANCED_BUFF_EFFECTS = {
         const gameState = window.gameState;
         if (gameState && gameState.playerStats) {
             // Add 0.5 to baseline 0.5 = 1.0 bullets/sec total (doubles the rate)
-            gameState.playerStats.bulletRegen += 0.5;
+            gameState.playerStats.bulletRegen += 0.66;
             gameState.playerStats.selectedBuffs.push('bulletStorm');
             
             console.log(`✅ Bullet Storm applied! Bullet regen: ${gameState.playerStats.bulletRegen.toFixed(3)}/sec`);
@@ -89,7 +89,7 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.healthRegen += 0.333;
+                gameState.playerStats.healthRegen += 0.5;
                 gameState.playerStats.selectedBuffs.push('survivalInstinct');
             }
         }
@@ -101,7 +101,7 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.bulletRegen += 0.5;
+                gameState.playerStats.bulletRegen += 1.0;
                 gameState.playerStats.selectedBuffs.push('bulletStorm');
             }
         }
@@ -115,7 +115,7 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.lifeSteal += 2;
+                gameState.playerStats.lifeSteal += 5;
                 gameState.playerStats.selectedBuffs.push('vampiricStrikes');
             }
         }
@@ -127,8 +127,8 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.damageBonus += 25;
-                gameState.playerStats.attackSpeed += 15;
+                gameState.playerStats.damageBonus += 20;
+                gameState.playerStats.attackSpeed += 10;
                 gameState.playerStats.selectedBuffs.push('berserkerRage');
             }
         }
@@ -140,7 +140,7 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.critChance += 20;
+                gameState.playerStats.critChance += 10;
                 gameState.playerStats.critDamage = 2.0;
                 gameState.playerStats.selectedBuffs.push('criticalFocus');
             }
@@ -149,12 +149,12 @@ export const STAT_BUFFS = [
     {
         id: 'swiftDeath',
         title: '⚡ Swift Death',
-        desc: '+20% movement and projectile speed',
+        desc: '+10% movement and projectile speed',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.moveSpeed += 20;
-                gameState.playerStats.projectileSpeed += 20;
+                gameState.playerStats.moveSpeed += 10;
+                gameState.playerStats.projectileSpeed += 10;
                 gameState.playerStats.selectedBuffs.push('swiftDeath');
             }
         }
