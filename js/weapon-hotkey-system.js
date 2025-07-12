@@ -70,24 +70,25 @@ export const WEAPON_BUFFS = [
         }
     },
     {
-        id: 'shotgunSpread',
-        title: '💥 Shotgun Spread',
-        desc: '+1 pellets and +10% damage for Energy Shotgun',
-        effect: () => {
-            // Optimize shotgun
-            if (PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN]) {
-                const config = PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN];
-                config.pellets = (config.pellets || 5) + 1; // Add 2 more pellets
-                config.damage = config.damage * 1.10;
-                
-                // Add to playerStats selected buffs
-                if (gameState && gameState.playerStats) {
-                    gameState.playerStats.selectedBuffs.push('shotgunSpread');
-                }
-                
-                console.log('💥 Shotgun Spread applied: Energy Shotgun enhanced!');
+
+    id: 'shotgunSpread',
+    title: '💥 Shotgun Spread',
+    desc: '+1 pellets, +10% damage, 20% cost for Energy Shotgun',
+    effect: () => {
+        // Optimize shotgun
+        if (PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN]) {
+            const config = PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN];
+            config.pellets += 1; // Add exactly 1 pellet
+            config.damage = config.damage * 1.10;
+			 config.cost = Math.ceil(config.cost * 1.2);
+            
+            // Add to playerStats selected buffs
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.selectedBuffs.push('shotgunSpread');
             }
         }
+    }
+
     },
     {
         id: 'chainReaction',

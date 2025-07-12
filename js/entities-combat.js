@@ -468,17 +468,18 @@ function executeChainLightning(bullet, firstTarget, gameStateParam) {
     }
 }
 
-// Enhanced visual effect for chain lightning jumps
+
+
 function createChainLightningEffect(startX, startY, endX, endY) {
     // First create regular lightning effect at the target
     if (window.createLightningEffect) {
         window.createLightningEffect(endX, endY);
     }
     
-    // Then create multiple lightning effects along the path for the chain visual
-    const segments = 3; // Number of visual segments for the chain
+    // Create multiple lightning effects along the path for the chain visual
+    const segments = 3;
     for (let i = 0; i < segments; i++) {
-        const t = (i + 1) / (segments + 1); // position along the path (0 to 1)
+        const t = (i + 1) / (segments + 1);
         const segX = startX + (endX - startX) * t;
         const segY = startY + (endY - startY) * t;
         
@@ -492,31 +493,24 @@ function createChainLightningEffect(startX, startY, endX, endY) {
             if (window.createLightningEffect) {
                 window.createLightningEffect(segX + randOffsetX, segY + randOffsetY);
             }
-        }, i * 30); // Stagger the effect for more dynamic visuals
+        }, i * 30);
     }
     
     // Create a chain-specific effect by adding to lightningEffects array if it exists
     if (window.lightningEffects) {
-        try {
-            // Create a chain-specific lightning effect that connects two points
-            window.lightningEffects.push({
-                startX: startX,
-                startY: startY,
-                endX: endX,
-                endY: endY,
-                life: 12, // Short life for chain effect
-                maxLife: 12,
-                branches: 2,
-                isChain: true // Mark as chain lightning for special rendering
-            });
-        } catch (e) {
-            // Fallback if pushing to array fails
-            console.log("Error adding chain lightning effect:", e);
-        }
+        window.lightningEffects.push({
+            startX: startX,
+            startY: startY,
+            endX: endX,
+            endY: endY,
+            life: 12,
+            maxLife: 12,
+            branches: 2,
+            isChain: true,
+            isSlowing: true // Mark this as a slowing chain
+        });
     }
 }
-
-
 // Add lifesteal function
 function applyLifesteal(damage, gameStateParam) {
     if (gameStateParam.playerStats.lifeSteal <= 0) return 0;
@@ -615,9 +609,15 @@ const comboMultiplier = getComboPointsMultiplier();
 
 export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, gameStateParam) {
     const speed = gameSpeed * enemySlowFactor * 0.7;
+	
+	
+
+	
     
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
+		
+		
         
         if (obstacle.type === 'skeleton' && obstacle.isDead) {
             obstacle.deathTimer += gameState.deltaTime;
@@ -631,6 +631,23 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             }
             continue;
         }
+		
+		
+		
+		
+		    if (obstacle.isSlowed && obstacle.slowDuration > 0) {
+        obstacle.slowDuration -= gameState.deltaTime || 1;
+        
+        // When slow effect expires, restore original speed
+        if (obstacle.slowDuration <= 0) {
+            obstacle.isSlowed = false;
+            obstacle.speed = obstacle.originalSpeed;
+            delete obstacle.originalSpeed;
+        }
+    }
+    
+		
+		
         
         // SKELETON-SPECIFIC LOGIC
         if (obstacle.type === 'skeleton') {

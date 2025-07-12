@@ -690,19 +690,25 @@ function handleProjectileEnemyDeath(enemy, gameStateParam, damage) {
 
 
 function processChainLightning(bullet, gameStateParam) {
-    // Initialize chainedTargets if it doesn't exist
-    if (!bullet.chainedTargets) bullet.chainedTargets = new Set();
-    
-    // Define a list of environmental objects that should not be hit by player attacks
+    // Environmental objects to skip
     const environmentalTypes = ['boltBox', 'rock', 'teslaCoil', 'frankensteinTable', 'sarcophagus'];
     
-    // Track the current position of the lightning
+    // Start chain from the first hit enemy
     let currentX = bullet.x;
     let currentY = bullet.y;
-    let chainCount = 0;
     
-    // First, add the initially hit target to the chainedTargets
-    // This ensures we don't chain back to the first target
+    // Maximum jumps (default to 3 enemies for chain lightning)
+    const maxChains = bullet.maxChains || 3;
+    
+    // Chain jump range
+    const chainRange = bullet.chainRange || 400;
+    
+    // Initialize chainedTargets if it doesn't exist
+    if (!bullet.chainedTargets) {
+        bullet.chainedTargets = new Set();
+    }
+    
+    // Find initially hit enemy and add to chained targets
     for (const obstacle of obstacles) {
         if (environmentalTypes.includes(obstacle.type)) continue;
         
@@ -714,18 +720,21 @@ function processChainLightning(bullet, gameStateParam) {
             bullet.chainedTargets.add(obstacle);
             currentX = obstacle.x + obstacle.width/2;
             currentY = obstacle.y + obstacle.height/2;
+            
+            // Apply slow effect to the hit enemy
+            applySlowEffect(obstacle);
             break;
         }
     }
     
-    // Now find and chain to additional targets
-    while (chainCount < bullet.maxChains) {
-        let nearestEnemy = null;
-        let nearestDistance = bullet.chainRange;
+    // Process chain jumps
+    for (let chainCount = 0; chainCount < maxChains; chainCount++) {
+        let nextTarget = null;
+        let nextDistance = chainRange;
         
-        // Find the nearest enemy that hasn't been hit yet
+        // Find nearest enemy that hasn't been hit yet
         for (const obstacle of obstacles) {
-            // Skip environmental objects and already chained targets
+            // Skip environmental objects and already hit targets
             if (environmentalTypes.includes(obstacle.type)) continue;
             if (bullet.chainedTargets.has(obstacle)) continue;
             
@@ -733,62 +742,132 @@ function processChainLightning(bullet, gameStateParam) {
             const dy = (obstacle.y + obstacle.height/2) - currentY;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance < nearestDistance) {
-                nearestEnemy = obstacle;
-                nearestDistance = distance;
+            if (distance < nextDistance) {
+                nextTarget = obstacle;
+                nextDistance = distance;
             }
         }
         
-        // No more valid targets in range
-        if (!nearestEnemy) break;
+        // No more targets in range
+        if (!nextTarget) break;
         
-        // Chain to this enemy
-        bullet.chainedTargets.add(nearestEnemy);
+        // Add to chained targets
+        bullet.chainedTargets.add(nextTarget);
         
-        // Apply damage to the enemy
-        const damage = Math.floor(bullet.damage * (gameStateParam.baseDamage || 20));
-        nearestEnemy.health -= damage;
+        // Calculate damage (using same calculation as the first hit)
+        const baseDamage = gameStateParam.baseDamage || 20;
+        let damage = bullet.damage * baseDamage;
+        
+        // Apply player stat bonuses
+        const damageBonus = gameStateParam.playerStats?.damageBonus || 0;
+        damage = damage * (1 + (damageBonus / 100));
+        
+        // Critical hit calculation
+        let isCritical = false;
+        const critChance = gameStateParam.playerStats?.critChance || 0;
+        if (Math.random() * 100 < critChance) {
+            isCritical = true;
+            const critMultiplier = gameStateParam.playerStats?.critDamage || 1.5;
+            damage *= critMultiplier;
+        }
+        
+        damage = Math.floor(damage);
+        
+        // Apply damage
+        nextTarget.health -= damage;
+        
+        // Apply slow effect to the chained target
+        applySlowEffect(nextTarget);
         
         // Show damage number
         if (window.createDamageNumber) {
             window.createDamageNumber(
-                nearestEnemy.x + nearestEnemy.width/2,
-                nearestEnemy.y + nearestEnemy.height/4,
-                damage
+                nextTarget.x + nextTarget.width/2,
+                nextTarget.y + nextTarget.height/4,
+                damage,
+                isCritical
             );
         }
         
-        // Create lightning effect between current position and enemy
-        createLightningEffect(currentX, currentY, 
-                             nearestEnemy.x + nearestEnemy.width/2, 
-                             nearestEnemy.y + nearestEnemy.height/2);
+        // Create chain lightning effect
+        createChainLightningEffect(
+            currentX, currentY,
+            nextTarget.x + nextTarget.width/2,
+            nextTarget.y + nextTarget.height/2
+        );
         
-        // Check for enemy death and handle it properly
-        if (nearestEnemy.health <= 0) {
+        // Check for enemy death
+        if (nextTarget.health <= 0) {
             if (window.handleProjectileEnemyDeath) {
-                window.handleProjectileEnemyDeath(nearestEnemy, gameStateParam, damage);
+                window.handleProjectileEnemyDeath(nextTarget, gameStateParam, damage);
             } else {
-                const index = obstacles.indexOf(nearestEnemy);
+                const index = obstacles.indexOf(nextTarget);
                 if (index > -1) {
                     obstacles.splice(index, 1);
                 }
             }
         }
         
-        // Update the current position to the chained target for the next iteration
-        currentX = nearestEnemy.x + nearestEnemy.width/2;
-        currentY = nearestEnemy.y + nearestEnemy.height/2;
-        
-        chainCount++;
-    }
-    
-    // Create visual effects for the chains
-    function createLightningEffect(startX, startY, endX, endY) {
-        if (window.createLightningEffect) {
-            window.createLightningEffect(endX, endY);
-        }
+        // Update current position to this target for next jump
+        currentX = nextTarget.x + nextTarget.width/2;
+        currentY = nextTarget.y + nextTarget.height/2;
     }
 }
+
+
+
+
+function applySlowEffect(enemy) {
+    // Skip if already slowed
+    if (enemy.isSlowed) return;
+    
+    // Apply slow effect
+    enemy.isSlowed = true;
+    enemy.slowDuration = 180; // 3 seconds at 60fps
+    enemy.originalSpeed = enemy.speed || 1;
+    enemy.speed = (enemy.speed || 1) * 0.6; // 40% speed reduction
+    
+    // Visual indicator for slowed enemies
+    if (!enemy.effects) enemy.effects = [];
+    enemy.effects.push({
+        type: 'slow',
+        duration: 180
+    });
+    
+    // Create visual slow effect
+    createSlowEffect(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
+}
+
+// Create visual indicator for slow effect
+function createSlowEffect(x, y) {
+    // Create slow particles
+    for (let i = 0; i < 5; i++) {
+        if (window.dropParticles) {
+            window.dropParticles.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 20,
+                velocityX: (Math.random() - 0.5) * 2,
+                velocityY: (Math.random() - 0.5) * 2,
+                life: 60,
+                maxLife: 60,
+                color: '#00BFFF' // Light blue for slow effect
+            });
+        }
+    }
+    
+    // Create a score popup to indicate slowing
+    if (window.createScorePopup) {
+        window.createScorePopup(x, y - 15, 'Slowed!', '#00BFFF');
+    }
+}
+
+
+
+
+
+
+
+
 
 // ========================================
 // PROJECTILE UNLOCKING SYSTEM
