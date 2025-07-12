@@ -266,47 +266,96 @@ function applyScreenShake(offsetX, offsetY) {
 }
 
 // ========================================
-// CRITICAL HEALTH OVERLAY SYSTEM
+// CRITICAL HEALTH OVERLAY SYSTEM - FIXED
 // ========================================
 
 let criticalHealthOverlay = {
     active: false,
     intensity: 0,
-    pulseTimer: 0
+    pulseTimer: 0,
+    persistentCheck: false, // New property to track if we're continuously checking health
+    outerGlowActive: false  // Track if outer glow is active
 };
 
+// Function to determine if health is in critical state
+function isHealthCritical(gameState) {
+    if (!gameState) return false;
+    
+    // Consider health critical when below 20% and no shields
+    const hpPercent = (gameState.currentHP / gameState.maxHP) * 100;
+    return hpPercent <= 20 && gameState.shieldCharges <= 0;
+}
+
+// Activate critical health overlay with pulsing effect
 function activateCriticalHealthOverlay() {
     if (criticalHealthOverlay.active) return;
     
     criticalHealthOverlay.active = true;
     criticalHealthOverlay.intensity = 0.35;
     criticalHealthOverlay.pulseTimer = 0;
+    criticalHealthOverlay.outerGlowActive = true;
     
     console.log('🔴 Critical health overlay activated');
     applyCriticalHealthOverlay();
+    
+    // Apply persistent outer container glow
+    if (!glowManager.gameContainer) {
+        glowManager.init();
+    }
+    glowManager.setDamageGlow('critical', 0.9, 'critical', 6000); // Very long duration
+    
+    // If we're not already persistently checking health, start now
+    if (!criticalHealthOverlay.persistentCheck) {
+        criticalHealthOverlay.persistentCheck = true;
+        startPersistentHealthCheck();
+    }
 }
 
+// Deactivate critical health overlay with fade-out
 function deactivateCriticalHealthOverlay() {
     if (!criticalHealthOverlay.active) return;
     
     criticalHealthOverlay.active = false;
     criticalHealthOverlay.intensity = 0;
+    criticalHealthOverlay.outerGlowActive = false;
     
     console.log('✅ Critical health overlay deactivated');
     removeCriticalHealthOverlay();
+    
+    // Remove the outer container glow
+    if (glowManager.gameContainer) {
+        glowManager.setDamageGlow('critical', 0, 'critical', 0);
+    }
 }
 
+// Update critical health overlay pulse effect
 function updateCriticalHealthOverlay() {
     if (!criticalHealthOverlay.active) return;
     
     // Pulsing effect
-    criticalHealthOverlay.pulseTimer += (gameState.deltaTime || 1) * 0.1;
+    criticalHealthOverlay.pulseTimer += (window.gameState?.deltaTime || 1) * 0.1;
     const pulse = Math.sin(criticalHealthOverlay.pulseTimer) * 0.15 + 0.85;
     const currentIntensity = criticalHealthOverlay.intensity * pulse;
     
     applyCriticalHealthOverlay(currentIntensity);
+    
+    // Keep the outer glow refreshed as long as we're in critical state
+    if (criticalHealthOverlay.outerGlowActive) {
+        if (!glowManager.gameContainer) {
+            glowManager.init();
+        }
+        
+        // Check if critical glow needs to be refreshed (if timer is getting low)
+        const criticalGlow = glowManager.activeGlows.critical;
+        if (!criticalGlow.active || criticalGlow.timer < 1000) {
+            // Update the outer glow with pulsing intensity that matches the inner overlay
+            const glowIntensity = 0.8 + (pulse * 0.2); // Range from 0.8 to 1.0 based on pulse
+            glowManager.setDamageGlow('critical', glowIntensity, 'critical', 6000);
+        }
+    }
 }
 
+// Apply critical health overlay visual effect
 function applyCriticalHealthOverlay(intensity = 0.35) {
     let overlay = document.getElementById('criticalHealthOverlay');
     
@@ -349,16 +398,56 @@ function applyCriticalHealthOverlay(intensity = 0.35) {
     overlay.style.opacity = intensity > 0 ? '1' : '0';
 }
 
+// Remove critical health overlay
 function removeCriticalHealthOverlay() {
     const overlay = document.getElementById('criticalHealthOverlay');
     if (overlay) {
         overlay.style.opacity = '0';
         setTimeout(() => {
-            if (overlay.parentNode) {
+            if (overlay.parentNode && !criticalHealthOverlay.active) {
                 overlay.parentNode.removeChild(overlay);
             }
         }, 500);
     }
+}
+
+// Continuously check health status for persistent critical effects
+function startPersistentHealthCheck() {
+    // Only run if game is initialized
+    if (!window.gameState) {
+        setTimeout(startPersistentHealthCheck, 500);
+        return;
+    }
+    
+    // Check if health is critical and update overlay accordingly
+    const checkHealthStatus = () => {
+        if (!window.gameState || !criticalHealthOverlay.persistentCheck) return;
+        
+        const isCritical = isHealthCritical(window.gameState);
+        
+        if (isCritical && !criticalHealthOverlay.active) {
+            activateCriticalHealthOverlay();
+        } else if (!isCritical && criticalHealthOverlay.active) {
+            deactivateCriticalHealthOverlay();
+        }
+        
+        // Continue checking while game is running
+        if (window.gameState.gameRunning || criticalHealthOverlay.active) {
+            requestAnimationFrame(checkHealthStatus);
+        } else {
+            // Stop persistent checking when game is not running
+            criticalHealthOverlay.persistentCheck = false;
+            criticalHealthOverlay.outerGlowActive = false;
+            
+            // Make sure glow is cleared when game stops
+            if (glowManager.gameContainer) {
+                glowManager.setDamageGlow('critical', 0, 'critical', 0);
+            }
+        }
+    };
+    
+    // Start the continuous health check
+    requestAnimationFrame(checkHealthStatus);
 }
 
 // ========================================
@@ -493,10 +582,10 @@ export function triggerDamageEffects(gameStateParam, damageType = 'health') {
     }
     glowManager.setDamageGlow(glowColor, glowIntensity, glowColor, glowDuration);
     
-    // 3. CRITICAL HEALTH OVERLAY (only when below 20% HP and no shields)
-    if (hpPercent <= 0.20 && !hasShields) {
+    // 3. CRITICAL HEALTH OVERLAY - use improved system with persistent checking
+    if (isHealthCritical(gameStateParam)) {
         activateCriticalHealthOverlay();
-    } else {
+    } else if (hpPercent > 0.20 || hasShields) {
         deactivateCriticalHealthOverlay();
     }
     
@@ -532,6 +621,24 @@ export function updateDamageEffects() {
     updateScreenShake();
     glowManager.update(gameState.deltaTime || 1);
     updateCriticalHealthOverlay();
+    
+    // Add continuous health status check
+    if (window.gameState && window.gameState.gameRunning && !criticalHealthOverlay.persistentCheck) {
+        criticalHealthOverlay.persistentCheck = true;
+        startPersistentHealthCheck();
+    }
+    
+    // Make sure critical outer glow stays synced with inner overlay
+    if (window.gameState && criticalHealthOverlay.persistentCheck) {
+        const isCritical = isHealthCritical(window.gameState);
+        
+        // Ensure outer glow matches critical health status
+        if (isCritical && !criticalHealthOverlay.outerGlowActive) {
+            activateCriticalHealthOverlay();
+        } else if (!isCritical && criticalHealthOverlay.outerGlowActive) {
+            deactivateCriticalHealthOverlay();
+        }
+    }
 }
 
 // ========================================
@@ -540,6 +647,11 @@ export function updateDamageEffects() {
 
 export function initDamageEffects() {
     glowManager.init();
+    
+    // Start persistent health check
+    criticalHealthOverlay.persistentCheck = true;
+    startPersistentHealthCheck();
+    
     console.log('🎮 Enhanced Damage Feedback System: READY');
 }
 
@@ -555,6 +667,10 @@ export function resetDamageEffects() {
     
     // Reset critical overlay
     deactivateCriticalHealthOverlay();
+    
+    // Reset persistent checking
+    criticalHealthOverlay.persistentCheck = false;
+    criticalHealthOverlay.outerGlowActive = false;
     
     console.log('🔄 All damage effects reset');
 }
