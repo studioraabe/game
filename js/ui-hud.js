@@ -73,14 +73,14 @@ function createMultiHUD() {
         left: 50%;
 		transform: translateX(-50%);
         display: flex;
-        flex-direction: row;
+        flex-direction: row-reverse;
         flex-wrap: wrap;
         justify-content: flex-end;
         align-items: center;
         align-content: flex-end;
-        padding: 10px;
-        gap: 0px 0px;
-        width: 374px;
+        padding: 10px 14px;
+        gap: 24px;
+        width: 560px;
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10.309px);
@@ -96,7 +96,7 @@ function createMultiHUD() {
     weaponsEnergyContainer.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 24px;
         flex: 1;
     `;
     
@@ -106,7 +106,7 @@ function createMultiHUD() {
     weaponsContainer.className = 'weapons-container';
     weaponsContainer.style.cssText = `
         display: flex;
-        gap: 8px;
+        gap: 12px;
     `;
     
     // Create energy/bullet bar container
@@ -132,7 +132,7 @@ function createMultiHUD() {
     healthContainer.id = 'healthContainer';
     healthContainer.className = 'health-container';
     healthContainer.style.cssText = `
-        width: 100%;
+        width: 177px;
         height: 32px;
         background: rgba(255, 255, 255, 0.1);
         
@@ -142,7 +142,8 @@ function createMultiHUD() {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-top: 8px;
+		order: 1;
+       
     `;
     
     // Assemble the containers
@@ -581,11 +582,11 @@ export function updateHealthBar() {
         top: 0;
         height: 100%;
         width: 100%;
-        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.4)' : 'transparent'};
-        border: ${gameState.shieldCharges > 0 ? '2px solid rgba(60, 194, 253, 0.8)' : 'none'};
+        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.0)' : 'transparent'};
+        border: ${gameState.shieldCharges > 0 ? '2px solid rgba(60, 194, 253, 0.0)' : 'none'};
         border-radius: inherit;
         transition: all 0.3s ease;
-        ${gameState.shieldCharges > 0 ? 'box-shadow: inset 0 0 20px rgba(60, 194, 253, 0.3);' : ''}
+        ${gameState.shieldCharges > 0 ? 'box-shadow: inset 0 0 20px rgba(60, 194, 253, 0.0);' : ''}
     `;
     
     // Create HP text - centered
@@ -619,14 +620,14 @@ export function updateHealthBar() {
         transform: translateY(-50%);
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
         z-index: 4;
         opacity: ${gameState.shieldCharges > 0 ? '1' : '0.5'};
         transition: opacity 0.3s ease;
-        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.8)' : 'rgba(0, 0, 0, 0.6)'};
+        background: ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 0.0)' : 'rgba(0, 0, 0, 0.0)'};
         padding: 2px 6px;
         border-radius: 8px;
-        border: 1px solid ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 1)' : 'rgba(255, 255, 255, 0.2)'};
+        border: 0px solid ${gameState.shieldCharges > 0 ? 'rgba(60, 194, 253, 1)' : 'rgba(255, 255, 255, 0.2)'};
     `;
     
     const shieldIcon = document.createElement('span');

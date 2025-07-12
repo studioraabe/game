@@ -102,15 +102,15 @@ export function updateEnhancedComboDisplay() {
         const pointsBonus = Math.min(gameState.comboCount * 1, 100);
         
         comboDisplay.innerHTML = `
-            <div class="combo-number-subtle ${shouldWiggle ? 'combo-wiggle' : ''}" style="color: ${comboColor}">
-                ${gameState.comboCount}x COMBO
+            
+		<div class="combo-bonuses" style="font-size: 12px; color: #d0d0d0; margin-top: 2px;">
+               Combo
             </div>
-            <div class="combo-bonuses" style="font-size: 12px; color: ${comboColor}; margin-top: 2px;">
-                +${dropBonus}% Drops | +${pointsBonus}% Points
+	<div class="combo-number-subtle ${shouldWiggle ? 'combo-wiggle' : ''}" style="color: ${comboColor}">
+                ${gameState.comboCount}x
             </div>
-            <div class="combo-timer-subtle">
-                <div class="combo-timer-fill-subtle" style="width: ${timerPercent}%; background-color: ${comboColor}"></div>
-            </div>
+           
+        
         `;
         
         // Enhanced glow effect
@@ -176,7 +176,7 @@ export function updateEnhancedBuffDisplay() {
         buffContainer.className = 'enhanced-buffs-container';
         buffContainer.style.cssText = `
             position: absolute !important;
-            bottom: 12px !important;
+            bottom: 8px !important;
             left: 16px !important;
             max-width: 160px;
             z-index: 100 !important;

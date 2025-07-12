@@ -19,14 +19,7 @@
 
 
     
-    /* WICHTIG: Standardmäßig komplett unsichtbar */
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    width: auto !important;
-    height: auto !important;
+
 }
 
 /* Enhanced Options Overlay with Tabs */
@@ -658,8 +651,8 @@
 /* NUR wenn aktiv - sichtbare Styling */
 .combo-display-enhanced.combo-subtle {
     min-width: 80px;
-    min-height: 40px;
-    padding: 8px 12px !important;
+    min-height: 32px;
+    padding: 4px 32px !important;
     background: rgba(255, 255, 255, 0.03) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         backdrop-filter: blur(10.309px) !important;
@@ -668,10 +661,10 @@
 
 /* Combo Nummer - dezenter */
 .combo-number-subtle {
-    font-size: 28px;
+    font-size: 18px;
     font-weight: 700;
     font-family: 'Rajdhani', monospace;
-    margin-bottom: 4px;
+    margin-top: -2px;
     color: #00ff88;
     text-shadow: 0 0 8px currentColor;
     transition: all 0.2s ease;
@@ -710,7 +703,7 @@
 /* 2. ENHANCED BUFF DISPLAY - LINKS UNTEN */
 .enhanced-buffs-container {
     position: absolute !important;
-    bottom: 12px !important;
+    bottom: 8px !important;
     left: 20px !important;
     max-width: 160px;
     z-index: 30 !important;
@@ -724,9 +717,9 @@
 .buff-item {
     display: flex;
     align-items: center;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+     background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 20px !important;
     padding: 8px 12px;
     margin-bottom: 8px;
     transition: all 0.3s ease;
@@ -1134,7 +1127,7 @@
     }
     
     .combo-number-subtle {
-        font-size: 24px;
+        font-size: 18px;
     }
     
     .combo-timer-subtle {
@@ -1357,8 +1350,8 @@
 .temp-buff-item {
     display: flex;
     align-items: center;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+   background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 12px;
     padding: 8px 12px;
     margin-bottom: 8px;
