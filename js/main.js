@@ -32,6 +32,13 @@ import {
 
 import './direct-weapon-hotkeys.js';
 
+import './levelup.js';
+
+
+
+
+
+
 
 import { initHUD, updateHUD } from './ui-hud.js';
 
@@ -238,7 +245,6 @@ window.resetDamageEffects = resetDamageEffects;
 
 
 async function init() {
-    console.log('🎮 Dungeon Runner V1.0 - Enhanced Edition with Controller Support');
     
     // Initialize systems
     initInput(); 
@@ -258,18 +264,14 @@ async function init() {
     initRoguelikeIntegration();
 	
 	
-	   console.log('🌄 Initializing background system...');
     initBackgroundSystem('assets/ground.png', 'assets/background.png');
     
     // NEW: Initialize weapon hotkey system
-    console.log('🔫 Initializing weapon hotkey system...');
     initWeaponHotkeySystem();
     
     // Load sprite system
-    console.log('🎨 Loading sprite system...');
     try {
         await spriteManager.loadSprites();
-        console.log('✅ Sprite system loaded successfully!');
     } catch (error) {
         console.warn('⚠️ Sprite system failed to load, using pixel art fallback:', error.message);
     }

@@ -8,7 +8,6 @@ import { initRoguelikeSystem, STAT_BUFFS } from './roguelike-stats.js';
 
 // Integration entry point - Call this from main.js
 export function initRoguelikeIntegration() {
-    console.log('🎮 Initializing Roguelike Integration...');
     
     // Initialize stats system
     initRoguelikeSystem();
@@ -32,8 +31,6 @@ export function initRoguelikeIntegration() {
     // Replace buff selection display with enhanced version
     patchBuffSelection();
     
-    console.log('🎮 Roguelike Integration Complete!');
-    console.log('📊 Stats are stored in gameState.playerStats');
 }
 
 // Enhanced buff selection display
@@ -279,7 +276,6 @@ export function startStatsUpdateLoop() {
         }
     }, 1000);
     
-    console.log('📊 Stats update loop started');
 }
 
 

@@ -166,11 +166,9 @@ function createObstacle(type, x, y, width, height) {
         obstacle.maxHealth = calculateEnemyHP(type, gameState.level);
         obstacle.health = obstacle.maxHealth;
         
-        console.log(`✅ Created ${type} with ${obstacle.health}/${obstacle.maxHealth} HP at level ${gameState.level}`);
         
         // EXTRA DEBUG FOR PROFESSOR
         if (type === 'professor') {
-            console.log(`🔮 PROFESSOR CREATED: HP=${obstacle.health}/${obstacle.maxHealth}, Level=${gameState.level}`);
         }
     } else {
         // Non-enemy objects (boltBox, rock, etc.) keep health = 1
@@ -205,7 +203,6 @@ function createObstacle(type, x, y, width, height) {
         obstacle.attackRange = 350;
         obstacle.moveSpeed = 0.5;
         obstacle.hasDetectedPlayer = false;
-        console.log(`🔮 Professor initialized with attack properties`);
     }
     
     return obstacle;

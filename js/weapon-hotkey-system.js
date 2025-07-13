@@ -31,7 +31,7 @@ export const WEAPON_HOTKEYS = {
 export const WEAPON_BUFFS = [
     {
         id: 'boltMastery',
-        title: '⚡ Bolt Mastery',
+        title: '⚡ Pistol Mastery',
         desc: '-20% cooldown and +20% damage for Lightning Bolt',
         effect: () => {
             // Optimize normal bolts
@@ -45,27 +45,25 @@ export const WEAPON_BUFFS = [
                     gameState.playerStats.selectedBuffs.push('boltMastery');
                 }
                 
-                console.log('⚡ Bolt Mastery applied: Lightning Bolt enhanced!');
             }
         }
     },
     {
         id: 'laserFocus',
         title: '🔵 Laser Focus',
-        desc: '-30% cooldown and +30% damage for Laser Beam',
+        desc: '-20% cooldown and +20% damage for Laser Beam',
         effect: () => {
             // Optimize laser beam
             if (PROJECTILE_CONFIGS[ProjectileType.LASER_BEAM]) {
                 const config = PROJECTILE_CONFIGS[ProjectileType.LASER_BEAM];
-                config.cooldown = Math.floor(config.cooldown * 0.7);
-                config.damage = config.damage * 1.3;
+                config.cooldown = Math.floor(config.cooldown * 0.8);
+                config.damage = config.damage * 1.2;
                 
                 // Add to playerStats selected buffs
                 if (gameState && gameState.playerStats) {
                     gameState.playerStats.selectedBuffs.push('laserFocus');
                 }
                 
-                console.log('🔵 Laser Focus applied: Laser Beam enhanced!');
             }
         }
     },
@@ -73,14 +71,14 @@ export const WEAPON_BUFFS = [
 
     id: 'shotgunSpread',
     title: '💥 Shotgun Spread',
-    desc: '+1 pellets, +10% damage, 20% cost for Energy Shotgun',
+    desc: '+1 pellets, +10% damage, 10% cost for Energy Shotgun',
     effect: () => {
         // Optimize shotgun
         if (PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN]) {
             const config = PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN];
             config.pellets += 1; // Add exactly 1 pellet
             config.damage = config.damage * 1.10;
-			 config.cost = Math.ceil(config.cost * 1.2);
+			 config.cost = Math.ceil(config.cost * 1.1);
             
             // Add to playerStats selected buffs
             if (gameState && gameState.playerStats) {
@@ -93,27 +91,26 @@ export const WEAPON_BUFFS = [
     {
         id: 'chainReaction',
         title: '⚡ Chain Reaction',
-        desc: '+2 chain jumps and +15% damage for Chain Lightning',
+        desc: '+1 chain jumps and +10% damage for Chain Lightning',
         effect: () => {
             // Optimize chain lightning
             if (PROJECTILE_CONFIGS[ProjectileType.CHAIN_LIGHTNING]) {
                 const config = PROJECTILE_CONFIGS[ProjectileType.CHAIN_LIGHTNING];
-                config.maxChains = (config.maxChains || 3) + 2; // Add 2 more chain jumps
-                config.damage = config.damage * 1.15;
+                config.maxChains = (config.maxChains || 3) + 1; // Add 2 more chain jumps
+                config.damage = config.damage * 1.10;
                 
                 // Add to playerStats selected buffs
                 if (gameState && gameState.playerStats) {
                     gameState.playerStats.selectedBuffs.push('chainReaction');
                 }
                 
-                console.log('⚡ Chain Reaction applied: Chain Lightning enhanced!');
             }
         }
     },
     {
         id: 'weaponOptimizer',
         title: '🔧 Weapon Optimizer',
-        desc: '+10% damage and -10% cooldown for all weapons but +10% energy cost',
+        desc: '+10% damage and -10% cooldown for all weapons',
         effect: () => {
             // Apply to all weapons
             Object.values(ProjectileType).forEach(type => {
@@ -121,7 +118,7 @@ export const WEAPON_BUFFS = [
                     const config = PROJECTILE_CONFIGS[type];
                     config.cooldown = Math.floor(config.cooldown * 0.90);
 					config.damage = config.damage * 1.10;
-                    config.cost = Math.ceil(config.cost * 1.1);
+                   
                 }
             });
             
@@ -130,19 +127,18 @@ export const WEAPON_BUFFS = [
                 gameState.playerStats.selectedBuffs.push('weaponOptimizer');
             }
             
-            console.log('🔧 Weapon Optimizer applied: All weapons enhanced!');
         }
     },
     {
         id: 'energySaver',
         title: '💡 Energy Saver',
-        desc: '-10% energy cost for all weapons but +10% cooldown',
+        desc: '-20% energy cost for all weapons but +10% cooldown',
         effect: () => {
             // Apply to all weapons
             Object.values(ProjectileType).forEach(type => {
                 if (PROJECTILE_CONFIGS[type]) {
                     const config = PROJECTILE_CONFIGS[type];
-                    config.cost = Math.max(1, Math.floor(config.cost * 0.90));
+                    config.cost = Math.max(1, Math.floor(config.cost * 0.80));
                     config.cooldown = Math.ceil(config.cooldown * 1.1);
                 }
             });
@@ -152,7 +148,6 @@ export const WEAPON_BUFFS = [
                 gameState.playerStats.selectedBuffs.push('energySaver');
             }
             
-            console.log('💡 Energy Saver applied: All weapons use less energy!');
         }
     },
     {
@@ -174,7 +169,6 @@ export const WEAPON_BUFFS = [
                 gameState.playerStats.selectedBuffs.push('overcharge');
             }
             
-            console.log('⚠️ Overcharge applied: All weapons deal more damage but cost more!');
         }
     },
     {
@@ -196,7 +190,6 @@ export const WEAPON_BUFFS = [
                 gameState.playerStats.selectedBuffs.push('rapidFire');
             }
             
-            console.log('🔥 Rapid Fire applied: All weapons fire faster but deal less damage!');
         }
     }
 ];
@@ -207,7 +200,6 @@ export const WEAPON_BUFFS = [
 
 // Initialize the weapon hotkey system
 export function initWeaponHotkeySystem() {
-    console.log('🔫 Initializing Weapon Hotkey System');
     
     // Unlock and equip all weapon types immediately
     unlockAllWeapons();
@@ -220,7 +212,6 @@ export function initWeaponHotkeySystem() {
     
     // Weapon HUD is now created by ui-hud.js
     
-    console.log('🔫 Weapon Hotkey System Initialized');
 }
 
 // ========================================
@@ -231,7 +222,6 @@ export function initWeaponHotkeySystem() {
 function unlockAllWeapons() {
     // Already unlocked? Skip
     if (projectileSystem.unlockedTypes.length >= 4) {
-        console.log('🔫 All weapons already unlocked');
         return;
     }
     
@@ -250,7 +240,6 @@ function unlockAllWeapons() {
             equipProjectileType(type);
         }
         
-        console.log(`🔫 Unlocked and equipped: ${PROJECTILE_CONFIGS[type].name}`);
     });
     
     // Force update the weapon HUD (now provided by ui-hud.js)
@@ -267,7 +256,6 @@ function addWeaponHotkeyListeners() {
     // Add our hotkey listener
     document.addEventListener('keydown', handleWeaponHotkeys);
     
-    console.log('🔫 Weapon hotkey listeners added');
 }
 
 // Handle weapon hotkey presses
@@ -307,7 +295,6 @@ function handleWeaponHotkeys(event) {
                 window.updateWeaponHUD();
             }
             
-            console.log(`🔫 Switched to: ${config.name} (${event.key})`);
         }
     }
 }
@@ -341,9 +328,7 @@ function replaceProjectileBuffsWithWeaponBuffs() {
             gameState.availableBuffs = updatedBuffs;
         }
         
-        console.log(`🔫 Replaced projectile unlock buffs with ${WEAPON_BUFFS.length} weapon enhancement buffs`);
     } else {
-        console.warn('⚠️ STAT_BUFFS not found, could not replace projectile buffs');
     }
 }
 

@@ -36,7 +36,6 @@ export function initDirectWeaponHotkeys() {
     // Hide the old projectile UI if it exists
     hideProjectileUI();
     
-    console.log('🔫 Direct weapon hotkeys initialized with continuous firing');
 }
 
 // Handle weapon key press (start shooting)
@@ -57,7 +56,6 @@ function handleWeaponKeyDown(event) {
     // Find weapon index
     const weaponIndex = projectileSystem.equippedTypes.indexOf(weaponType);
     if (weaponIndex < 0) {
-        console.error(`❌ Weapon ${weaponType} not equipped!`);
         return;
     }
     
@@ -81,7 +79,6 @@ function handleWeaponKeyDown(event) {
             window.updateWeaponHUD();
         }
         
-        console.log(`🔫 Switched to: ${config.name} (${event.key.toUpperCase()})`);
     }
     
     // Start shooting immediately
@@ -154,7 +151,6 @@ function startContinuousShooting(keyCode, weaponType) {
     }, shootInterval);
     
     weaponShootIntervals.set(keyCode, intervalId);
-    console.log(`🔫 Started continuous shooting for ${weaponType} (${shootInterval}ms intervals)`);
 }
 
 // Stop continuous shooting for a weapon
@@ -163,7 +159,6 @@ function stopContinuousShooting(keyCode) {
     if (intervalId) {
         clearInterval(intervalId);
         weaponShootIntervals.delete(keyCode);
-        console.log(`🔫 Stopped continuous shooting for ${keyCode}`);
     }
 }
 
@@ -176,7 +171,6 @@ function stopAllWeaponShooting() {
     }
     weaponShootIntervals.clear();
     
-    console.log('🔫 Stopped all weapon shooting');
 }
 
 // Override the input handling to make Q/W/E/R exclusive to weapons
@@ -247,4 +241,3 @@ window.stopAllWeaponShooting = stopAllWeaponShooting;
 // Auto-initialize
 autoInit();
 
-console.log('🔫 Enhanced weapon hotkeys loaded - Q/W/E/R will select and shoot weapons');

@@ -9,7 +9,6 @@ import { initWeaponHotkeySystem, WEAPON_BUFFS } from './weapon-hotkey-system.js'
 
 // Integrate with the game's initialization process
 export function integrateWeaponSystem() {
-    console.log('🔫 Integrating Weapon Hotkey System');
     
     // Hook into the game's initialization
     hookIntoGameInit();
@@ -17,7 +16,6 @@ export function integrateWeaponSystem() {
     // Replace projectile buffs with weapon buffs
     replaceProjectileBuffs();
     
-    console.log('🔫 Weapon System Integration Complete');
 }
 
 // Hook into the game's initialization process
@@ -33,7 +31,6 @@ function hookIntoGameInit() {
         }
         
         // Initialize our weapon system
-        console.log('🔫 Initializing Weapon Hotkey System from game init');
         initWeaponHotkeySystem();
     };
     
@@ -47,7 +44,6 @@ function hookIntoGameInit() {
 function replaceProjectileBuffs() {
     // Try to find the PROJECTILE_BUFFS from projectile-buff-integration.js
     if (window.PROJECTILE_BUFFS) {
-        console.log('🔫 Found PROJECTILE_BUFFS, replacing with WEAPON_BUFFS');
         
         // Replace the PROJECTILE_BUFFS with our WEAPON_BUFFS
         window.PROJECTILE_BUFFS = WEAPON_BUFFS;
@@ -77,7 +73,6 @@ function replaceProjectileBuffs() {
                     window.gameState.availableBuffs = [...window.STAT_BUFFS];
                 }
                 
-                console.log(`🔫 Enhanced buff system updated with ${WEAPON_BUFFS.length} weapon buffs`);
             }
             
             return result;
@@ -97,7 +92,6 @@ function overrideProjectileCycling() {
         
         window.cycleProjectileType = function(direction) {
             // Do nothing - we're using direct hotkeys instead
-            console.log('🔫 Weapon cycling disabled - using direct hotkeys instead');
             
             // Show a message to the user
             if (window.createScorePopup && window.player) {
@@ -167,20 +161,17 @@ if (document.readyState === 'complete') {
         }
         
         // Then add our laser beam enhancements
-        console.log('🔵 Adding enhanced continuous laser beam...');
         integrateEnhancedLaserBeam();
     };
     
     // If integrateWeaponSystem was already called, apply our enhancements now
     if (window.gameState && window.ProjectileType) {
-        console.log('🔵 Weapon system already initialized, applying laser beam enhancements now');
         setTimeout(integrateEnhancedLaserBeam, 500);
     }
     
     // Main integration function
     function integrateEnhancedLaserBeam() {
         if (!window.gameState || !window.ProjectileType || !window.PROJECTILE_CONFIGS) {
-            console.log('🔵 Game not ready yet, retrying in 500ms...');
             setTimeout(integrateEnhancedLaserBeam, 500);
             return;
         }
@@ -189,11 +180,9 @@ if (document.readyState === 'complete') {
         
         // Make sure we have the laser beam type
         if (!ProjectileType.LASER_BEAM) {
-            console.error('❌ Laser Beam projectile type not found!');
             return;
         }
         
-        console.log('🔵 Enhancing Laser Beam weapon...');
         
         // Keep track of key state
         let isWKeyDown = false;

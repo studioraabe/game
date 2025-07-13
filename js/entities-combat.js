@@ -288,7 +288,6 @@ export function updateBullets(gameStateParam) {
                     // Apply damage
                     obstacle.health -= damage;
                     
-                    console.log(`💥 ${obstacle.type} hit for ${damage} damage. Health: ${obstacle.health}/${obstacle.maxHealth}`);
                     
                     // Show damage number with critical indication
                     if (window.createDamageNumber) {
@@ -469,7 +468,6 @@ function executeChainLightning(bullet, firstTarget, gameStateParam) {
         
         // Create a small delay between chain jumps for better visibility
         setTimeout(() => {
-            console.log(`⚡ Chain Lightning jumped to ${nextTarget.type}! Chain #${chainCount+1} - SLOWED`);
         }, chainCount * 50);
     }
 }
@@ -494,7 +492,6 @@ function applySlowEffect(enemy) {
     // Create visual slow effect
     createSlowEffect(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
     
-    console.log(`❄️ Applied slow effect to ${enemy.type}: speed reduced to ${(enemy.speedMultiplier * 100).toFixed(0)}%`);
 }
 
 
@@ -605,7 +602,6 @@ const comboMultiplier = getComboPointsMultiplier();
 	if (obstacle.type === 'professor') {
     basePoints = 100; // Boss-level points (same as alphaWolf)
     gameStateParam.bossesKilled++; // Count as boss kill
-    console.log(`🔮 Professor defeated! Boss kill count: ${gameStateParam.bossesKilled}`);
 }
     
     // Show enhanced popup with combo indicator
@@ -703,7 +699,6 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             if (obstacle.slowDuration <= 0) {
                 obstacle.isSlowed = false;
                 obstacle.speedMultiplier = 1.0; // Reset to normal speed
-                console.log(`❄️ Slow effect expired on ${obstacle.type} - speed restored`);
             }
         }
         
@@ -1150,7 +1145,6 @@ function updateBatAI(obstacle, gameStateParam) {
 
 
 function handlePlayerDamageWithAmount(gameStateParam, damageAmount, damageSource = 'unknown', damageCategory = 'enemy') {
-    console.log(`🎯 Player takes ${damageAmount} damage from ${damageSource} (${damageCategory})`);
     
     // Shield check first
     if (gameStateParam.shieldCharges > 0) {
@@ -1217,7 +1211,6 @@ function handlePlayerDamageWithAmount(gameStateParam, damageAmount, damageSource
 
 
 function handlePlayerDamage(gameStateParam, damageSource, damageCategory = 'enemy') {
-    console.log(`🎯 Player takes damage from ${damageSource} (${damageCategory}) - enemy unaffected`);
     
     // Calculate damage amount
     let damageAmount = 0;
@@ -1294,7 +1287,6 @@ function handlePlayerDamage(gameStateParam, damageSource, damageCategory = 'enem
 
 
 function handleDamage(gameStateParam, damageSource, obstacleIndex = -1, damageCategory = 'enemy') {
-    console.log(`🎯 Damage from ${damageSource} (${damageCategory})`);
     
     // Calculate damage amount
     let damageAmount = 0;
@@ -1518,7 +1510,6 @@ function updateProfessorAI(obstacle, level, gameStateParam) {
         obstacle.attackRange = 350;
         obstacle.moveSpeed = 1.0;
         obstacle.hasDetectedPlayer = false;
-        console.log(`🔮 Professor initialized at x:${obstacle.x}, y:${obstacle.y}`);
     }
     
     // Floating movement (slight hover effect)
@@ -1549,10 +1540,7 @@ function updateProfessorAI(obstacle, level, gameStateParam) {
     // FIXED: Attack logic with better debugging
     obstacle.attackCooldown -= gameState.deltaTime;
     
-    // Debug output every 60 frames
-    if (Math.floor(obstacle.animationTime || 0) % 60 === 0) {
-        console.log(`🔮 Professor state: distance=${Math.round(playerDistance)}, cooldown=${Math.round(obstacle.attackCooldown)}, inRange=${playerInAttackRange}, detected=${obstacle.hasDetectedPlayer}`);
-    }
+
     
     if (obstacle.attackCooldown <= 0 && 
         playerInAttackRange && 
@@ -1560,7 +1548,6 @@ function updateProfessorAI(obstacle, level, gameStateParam) {
         obstacle.hasDetectedPlayer &&
         !gameStateParam.isGhostWalking) { // Don't attack ghost walking player
         
-        console.log(`🔮 Professor ATTACKING! Player at distance: ${Math.round(playerDistance)}`);
         
         // Start attack
         obstacle.isAttacking = true;
@@ -1580,16 +1567,13 @@ function updateProfessorAI(obstacle, level, gameStateParam) {
                 targetY,
                 1 // Fixed power level
             );
-            console.log(`🔮 Magical projectile created!`);
         } else {
-            console.error(`🔮 createMagicalProjectile function not found!`);
         }
         
         // Reset attack state
         obstacle.isAttacking = false;
         obstacle.attackCooldown = 120; // 2 seconds at 60fps
         
-        console.log(`🔮 Professor attack completed! Next attack in 2 seconds.`);
     }
 }
 
@@ -1627,7 +1611,6 @@ function createMagicalProjectile(startX, startY, targetX, targetY, power) {
         type: 'magical'
     });
     
-    console.log(`🔮 Professor cast spell with power ${power}!`);
 }
 
 

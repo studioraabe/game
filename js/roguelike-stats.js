@@ -19,7 +19,6 @@ const ENHANCED_BUFF_EFFECTS = {
             gameState.playerStats.healthRegen += 0.66;
             gameState.playerStats.selectedBuffs.push('survivalInstinct');
             
-            console.log(`✅ Survival Instinct applied! Health regen: ${gameState.playerStats.healthRegen.toFixed(3)}/sec`);
             
             // Force UI update
             if (window.updateRegenIndicators) {
@@ -35,7 +34,6 @@ const ENHANCED_BUFF_EFFECTS = {
             gameState.playerStats.bulletRegen += 0.66;
             gameState.playerStats.selectedBuffs.push('bulletStorm');
             
-            console.log(`✅ Bullet Storm applied! Bullet regen: ${gameState.playerStats.bulletRegen.toFixed(3)}/sec`);
             
             // Force UI update
             if (window.updateRegenIndicators) {
@@ -235,7 +233,6 @@ export const STAT_BUFFS = [
                         config.cost = Math.max(1, config.cost - 1);
                     });
                     
-                    console.log('⚡ Energy Efficiency: Reduced all weapon costs by 1');
                 }
             }
         }
@@ -258,7 +255,6 @@ export const STAT_BUFFS = [
                         config.cooldown = Math.floor(config.cooldown * 0.7);
                     });
                     
-                    console.log('🔥 Rapid Fire: Reduced all weapon cooldowns by 30%');
                 }
             }
         }
@@ -278,7 +274,6 @@ export function initializeStatBuffs() {
     // Replace the default buffs with our expanded set
     gameState.availableBuffs = startingBuffs;
     
-    console.log('🎮 Roguelike Stats System Initialized');
     console.log(`📊 Available Buffs: ${startingBuffs.length}`);
 }
 
@@ -446,7 +441,6 @@ export function calculateDamage(baseDamage) {
 export function initRoguelikeSystem() {
     const gameState = window.gameState;
     if (!gameState) {
-        console.error('❌ gameState not available for roguelike system initialization');
         return;
     }
     
@@ -487,7 +481,6 @@ export function initRoguelikeSystem() {
     // Initialize available buffs
     initializeStatBuffs();
     
-    console.log('🎮 Roguelike Stats System Ready');
 }
 
 export { replenishBuffSelection };

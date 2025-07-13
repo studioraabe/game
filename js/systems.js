@@ -460,7 +460,6 @@ class HighscoreValidator {
     // Load banned words from text file
     async loadBannedWords() {
         try {
-            console.log('📚 Loading banned words list...');
             
             // Try multiple file locations
             const possiblePaths = [
