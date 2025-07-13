@@ -40,6 +40,22 @@ const ENHANCED_BUFF_EFFECTS = {
                 window.updateRegenIndicators();
             }
         }
+    },
+
+	'vampiricStrikes': () => {
+        const gameState = window.gameState;
+        if (gameState && gameState.playerStats) {
+            // FIXED: Increase lifesteal to a more noticeable amount
+            gameState.playerStats.lifeSteal += 5; // 5% lifesteal
+            gameState.playerStats.selectedBuffs.push('vampiricStrikes');
+            
+            console.log(`🩸 Vampiric Strikes applied: ${gameState.playerStats.lifeSteal}% lifesteal`);
+            
+            // Force UI update
+            if (window.updateRegenIndicators) {
+                window.updateRegenIndicators();
+            }
+        }
     }
 };
 
@@ -106,17 +122,11 @@ export const STAT_BUFFS = [
     },
     
     // Combat buffs
-    {
+      {
         id: 'vampiricStrikes',
         title: '🩸 Vampiric Strikes',
-        desc: 'Gain 2% life steal, healing on enemy kills',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.lifeSteal += 5;
-                gameState.playerStats.selectedBuffs.push('vampiricStrikes');
-            }
-        }
+        desc: 'Gain 5% life steal, healing on enemy kills',
+        effect: ENHANCED_BUFF_EFFECTS.vampiricStrikes
     },
     {
         id: 'berserkerRage',
@@ -392,21 +402,12 @@ export function updatePlayerStats() {
 // Apply lifesteal when an enemy is killed
 export function applyLifesteal(damage) {
     const gameState = window.gameState;
-    if (!gameState || !gameState.playerStats || gameState.playerStats.lifeSteal <= 0) return 0;
-    
-    // Calculate healing from lifesteal
-    const healAmount = Math.max(1, Math.floor(damage * (gameState.playerStats.lifeSteal / 100)));
-    
-    // Apply healing if not at max health
-    if (gameState.currentHP < gameState.maxHP) {
-        const oldHP = gameState.currentHP;
-        gameState.currentHP = Math.min(gameState.maxHP, gameState.currentHP + healAmount);
-        
-        // Return the amount healed
-        return gameState.currentHP - oldHP;
+    if (!gameState || !gameState.playerStats || gameState.playerStats.lifeSteal <= 0) {
+        return 0;
     }
     
-    return 0;
+    // Use the enhanced lifesteal function for consistency
+    return applyEnhancedLifesteal(damage, gameState);
 }
 
 // Calculate damage with critical hit chance

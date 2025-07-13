@@ -642,22 +642,57 @@ function processLaserHits(laser, gameStateParam) {
 
 
 function handleProjectileEnemyDeath(enemy, gameStateParam, damage) {
-    // Calculate score
-    const config = window.ENEMY_CONFIG?.[enemy.type] || { points: 10 };
-    const basePoints = config.points || 10;
-    const levelBonus = (gameStateParam.level - 1) * 5;
-    const points = (basePoints + levelBonus) * gameStateParam.scoreMultiplier;
+    // ========================================
+    // SCORE CALCULATION WITH COMBO SYSTEM
+    // ========================================
     
+    // Get base enemy configuration
+    const config = window.ENEMY_CONFIG?.[enemy.type] || { points: 10 };
+    let basePoints = config.points || 10;
+    
+    // Special handling for professor (boss enemy)
+    if (enemy.type === 'professor') {
+        basePoints = 100; // Boss-level points
+        gameStateParam.bossesKilled++; // Count as boss kill
+    }
+    
+    // Calculate level bonus
+    const levelBonus = (gameStateParam.level - 1) * 5;
+    
+    // Get combo multiplier for enhanced scoring
+    const comboMultiplier = window.getComboPointsMultiplier ? window.getComboPointsMultiplier() : 1;
+    
+    // Calculate final points with all bonuses
+    const points = Math.floor((basePoints + levelBonus) * gameStateParam.scoreMultiplier * comboMultiplier);
+    
+    // Add points to score
     gameStateParam.score += points;
+    
+    // Show score popup with combo indicator if applicable
     if (window.createScorePopup) {
-        window.createScorePopup(enemy.x + enemy.width/2, enemy.y, points);
+        if (gameStateParam.comboCount >= 5) {
+            window.createScorePopup(
+                enemy.x + enemy.width/2,
+                enemy.y,
+                `${points} (+${Math.round((comboMultiplier - 1) * 100)}%)`
+            );
+        } else {
+            window.createScorePopup(enemy.x + enemy.width/2, enemy.y, points);
+        }
     }
 
-    // Apply lifesteal if player has it
-    const lifeSteal = gameStateParam.playerStats?.lifeSteal || 0;
-    if (lifeSteal > 0) {
-        const healAmount = Math.max(1, Math.floor(damage * (lifeSteal / 100)));
+    // ========================================
+    // LIFESTEAL APPLICATION (FIXED)
+    // ========================================
+    
+    // Apply lifesteal if player has it and damage was dealt
+    if (damage > 0 && gameStateParam.playerStats?.lifeSteal > 0) {
+        const lifeStealPercent = gameStateParam.playerStats.lifeSteal;
+        const healAmount = Math.max(1, Math.floor(damage * (lifeStealPercent / 100)));
         
+        console.log(`🩸 Lifesteal: ${damage} damage * ${lifeStealPercent}% = ${healAmount} heal`);
+        
+        // Apply healing if not at max health
         if (gameStateParam.currentHP < gameStateParam.maxHP) {
             const oldHP = gameStateParam.currentHP;
             gameStateParam.currentHP = Math.min(gameStateParam.maxHP, gameStateParam.currentHP + healAmount);
@@ -665,44 +700,132 @@ function handleProjectileEnemyDeath(enemy, gameStateParam, damage) {
             
             if (actualHeal > 0 && window.createScorePopup) {
                 window.createScorePopup(
-                    player.x + player.width/2, 
-                    player.y - 15, 
+                    window.player.x + window.player.width/2, 
+                    window.player.y - 15, 
                     `+${actualHeal} 🩸`
                 );
+                
+                console.log(`🩸 Lifesteal healed: ${actualHeal} HP (${oldHP} -> ${gameStateParam.currentHP})`);
             }
         }
     }
+
+    // ========================================
+    // DROP SYSTEM
+    // ========================================
     
-    // Roll for drops
+    // Roll for item drops with combo bonus
     if (window.rollForDrop) {
         window.rollForDrop(enemy.type, enemy.x + enemy.width/2, enemy.y);
     }
     
+    // Count alpha wolf as boss kill
     if (enemy.type === 'alphaWolf') {
         gameStateParam.bossesKilled++;
     }
+
+    // ========================================
+    // GAME PROGRESSION & STATS
+    // ========================================
     
-    // Update game stats
+    // Update game statistics
     gameStateParam.enemiesDefeated++;
     gameStateParam.bulletsHit++;
     gameStateParam.levelProgress += 3;
+    
+    // Update combo system
+    gameStateParam.comboCount++;
+    if (gameStateParam.comboCount >= 2) {
+        gameStateParam.comboTimer = 300; // Combo lasts 5 seconds at 60fps
+    }
+    
+    // Update consecutive hits for achievements
+    gameStateParam.consecutiveHits++;
+
+    // ========================================
+    // AUDIO FEEDBACK
+    // ========================================
+    
+    // Play hit sound
     if (window.soundManager) {
         window.soundManager.hit();
     }
+
+    // ========================================
+    // SPRITE CLEANUP
+    // ========================================
     
-    gameStateParam.comboCount++;
-    if (gameStateParam.comboCount >= 2) {
-        gameStateParam.comboTimer = 300;
+    // Clean up sprite system entities if sprite manager exists
+    if (enemy.id && window.spriteManager) {
+        window.spriteManager.cleanupEntity(enemy.type, enemy.id);
     }
+
+    // ========================================
+    // REMOVE ENEMY FROM GAME
+    // ========================================
     
     // Remove enemy from obstacles array
-    const enemyIndex = obstacles.indexOf(enemy);
+    const enemyIndex = window.obstacles.indexOf(enemy);
     if (enemyIndex > -1) {
-        obstacles.splice(enemyIndex, 1);
+        window.obstacles.splice(enemyIndex, 1);
     }
+
+    // ========================================
+    // HEALING SYSTEM (UNDEAD RESILIENCE BUFF)
+    // ========================================
+    
+    // Handle healing from undead resilience buff
+    const bulletsNeeded = gameStateParam.activeBuffs?.undeadResilience > 0 ? 10 : 15;
+    if (gameStateParam.bulletsHit >= bulletsNeeded) {
+        // Calculate base heal amount (25% of max HP)
+        const baseHealAmount = Math.floor(gameStateParam.maxHP * 0.25);
+        
+        // Apply enhanced healing with buff support
+        const actualHeal = window.enhancedHealPlayer ? 
+            window.enhancedHealPlayer(baseHealAmount) : 
+            window.healPlayer ? window.healPlayer(baseHealAmount) : 0;
+        
+        if (actualHeal > 0) {
+            // Show healing popup
+            if (window.createScorePopup && window.player) {
+                window.createScorePopup(
+                    window.player.x + window.player.width/2, 
+                    window.player.y, 
+                    `+${actualHeal} HP`
+                );
+            }
+        } else {
+            // If at full health, give bonus points instead
+            const comboMultiplier = window.getComboPointsMultiplier ? window.getComboPointsMultiplier() : 1;
+            const bonusPoints = Math.floor(500 * gameStateParam.scoreMultiplier * comboMultiplier);
+            gameStateParam.score += bonusPoints;
+            
+            if (window.createScorePopup && window.player) {
+                window.createScorePopup(
+                    window.player.x + window.player.width/2, 
+                    window.player.y, 
+                    `+${bonusPoints} Bonus!`
+                );
+            }
+        }
+        
+        // Reset bullet hit counter
+        gameStateParam.bulletsHit = 0;
+    }
+
+    // ========================================
+    // DEBUG LOGGING
+    // ========================================
+    
+    console.log(`💀 ${enemy.type} killed by projectile:`, {
+        damage: damage,
+        points: points,
+        combo: gameStateParam.comboCount,
+        lifesteal: gameStateParam.playerStats?.lifeSteal || 0,
+        currentHP: gameStateParam.currentHP,
+        maxHP: gameStateParam.maxHP
+    });
 }
-
-
 
 function processChainLightning(bullet, gameStateParam) {
     // Environmental objects to skip

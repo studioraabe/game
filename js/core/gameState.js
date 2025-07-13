@@ -438,11 +438,7 @@ export function checkLevelComplete() {
         const nextLevel = gameState.level + 1;
         const isBuffLevel = nextLevel % 2 === 0;
         const hasAvailableBuffs = gameState.availableBuffs && gameState.availableBuffs.length > 0;
-        
-        console.log(`🎮 Level ${gameState.level} complete!`);
-        console.log(`🎮 Next level would be: ${nextLevel}`);
-        console.log(`🎮 Is buff level: ${isBuffLevel}`);
-        console.log(`🎮 Available buffs: ${hasAvailableBuffs ? gameState.availableBuffs.length : 0}`);
+
         
         if (isBuffLevel && hasAvailableBuffs) {
             // Show buff selection screen
@@ -456,7 +452,6 @@ export function checkLevelComplete() {
             if (levelScoreEl) levelScoreEl.textContent = gameState.score;
             if (enemiesDefeatedEl) enemiesDefeatedEl.textContent = gameState.enemiesDefeated;
             
-            console.log(`🔮 Showing buff selection screen for level ${nextLevel}`);
             window.showScreen('levelComplete');
             
             // Update the buff buttons
@@ -465,7 +460,6 @@ export function checkLevelComplete() {
             }
         } else {
             // Regular level progression - no buffs
-            console.log(`➡️ Proceeding to level ${nextLevel} without buffs`);
             proceedToNextLevel();
         }
     }
@@ -484,7 +478,6 @@ function proceedToNextLevel() {
     // Update player stats for new level
     updatePlayerStatsForLevel(gameState.level);
     
-    console.log(`🚀 Advanced to level ${gameState.level}`);
 }
 
 // KORRIGIERTER 60 FPS GAME LOOP

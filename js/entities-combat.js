@@ -586,23 +586,22 @@ function applyLifesteal(damage, gameStateParam) {
 }
 
 
-export function handleEnemyDeath(obstacle, index, gameStateParam) {
+export function handleEnemyDeath(obstacle, index, gameStateParam, damage = 0) {
     const config = window.ENEMY_CONFIG?.[obstacle.type] || { points: 10 };
     let basePoints = config.points || 10;
 
     const levelBonus = (gameStateParam.level - 1) * 5;
     
-    // NEW: Enhanced combo point multiplier - 1% per combo level
-const comboMultiplier = getComboPointsMultiplier();
+    // Enhanced combo point multiplier
+    const comboMultiplier = getComboPointsMultiplier();
     const points = Math.floor((basePoints + levelBonus) * gameStateParam.scoreMultiplier * comboMultiplier);
     
     gameStateParam.score += points;
 
-
-	if (obstacle.type === 'professor') {
-    basePoints = 100; // Boss-level points (same as alphaWolf)
-    gameStateParam.bossesKilled++; // Count as boss kill
-}
+    if (obstacle.type === 'professor') {
+        basePoints = 100;
+        gameStateParam.bossesKilled++;
+    }
     
     // Show enhanced popup with combo indicator
     if (gameStateParam.comboCount >= 5) {
@@ -615,14 +614,14 @@ const comboMultiplier = getComboPointsMultiplier();
         createScorePopup(obstacle.x + obstacle.width/2, obstacle.y, points);
     }
 
-    // Apply lifesteal when killing enemies
-    if (playerStats.lifeSteal > 0) {
-        const lifeStealAmount = applyLifesteal(damage);
-        if (lifeStealAmount > 0) {
+    // FIXED: Apply lifesteal consistently using the enhanced function
+    if (damage > 0) {
+        const actualLifesteal = applyEnhancedLifesteal(damage, gameStateParam);
+        if (actualLifesteal > 0) {
             createScorePopup(
                 player.x + player.width/2, 
                 player.y - 15, 
-                `+${lifeStealAmount} 🩸`,
+                `+${actualLifesteal} 🩸`,
                 true
             );
         }
@@ -660,7 +659,6 @@ const comboMultiplier = getComboPointsMultiplier();
         if (actualHeal > 0) {
             createScorePopup(player.x + player.width/2, player.y, `+${actualHeal} HP`);
         } else {
-            // Bonus points also get combo multiplier
             const bonusPoints = Math.floor(500 * gameStateParam.scoreMultiplier * comboMultiplier);
             gameStateParam.score += bonusPoints;
             createScorePopup(player.x + player.width/2, player.y, `+${bonusPoints} Bonus!`);
@@ -668,6 +666,34 @@ const comboMultiplier = getComboPointsMultiplier();
         gameStateParam.bulletsHit = 0;
     }
 }
+
+
+export function applyEnhancedLifesteal(damage, gameStateParam) {
+    // FIXED: Consistent reference to playerStats
+    const playerStats = gameStateParam.playerStats;
+    if (!playerStats || !playerStats.lifeSteal || playerStats.lifeSteal <= 0) {
+        return 0;
+    }
+    
+    // Calculate healing from lifesteal percentage
+    const healAmount = Math.max(1, Math.floor(damage * (playerStats.lifeSteal / 100)));
+    
+    console.log(`🩸 Lifesteal calculation: ${damage} damage * ${playerStats.lifeSteal}% = ${healAmount} heal`);
+    
+    // Apply healing if not at max health
+    if (gameStateParam.currentHP < gameStateParam.maxHP) {
+        const oldHP = gameStateParam.currentHP;
+        gameStateParam.currentHP = Math.min(gameStateParam.maxHP, gameStateParam.currentHP + healAmount);
+        const actualHeal = gameStateParam.currentHP - oldHP;
+        
+        console.log(`🩸 Lifesteal healed: ${actualHeal} HP (${oldHP} -> ${gameStateParam.currentHP})`);
+        return actualHeal;
+    }
+    
+    return 0;
+}
+
+
 
 // FIXED: Enemy movement system that respects individual enemy speeds
 // Replace the updateObstacles function in entities-combat.js
