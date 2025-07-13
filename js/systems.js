@@ -146,8 +146,7 @@ export function rollForDrop(enemyType, x, y) {
     
     if (Math.random() < dropChance) {
         const randomItem = dropConfig.items[Math.floor(Math.random() * dropConfig.items.length)];
-        createDrop(randomItem.type, x, y, randomItem.duration);
-        
+			createDrop(x, y, randomItem.type);        
         
     }
 }

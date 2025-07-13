@@ -113,13 +113,14 @@ export const WEAPON_BUFFS = [
     {
         id: 'weaponOptimizer',
         title: '🔧 Weapon Optimizer',
-        desc: '-15% cooldown for all weapons but +10% energy cost',
+        desc: '+10% damage and -10% cooldown for all weapons but +10% energy cost',
         effect: () => {
             // Apply to all weapons
             Object.values(ProjectileType).forEach(type => {
                 if (PROJECTILE_CONFIGS[type]) {
                     const config = PROJECTILE_CONFIGS[type];
-                    config.cooldown = Math.floor(config.cooldown * 0.85);
+                    config.cooldown = Math.floor(config.cooldown * 0.90);
+					config.damage = config.damage * 1.10;
                     config.cost = Math.ceil(config.cost * 1.1);
                 }
             });
@@ -135,13 +136,13 @@ export const WEAPON_BUFFS = [
     {
         id: 'energySaver',
         title: '💡 Energy Saver',
-        desc: '-20% energy cost for all weapons but +10% cooldown',
+        desc: '-10% energy cost for all weapons but +10% cooldown',
         effect: () => {
             // Apply to all weapons
             Object.values(ProjectileType).forEach(type => {
                 if (PROJECTILE_CONFIGS[type]) {
                     const config = PROJECTILE_CONFIGS[type];
-                    config.cost = Math.max(1, Math.floor(config.cost * 0.80));
+                    config.cost = Math.max(1, Math.floor(config.cost * 0.90));
                     config.cooldown = Math.ceil(config.cooldown * 1.1);
                 }
             });
@@ -179,14 +180,14 @@ export const WEAPON_BUFFS = [
     {
         id: 'rapidFire',
         title: '🔥 Rapid Fire',
-        desc: '-40% cooldown for all weapons but -15% damage',
+        desc: '-50% cooldown for all weapons but -20% damage',
         effect: () => {
             // Apply to all weapons
             Object.values(ProjectileType).forEach(type => {
                 if (PROJECTILE_CONFIGS[type]) {
                     const config = PROJECTILE_CONFIGS[type];
-                    config.cooldown = Math.floor(config.cooldown * 0.6);
-                    config.damage = config.damage * 0.85;
+                    config.cooldown = Math.floor(config.cooldown * 0.5);
+                    config.damage = config.damage * 0.80;
                 }
             });
             

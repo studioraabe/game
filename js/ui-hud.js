@@ -81,11 +81,11 @@ function createMultiHUD() {
         align-items: center;
         align-content: flex-end;
         padding: 10px 14px;
-        gap: 24px;
-        width: 560px;
+        gap: 20px;
+        width: 588px;
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10.309px);
+        backdrop-filter: blur(10px);
         border-radius: 20px;
         z-index: 10;
         visibility: visible !important;
@@ -98,7 +98,7 @@ function createMultiHUD() {
     weaponsEnergyContainer.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 24px;
+        gap: 20px;
         flex: 1;
     `;
     
@@ -126,7 +126,7 @@ function createMultiHUD() {
         display: flex;
         align-items: center;
         justify-content: center;
-        min-width: 120px;
+        max-width: 160px !important;
     `;
     
     // Create health bar container
@@ -134,7 +134,7 @@ function createMultiHUD() {
     healthContainer.id = 'healthContainer';
     healthContainer.className = 'health-container';
     healthContainer.style.cssText = `
-        width: 143px;
+        width: 160px;
         height: 32px;
         background: rgba(255, 255, 255, 0.1);
         
@@ -397,7 +397,7 @@ export function updateWeaponHUD() {
             top: -6px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.1);
             border: 0.5px solid rgba(49, 49, 49, 0.4);
             backdrop-filter: blur(10.309px);
             border-radius: 3px;
@@ -409,6 +409,7 @@ export function updateWeaponHUD() {
             align-items: center;
             justify-content: center;
             font-weight: bold;
+			z-index: 20;
         `;
         
         // Cost badge (bottom)
@@ -422,7 +423,7 @@ export function updateWeaponHUD() {
             transform: translateX(-50%);
     
             color: white;
-            font-size: 9px;
+            font-size: 10px;
             width: 14px;
             height: 14px;
             border-radius: 50%;
@@ -484,7 +485,7 @@ function setupWeaponSlots() {
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.8);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -492,6 +493,7 @@ function setupWeaponSlots() {
             opacity: 0;
             pointer-events: none;
             z-index: 3;
+			border: inline 2px solid rgb(203, 32, 32);
         `;
         
         // Create a static cooldown text element
@@ -580,11 +582,11 @@ function updateWeaponCooldowns() {
                     color: white;
                     font-size: 16px;
                     font-weight: bold;
-                    text-shadow: 0 0 4px #000, 0 0 4px #000, 0 0 4px #000;
                     pointer-events: none;
                     z-index: 10;
-                    background-color: rgba(0, 0, 0, 0.3);
+                    background-color: rgba(0, 0, 0, 0.6);
                     border-radius: 50%;
+					border: 2px solid rgb(207, 57, 59, 0.9);
                 `;
                 slot.appendChild(cooldownNumber);
                 slotState.hasElement = true;

@@ -74,6 +74,9 @@ const PROJECTILE_CONFIGS = {
         speed: 18,
         penetration: false
     },
+	
+	
+	
     
     [ProjectileType.LASER_BEAM]: {
         name: "🔵 Laser Beam",
@@ -90,11 +93,11 @@ const PROJECTILE_CONFIGS = {
         name: "💥 Energy Shotgun",
         desc: "Spreads 5 bolts in a cone",
         cooldown: 120,
-        cost: 5,
+        cost: 4,
         damage: 0.8,
-        speed: 22,
+        speed: 20,
         penetration: false,
-        pellets: 5,
+        pellets: 4,
         spread: 0.2
     },
     
@@ -107,7 +110,7 @@ const PROJECTILE_CONFIGS = {
         speed: 20,
         penetration: false,
         maxChains: 3,
-        chainRange: 400
+        chainRange: 300
     },
     
     [ProjectileType.SEEKING_BOLT]: {
@@ -122,6 +125,18 @@ const PROJECTILE_CONFIGS = {
         turnRate: 0.35
     }
 };
+
+const ORIGINAL_PROJECTILE_CONFIGS = JSON.parse(JSON.stringify(PROJECTILE_CONFIGS));
+// Add a reset function
+export function resetProjectileConfigs() {
+    // Deep copy original configs back
+    Object.keys(ORIGINAL_PROJECTILE_CONFIGS).forEach(type => {
+        PROJECTILE_CONFIGS[type] = JSON.parse(JSON.stringify(ORIGINAL_PROJECTILE_CONFIGS[type]));
+    });
+    
+    console.log('🔫 Projectile configurations reset to default values');
+}
+
 
 // ========================================
 // HELPER FUNCTIONS

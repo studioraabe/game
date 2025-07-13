@@ -193,6 +193,7 @@ function createObstacle(type, x, y, width, height) {
         obstacle.verticalMovement = 0;
         obstacle.jumpTimer = jumpFrequency;
         obstacle.originalY = y;
+		obstacle.lastHealth = obstacle.health; // ADD THIS LINE
     }
     
     // ADDED: Professor-specific initialization

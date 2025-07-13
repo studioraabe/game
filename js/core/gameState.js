@@ -228,6 +228,11 @@ export function resetGame() {
     
     resetDamageEffects();
     gameState.needsRedraw = true;
+	
+	
+	if (window.resetProjectileConfigs) {
+    window.resetProjectileConfigs();
+	}
 }
 	
     

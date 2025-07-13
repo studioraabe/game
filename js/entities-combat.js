@@ -926,7 +926,9 @@ function updateAlphaWolf(obstacle, level, gameStateParam) {
     
     // Fury trigger on health loss
     const healthLost = obstacle.lastHealth - obstacle.health;
-    if (healthLost > 0 && !obstacle.furyTriggered && obstacle.furyAttackCooldown <= 0) {
+const healthPercent = obstacle.health / obstacle.maxHealth;
+if ((healthLost >= obstacle.maxHealth * 0.5 || healthPercent < 0.5) && 
+    !obstacle.furyTriggered && obstacle.furyAttackCooldown <= 0) {
         obstacle.isFuryCharging = true;
         obstacle.furyChargeTime = 90;
         obstacle.furyTriggered = true;
@@ -962,9 +964,10 @@ function updateAlphaWolf(obstacle, level, gameStateParam) {
             const dy = obstacle.targetY - (obstacle.y + obstacle.height/2);
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            const leapSpeed = 8;
+            const leapSpeed = 6;
+			const maxLeapHeight = 50;
             obstacle.leapVelocityX = (dx / distance) * leapSpeed;
-            obstacle.leapVelocityY = (dy / distance) * leapSpeed;
+            obstacle.leapVelocityY = (dy / distance) * leapSpeed - 3;
             
             obstacle.furyAttackCooldown = 120;
         }
@@ -974,6 +977,15 @@ function updateAlphaWolf(obstacle, level, gameStateParam) {
     if (obstacle.isLeaping) {
         obstacle.x += obstacle.leapVelocityX * gameState.deltaTime;
         obstacle.y += obstacle.leapVelocityY * gameState.deltaTime;
+		
+		    // ADD THIS: Apply gravity during leap
+    obstacle.leapVelocityY += 0.3 * gameState.deltaTime; // Gravity pulls wolf down
+    
+    // ADD THIS: Prevent wolf from going too high off screen
+    if (obstacle.y < 50) { // Minimum Y position (top bound)
+        obstacle.y = 50;
+        obstacle.leapVelocityY = Math.max(0, obstacle.leapVelocityY); // Stop upward movement
+    }
         
         obstacle.facingDirection = obstacle.leapVelocityX > 0 ? 1 : -1;
         
@@ -991,41 +1003,33 @@ function updateAlphaWolf(obstacle, level, gameStateParam) {
         if (!obstacle.leapTimer) obstacle.leapTimer = 60;
         obstacle.leapTimer -= gameState.deltaTime;
         
-        if (obstacle.y >= obstacle.originalY || 
-            distanceTraveled >= obstacle.maxLeapDistance || 
-            obstacle.leapTimer <= 0) {
-            
-            obstacle.y = obstacle.originalY;
-            obstacle.isLeaping = false;
-            obstacle.leapVelocityX = 0;
-            obstacle.leapVelocityY = 0;
-            
-            delete obstacle.leapStartX;
-            delete obstacle.leapStartY;
-            delete obstacle.leapTimer;
-            delete obstacle.maxLeapDistance;
-            
-            // Landing damage check
-            const landingRadius = 40;
-            const playerCenterX = player.x + player.width/2;
-            const playerCenterY = player.y + player.height/2;
-            const wolfCenterX = obstacle.x + obstacle.width/2;
-            const wolfCenterY = obstacle.y + obstacle.height/2;
-            
-            const distanceToPlayer = Math.sqrt(
-                (playerCenterX - wolfCenterX) * (playerCenterX - wolfCenterX) +
-                (playerCenterY - wolfCenterY) * (playerCenterY - wolfCenterY)
-            );
-            
-            if (distanceToPlayer < landingRadius && !isPlayerInvulnerable(gameStateParam)) {
-                handlePlayerDamage(gameStateParam, 'Alpha Wolf Fury', 'fury');
-            }
-            
-            createBloodParticles(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height);
-            createLightningEffect(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
-            
-            obstacle.furyTriggered = false;
-        }
+        if (obstacle.y >= obstacle.originalY || obstacle.leapTimer <= 0) {
+    obstacle.y = obstacle.originalY;
+    obstacle.isLeaping = false;
+    obstacle.leapVelocityX = 0;
+    obstacle.leapVelocityY = 0;
+    obstacle.furyTriggered = false;
+    
+    // Landing damage check remains the same
+    const landingRadius = 60; // Increased from 40
+    const playerCenterX = player.x + player.width/2;
+    const playerCenterY = player.y + player.height/2;
+    const wolfCenterX = obstacle.x + obstacle.width/2;
+    const wolfCenterY = obstacle.y + obstacle.height/2;
+    
+    const distanceToPlayer = Math.sqrt(
+        (playerCenterX - wolfCenterX) * (playerCenterX - wolfCenterX) +
+        (playerCenterY - wolfCenterY) * (playerCenterY - wolfCenterY)
+    );
+    
+    if (distanceToPlayer < landingRadius && !isPlayerInvulnerable(gameStateParam)) {
+        handlePlayerDamage(gameStateParam, 'Alpha Wolf Fury', 'fury');
+    }
+    
+    // Visual effects
+    createBloodParticles(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height);
+    createLightningEffect(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
+}
     }
     
     // Normal jump logic when not in fury mode
