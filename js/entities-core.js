@@ -211,6 +211,11 @@ function createObstacle(type, x, y, width, height) {
     return obstacle;
 }
 
+
+
+
+// Complete replacement for the spawn chance calculation in spawnObstacle function
+
 export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
     obstacleTimer -= gameState.deltaTime * timeSlowFactor;
     
@@ -223,100 +228,160 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         let obstacleWidth, obstacleHeight, obstacleTypeStr, obstacleY;
         let timerValue;
         
+        // AGGRESSIVE HAZARD SCALING
+        const hazardBoost = Math.min(4.0, 1.0 + (level - 1) * 0.3); // 30% more per level, max 400%
+        
+        // Base spawn chances (these will be modified by level)
+        const boltBoxChance = 0.15; // 15% for bolt boxes
         const bossChance = SPAWN_CHANCES.getBossChance(level);
-        const flyingChance = SPAWN_CHANCES.getFlyingChance(level, bossChance);
-        const mediumChance = SPAWN_CHANCES.getMediumChance(level, flyingChance);
-        const humanChance = SPAWN_CHANCES.getHumanChance(level, mediumChance);
+        const batChance = 0.15; // 15% for bats
+        const spiderChance = 0.08; // 8% for spiders
+        const wolfChance = 0.03; // 3% for wolves
+        const professorChance = 0.05; // 5% for professors
+        const vampireChance = 0.04; // 4% for vampires
+        const skeletonChance = 0.10; // 10% for skeletons
         
-        const remainingChance = 1.0 - humanChance;
-        const staticObstacleChance = remainingChance * 0.8;
+        // HAZARDS GET BOOSTED RATES
+        const teslaBaseChance = 0.10 * hazardBoost; // 10% base, scales up to 40%
+        const frankensteinBaseChance = 0.08 * hazardBoost; // 8% base, scales up to 32%
         
-        const skeletonChance = humanChance + staticObstacleChance * 0.40;
-        const teslaChance = humanChance + staticObstacleChance * 0.60;
-        const frankensteinChance = humanChance + staticObstacleChance * 0.75;
-        const rockChance = humanChance + staticObstacleChance * 1.0;
+        // Rocks and sarcophagi get reduced to make room
+        const rockChance = Math.max(0.05, 0.15 - (level * 0.01)); // Starts at 15%, reduces
+        const sarcophagusChance = 0.05; // 5% constant
         
-        // Determine obstacle properties
-        if (obstacleType < 0.15 && bulletBoxesFound < 3) {
+        // Calculate cumulative thresholds
+        let currentThreshold = 0;
+        const thresholds = {};
+        
+        // Build threshold map in order of priority
+        if (bulletBoxesFound < 3) {
+            thresholds.boltBox = currentThreshold + boltBoxChance;
+            currentThreshold = thresholds.boltBox;
+        }
+        
+        thresholds.alphaWolf = currentThreshold + bossChance;
+        currentThreshold = thresholds.alphaWolf;
+        
+        thresholds.bat = currentThreshold + batChance;
+        currentThreshold = thresholds.bat;
+        
+        thresholds.spider = currentThreshold + spiderChance;
+        currentThreshold = thresholds.spider;
+        
+        thresholds.wolf = currentThreshold + wolfChance;
+        currentThreshold = thresholds.wolf;
+        
+        thresholds.professor = currentThreshold + professorChance;
+        currentThreshold = thresholds.professor;
+        
+        thresholds.vampire = currentThreshold + vampireChance;
+        currentThreshold = thresholds.vampire;
+        
+        thresholds.skeleton = currentThreshold + skeletonChance;
+        currentThreshold = thresholds.skeleton;
+        
+        // HAZARDS GET PRIORITY PLACEMENT
+        thresholds.teslaCoil = currentThreshold + teslaBaseChance;
+        currentThreshold = thresholds.teslaCoil;
+        
+        thresholds.frankensteinTable = currentThreshold + frankensteinBaseChance;
+        currentThreshold = thresholds.frankensteinTable;
+        
+        thresholds.rock = currentThreshold + rockChance;
+        currentThreshold = thresholds.rock;
+        
+        thresholds.sarcophagus = currentThreshold + sarcophagusChance;
+        
+        // Debug logging
+        if (Math.random() < 0.01) { // Log 1% of the time
+            console.log(`⚡ Level ${level} Spawn Rates:`, {
+                hazardBoost: `${(hazardBoost * 100).toFixed(0)}%`,
+                tesla: `${(teslaBaseChance * 100).toFixed(1)}%`,
+                frankenstein: `${(frankensteinBaseChance * 100).toFixed(1)}%`,
+                totalHazards: `${((teslaBaseChance + frankensteinBaseChance) * 100).toFixed(1)}%`,
+                rock: `${(rockChance * 100).toFixed(1)}%`
+            });
+        }
+        
+        // Determine what to spawn based on thresholds
+        if (obstacleType < (thresholds.boltBox || 0) && bulletBoxesFound < 3) {
             obstacleTypeStr = 'boltBox';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight - 20;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < bossChance) {
+        } else if (obstacleType < thresholds.alphaWolf) {
             obstacleTypeStr = 'alphaWolf';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < flyingChance) {
+        } else if (obstacleType < thresholds.bat) {
             obstacleTypeStr = 'bat';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = 120 + Math.random() * 110;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < mediumChance) {
+        } else if (obstacleType < thresholds.spider) {
             obstacleTypeStr = 'spider';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight + 10;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-		} else if (obstacleType < mediumChance + 0.03) {
-				obstacleTypeStr = 'wolf';
-				const config = ENEMY_CONFIG[obstacleTypeStr];
-				obstacleWidth = config.width;
-				obstacleHeight = config.height;
-				obstacleY = CANVAS.groundY - obstacleHeight - 20;
-				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-			} else if (obstacleType < mediumChance + 0.08) {
-				// FIXED: Professor spawn - lowered by 40px
-				obstacleTypeStr = 'professor';
-				const config = ENEMY_CONFIG[obstacleTypeStr];
-				obstacleWidth = config.width;
-				obstacleHeight = config.height;
-				obstacleY = CANVAS.groundY - obstacleHeight +5; // Changed from -30 to -70
-				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-			} else if (obstacleType < humanChance) {
-				obstacleTypeStr = 'vampire';
-				const config = ENEMY_CONFIG[obstacleTypeStr];
-				obstacleWidth = config.width;
-				obstacleHeight = config.height;
-				obstacleY = CANVAS.groundY - obstacleHeight - 30;
-				timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-			}				
-				else if (obstacleType < skeletonChance) {
+        } else if (obstacleType < thresholds.wolf) {
+            obstacleTypeStr = 'wolf';
+            const config = ENEMY_CONFIG[obstacleTypeStr];
+            obstacleWidth = config.width;
+            obstacleHeight = config.height;
+            obstacleY = CANVAS.groundY - obstacleHeight - 20;
+            timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+        } else if (obstacleType < thresholds.professor) {
+            obstacleTypeStr = 'professor';
+            const config = ENEMY_CONFIG[obstacleTypeStr];
+            obstacleWidth = config.width;
+            obstacleHeight = config.height;
+            obstacleY = CANVAS.groundY - obstacleHeight + 5;
+            timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+        } else if (obstacleType < thresholds.vampire) {
+            obstacleTypeStr = 'vampire';
+            const config = ENEMY_CONFIG[obstacleTypeStr];
+            obstacleWidth = config.width;
+            obstacleHeight = config.height;
+            obstacleY = CANVAS.groundY - obstacleHeight - 30;
+            timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+        } else if (obstacleType < thresholds.skeleton) {
             obstacleTypeStr = 'skeleton';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight + 20;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < teslaChance) {
+        } else if (obstacleType < thresholds.teslaCoil) {
             obstacleTypeStr = 'teslaCoil';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < frankensteinChance) {
+        } else if (obstacleType < thresholds.frankensteinTable) {
             obstacleTypeStr = 'frankensteinTable';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight + 160;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < rockChance) {
+        } else if (obstacleType < thresholds.rock) {
             obstacleTypeStr = 'rock';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight + 2;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } else if (obstacleType < rockChance + 0.05) {
+        } else if (obstacleType < thresholds.sarcophagus) {
             obstacleTypeStr = 'sarcophagus';
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
@@ -324,14 +389,25 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             obstacleY = CANVAS.groundY - obstacleHeight - 3;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else {
-            obstacleTypeStr = 'rock';
-            const config = ENEMY_CONFIG[obstacleTypeStr];
-            obstacleWidth = config.width;
-            obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight;
-            timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
-        } 
+            // Fallback - spawn a hazard!
+            if (Math.random() < 0.6) {
+                obstacleTypeStr = 'teslaCoil';
+                const config = ENEMY_CONFIG[obstacleTypeStr];
+                obstacleWidth = config.width;
+                obstacleHeight = config.height;
+                obstacleY = CANVAS.groundY - obstacleHeight;
+                timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+            } else {
+                obstacleTypeStr = 'frankensteinTable';
+                const config = ENEMY_CONFIG[obstacleTypeStr];
+                obstacleWidth = config.width;
+                obstacleHeight = config.height;
+                obstacleY = CANVAS.groundY - obstacleHeight + 160;
+                timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+            }
+        }
         
+        // Rest of the function remains the same...
         // Try to find valid spawn position
         while (attemptCount < maxAttempts && !isSpawnPositionValid(spawnX, obstacleWidth)) {
             spawnX += MIN_SPAWN_DISTANCE + Math.random() * 40;
@@ -347,8 +423,6 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         const newObstacle = createObstacle(obstacleTypeStr, spawnX, obstacleY, obstacleWidth, obstacleHeight);
         
         // Add special properties
-     
-        
         if (obstacleTypeStr === 'alphaWolf') {
             const jumpFrequency = Math.max(60 - (level * 5), 20);
             newObstacle.verticalMovement = 0;
@@ -381,10 +455,6 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             newObstacle.isPermanent = true;
           	newObstacle.isIndestructible = true;
         }
-		
-		
-		
-			
         
         obstacles.push(newObstacle);
         
@@ -408,6 +478,31 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         obstacleTimer = 5;
     }
 }
+
+// Also add this debug function to check spawn rates:
+window.checkHazardRates = function(level = null) {
+    const currentLevel = level || (window.gameState ? window.gameState.level : 1);
+    const hazardBoost = Math.min(4.0, 1.0 + (currentLevel - 1) * 0.3);
+    
+    console.log(`
+⚡ HAZARD SPAWN RATES - Level ${currentLevel}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hazard Multiplier: ${(hazardBoost * 100).toFixed(0)}%
+Tesla Coil: ${(10 * hazardBoost).toFixed(1)}% chance
+Frankenstein: ${(8 * hazardBoost).toFixed(1)}% chance
+Total Hazards: ${(18 * hazardBoost).toFixed(1)}% chance
+Rock spawn: ${Math.max(5, 15 - currentLevel).toFixed(1)}% chance
+
+📈 Level Progression:
+Level 1: 18% hazards (10% tesla, 8% frank)
+Level 5: 36% hazards (20% tesla, 16% frank)
+Level 10: 54% hazards (30% tesla, 24% frank)
+Level 15: 72% hazards (40% tesla, 32% frank)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `);
+};
+
+
 
 // ========================================
 // BASIC UPDATE FUNCTIONS

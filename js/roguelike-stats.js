@@ -62,7 +62,8 @@ const ENHANCED_BUFF_EFFECTS = {
 
 
 
-
+// Complete STAT_BUFFS array for js/roguelike-stats.js
+// Replace the entire STAT_BUFFS array with this:
 
 export const STAT_BUFFS = [
     // Original buffs from DUNGEON_THEME
@@ -103,8 +104,12 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.healthRegen += 0.5;
+                gameState.playerStats.healthRegen += 0.66;
                 gameState.playerStats.selectedBuffs.push('survivalInstinct');
+                
+                if (window.updateRegenIndicators) {
+                    window.updateRegenIndicators();
+                }
             }
         }
     },
@@ -115,18 +120,34 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.bulletRegen += 1.0;
+                gameState.playerStats.bulletRegen += 0.66;
                 gameState.playerStats.selectedBuffs.push('bulletStorm');
+                
+                if (window.updateRegenIndicators) {
+                    window.updateRegenIndicators();
+                }
             }
         }
     },
     
     // Combat buffs
-      {
+    {
         id: 'vampiricStrikes',
         title: '🩸 Vampiric Strikes',
         desc: 'Gain 5% life steal, healing on enemy kills',
-        effect: ENHANCED_BUFF_EFFECTS.vampiricStrikes
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.lifeSteal += 5;
+                gameState.playerStats.selectedBuffs.push('vampiricStrikes');
+                
+                console.log(`🩸 Vampiric Strikes applied: ${gameState.playerStats.lifeSteal}% lifesteal`);
+                
+                if (window.updateRegenIndicators) {
+                    window.updateRegenIndicators();
+                }
+            }
+        }
     },
     {
         id: 'berserkerRage',
@@ -135,40 +156,91 @@ export const STAT_BUFFS = [
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.damageBonus += 20;
-                gameState.playerStats.attackSpeed += 10;
+                gameState.playerStats.damageBonus += 25;
+                gameState.playerStats.attackSpeed += 15;
                 gameState.playerStats.selectedBuffs.push('berserkerRage');
             }
         }
     },
+    
+    // MULTIPLE CRITICAL BUFFS
     {
         id: 'criticalFocus',
         title: '🎯 Critical Focus',
-        desc: '20% chance for critical hits (2x damage)',
+        desc: '+20% crit chance, 2x crit damage',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.critChance += 10;
-                gameState.playerStats.critDamage = 2.0;
+                gameState.playerStats.critChance += 20;
+                gameState.playerStats.critDamage = Math.max(2.0, gameState.playerStats.critDamage);
                 gameState.playerStats.selectedBuffs.push('criticalFocus');
+                
+                console.log(`🎯 Critical Focus: ${gameState.playerStats.critChance}% chance, ${gameState.playerStats.critDamage}x damage`);
             }
         }
     },
     {
-        id: 'swiftDeath',
-        title: '⚡ Swift Death',
-        desc: '+10% movement and projectile speed',
+        id: 'criticalStrikes',
+        title: '🎯 Critical Strikes',
+        desc: '+20% crit chance, 2x crit damage (stacks!)',
         effect: () => {
             const gameState = window.gameState;
             if (gameState && gameState.playerStats) {
-                gameState.playerStats.moveSpeed += 10;
-                gameState.playerStats.projectileSpeed += 10;
+                gameState.playerStats.critChance += 20;
+                gameState.playerStats.critDamage = Math.max(2.0, gameState.playerStats.critDamage);
+                gameState.playerStats.selectedBuffs.push('criticalStrikes');
+                
+                console.log(`🎯 Critical Strikes: ${gameState.playerStats.critChance}% chance, ${gameState.playerStats.critDamage}x damage`);
+            }
+        }
+    },
+    {
+        id: 'criticalPrecision',
+        title: '🎯 Critical Precision',
+        desc: '+15% crit chance, +0.5x crit damage',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.critChance += 15;
+                gameState.playerStats.critDamage += 0.5;
+                gameState.playerStats.selectedBuffs.push('criticalPrecision');
+                
+                console.log(`🎯 Critical Precision: ${gameState.playerStats.critChance}% chance, ${gameState.playerStats.critDamage}x damage`);
+            }
+        }
+    },
+    {
+        id: 'criticalMastery',
+        title: '💥 Critical Mastery',
+        desc: '+25% crit chance, +1.0x crit damage!',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.critChance += 25;
+                gameState.playerStats.critDamage += 1.0;
+                gameState.playerStats.selectedBuffs.push('criticalMastery');
+                
+                console.log(`💥 Critical Mastery: ${gameState.playerStats.critChance}% chance, ${gameState.playerStats.critDamage}x damage`);
+            }
+        }
+    },
+    
+    // Movement buff
+    {
+        id: 'swiftDeath',
+        title: '⚡ Swift Death',
+        desc: '+20% movement and projectile speed',
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.moveSpeed += 20;
+                gameState.playerStats.projectileSpeed += 20;
                 gameState.playerStats.selectedBuffs.push('swiftDeath');
             }
         }
     },
     
-    // PROJECTILE BUFFS - Weapon unlocks (cycling is automatic)
+    // PROJECTILE BUFFS - Weapon unlocks (already unlocked with hotkey system)
     {
         id: 'laserMastery',
         title: '🔵 Laser Mastery',
@@ -226,7 +298,7 @@ export const STAT_BUFFS = [
         }
     },
     
-    // REPLACE weaponMaster with something more useful
+    // Weapon modifier buffs
     {
         id: 'energyEfficiency',
         title: '⚡ Energy Efficiency',
@@ -236,18 +308,61 @@ export const STAT_BUFFS = [
             if (gameState && gameState.playerStats) {
                 gameState.playerStats.selectedBuffs.push('energyEfficiency');
                 
-                // Reduce all projectile costs by 1 (minimum 1)
                 if (window.PROJECTILE_CONFIGS) {
                     Object.keys(window.PROJECTILE_CONFIGS).forEach(type => {
                         const config = window.PROJECTILE_CONFIGS[type];
                         config.cost = Math.max(1, config.cost - 1);
                     });
-                    
                 }
             }
         }
     },
-    
+	
+	// Add these two buffs to your STAT_BUFFS array in js/roguelike-stats.js
+
+{
+    id: 'momentumVitality',
+    title: '🌊 Momentum & Vitality',
+    desc: '+15% move speed, +0.5 HP/sec regen',
+    effect: () => {
+        const gameState = window.gameState;
+        if (gameState && gameState.playerStats) {
+            gameState.playerStats.moveSpeed += 15;
+            gameState.playerStats.healthRegen += 0.5;
+            gameState.playerStats.selectedBuffs.push('momentumVitality');
+            
+            console.log(`🌊 Momentum & Vitality: ${gameState.playerStats.moveSpeed}% speed, ${gameState.playerStats.healthRegen} HP/sec`);
+            
+            if (window.updateRegenIndicators) {
+                window.updateRegenIndicators();
+            }
+        }
+    }
+},
+
+{
+    id: 'flowState',
+    title: '🌊 Flow State',
+    desc: '+15% move speed, +0.5 HP/sec (stacks!)',
+    effect: () => {
+        const gameState = window.gameState;
+        if (gameState && gameState.playerStats) {
+            gameState.playerStats.moveSpeed += 15;
+            gameState.playerStats.healthRegen += 0.5;
+            gameState.playerStats.selectedBuffs.push('flowState');
+            
+            console.log(`🌊 Flow State: ${gameState.playerStats.moveSpeed}% speed, ${gameState.playerStats.healthRegen} HP/sec`);
+            
+            if (window.updateRegenIndicators) {
+                window.updateRegenIndicators();
+            }
+        }
+    }
+},
+	
+	
+	
+	
     {
         id: 'rapidFire',
         title: '🔥 Rapid Fire',
@@ -258,13 +373,11 @@ export const STAT_BUFFS = [
                 gameState.playerStats.attackSpeed += 50;
                 gameState.playerStats.selectedBuffs.push('rapidFire');
                 
-                // Reduce all projectile cooldowns by 30%
                 if (window.PROJECTILE_CONFIGS) {
                     Object.keys(window.PROJECTILE_CONFIGS).forEach(type => {
                         const config = window.PROJECTILE_CONFIGS[type];
                         config.cooldown = Math.floor(config.cooldown * 0.7);
                     });
-                    
                 }
             }
         }
@@ -319,8 +432,9 @@ export function chooseBuff(buffId) {
     applyBuff(buffId);
     
     // Remove the selected buff from available buffs
-    gameState.availableBuffs = gameState.availableBuffs.filter(buff => buff.id !== buffId);
-    
+ if (buffId !== 'criticalFocus') {
+        gameState.availableBuffs = gameState.availableBuffs.filter(buff => buff.id !== buffId);
+    }    
     // Add more buffs to selection if running low
     if (gameState.availableBuffs.length < 2) {
         replenishBuffSelection();
@@ -374,6 +488,22 @@ function replenishBuffSelection() {
 function createUpgradedBuffs() {
     const gameState = window.gameState;
     if (!gameState || !gameState.playerStats) return [];
+	
+	
+	  const upgradedBuffs = [{
+        id: `criticalFocus_stack_${Date.now()}`,
+        title: `🎯 Critical Focus+`,
+        desc: `+10% more crit chance, +0.5x more crit damage`,
+        effect: () => {
+            const gameState = window.gameState;
+            if (gameState && gameState.playerStats) {
+                gameState.playerStats.critChance += 10;
+                gameState.playerStats.critDamage += 0.5;
+                gameState.playerStats.selectedBuffs.push(`criticalFocus_stack_${Date.now()}`);
+            }
+        }
+    }];
+	
     
     // Get most recently selected buffs to offer upgrades
     const recentBuffIds = gameState.playerStats.selectedBuffs.slice(-3);

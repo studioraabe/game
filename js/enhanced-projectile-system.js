@@ -130,9 +130,57 @@ const ORIGINAL_PROJECTILE_CONFIGS = JSON.parse(JSON.stringify(PROJECTILE_CONFIGS
 // Add a reset function
 export function resetProjectileConfigs() {
     // Deep copy original configs back
-    Object.keys(ORIGINAL_PROJECTILE_CONFIGS).forEach(type => {
+      Object.keys(ORIGINAL_PROJECTILE_CONFIGS).forEach(type => {
         PROJECTILE_CONFIGS[type] = JSON.parse(JSON.stringify(ORIGINAL_PROJECTILE_CONFIGS[type]));
     });
+	
+	
+	
+	   PROJECTILE_CONFIGS[ProjectileType.NORMAL] = {
+        name: "⚡ Lightning Bolt",
+        desc: "Standard energy projectile",
+        cooldown: 10,
+        cost: 1,
+        damage: 1.0,
+        speed: 18,
+        penetration: false
+    };
+    
+    PROJECTILE_CONFIGS[ProjectileType.LASER_BEAM] = {
+        name: "🔵 Laser Beam",
+        desc: "Instant piercing beam",
+        cooldown: 180,
+        cost: 10,
+        damage: 1.5,
+        speed: 0,
+        penetration: true,
+        range: 600
+    };
+    
+    PROJECTILE_CONFIGS[ProjectileType.ENERGY_SHOTGUN] = {
+        name: "💥 Energy Shotgun",
+        desc: "Spreads 5 bolts in a cone",
+        cooldown: 120,
+        cost: 4,
+        damage: 0.8,
+        speed: 20,
+        penetration: false,
+        pellets: 4,  // IMPORTANT: Reset to default 4 pellets
+        spread: 0.2
+    };
+    
+    PROJECTILE_CONFIGS[ProjectileType.CHAIN_LIGHTNING] = {
+        name: "⚡ Chain Lightning",
+        desc: "Jumps between 3 enemies",
+        cooldown: 240,
+        cost: 15,
+        damage: 1.1,
+        speed: 20,
+        penetration: false,
+        maxChains: 3,  // IMPORTANT: Reset to default 3 chains
+        chainRange: 300
+    };
+	
     
     console.log('🔫 Projectile configurations reset to default values');
 }

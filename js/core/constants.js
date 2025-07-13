@@ -27,11 +27,11 @@ export const GAME_CONSTANTS = {
 	
 	    PLAYER_BASE_MAX_BULLETS: 100,        // Start with 100 bullets max
     PLAYER_BULLETS_PER_LEVEL: 100,        // +25 bullets per level (matches HP scaling)
-	 PLAYER_MAX_BULLET_CAP: 999,
-    
+	 PLAYER_MAX_BULLET_CAP: 500,
+
     // NEW: ENEMY SCALING MULTIPLIERS
-    ENEMY_HP_MULTIPLIER_PER_LEVEL: 1.1,
-    ENEMY_DAMAGE_MULTIPLIER_PER_LEVEL: 1.06
+    ENEMY_HP_MULTIPLIER_PER_LEVEL: 1.11,
+    ENEMY_DAMAGE_MULTIPLIER_PER_LEVEL: 1.08
 };
 
 // NEW: ENEMY BASE STATS OBJECT (separate from GAME_CONSTANTS)
@@ -145,7 +145,7 @@ export const DROP_CONFIG = {
             { type: DropType.MAGNET_MODE, chance: 0.20, duration: 1200 },
             { type: DropType.BERSERKER_MODE, chance: 0.15, duration: 600 },
             { type: DropType.GHOST_WALK, chance: 0.10, duration: 300 },
-            { type: DropType.TIME_SLOW, chance: 0.05, duration: 300 }
+            { type: DropType.TIME_SLOW, chance: 0.05, duration: 450 }
         ]
     }
 };

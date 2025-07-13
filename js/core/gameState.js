@@ -230,9 +230,9 @@ export function resetGame() {
     gameState.needsRedraw = true;
 	
 	
-	if (window.resetProjectileConfigs) {
-    window.resetProjectileConfigs();
-	}
+    if (window.resetProjectileConfigs) {
+        window.resetProjectileConfigs();
+    }
 }
 	
     
