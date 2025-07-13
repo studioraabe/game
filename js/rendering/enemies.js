@@ -801,16 +801,16 @@ if (obstacle.type === 'professor' && obstacle.health !== undefined && obstacle.m
     const healthPercent = obstacle.health / obstacle.maxHealth;
     
     // Background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = '#222222';
     ctx.fillRect(barX, barY, barWidth, barHeight);
     
     // Health fill
-    ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : 
-                   healthPercent > 0.25 ? '#ffff00' : '#ff0000';
+    ctx.fillStyle = healthPercent > 0.5 ? '#8B0000' : 
+                   healthPercent > 0.25 ? '#8B0000' : '#8B0000';
     ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
     
     // Border
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barWidth, barHeight);
     
@@ -819,7 +819,7 @@ if (obstacle.type === 'professor' && obstacle.health !== undefined && obstacle.m
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(`${obstacle.health}/${obstacle.maxHealth}`, 
-                 barX + barWidth/2, barY + barHeight + 12);
+                 barX + barWidth/2, barY + barHeight - 12);
 }
 
 	
@@ -873,7 +873,7 @@ function drawHealthBar(ctx, x, y, width, health, maxHealth, type) {
     ctx.font = '10px Rajdhani';
     ctx.textAlign = 'center';
     ctx.fillText(`${health}/${maxHealth}`, 
-                 x + width/2, y - 2);
+                 x + width/2, y - 4);
 }
     
 

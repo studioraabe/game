@@ -168,7 +168,10 @@ function createObstacle(type, x, y, width, height) {
         
         
         // EXTRA DEBUG FOR PROFESSOR
-        if (type === 'professor') {
+          if (type === 'professor') {
+            obstacle.showHealthBar = true;  // Force health bar display
+            obstacle.isBoss = true;         // Mark as boss for special rendering
+            console.log(`🧙 Professor created with ${obstacle.health}/${obstacle.maxHealth} HP`);
         }
     } else {
         // Non-enemy objects (boltBox, rock, etc.) keep health = 1
@@ -199,9 +202,9 @@ function createObstacle(type, x, y, width, height) {
         obstacle.attackCooldown = 0;
         obstacle.isAttacking = false;
         obstacle.facingDirection = -1;
-        obstacle.detectionRange = 400;
+        obstacle.detectionRange = 500;
         obstacle.attackRange = 350;
-        obstacle.moveSpeed = 0.5;
+        obstacle.moveSpeed = 0.25;
         obstacle.hasDetectedPlayer = false;
     }
     
