@@ -210,13 +210,20 @@ export function updateTopStatsBar() {
     
     // Clear existing content
     topStatsBar.innerHTML = '';
+	
+	
+	   const baseDamageLevel1 = 20; // From GAME_CONSTANTS.PLAYER_BASE_DAMAGE
+    const currentBaseDamage = gameState.baseDamage || baseDamageLevel1;
+    const damageBonus = gameState.playerStats?.damageBonus || 0;
+    const totalDamage = currentBaseDamage * (1 + damageBonus / 100);
+    const totalDamageIncrease = Math.round(((totalDamage / baseDamageLevel1) - 1) * 100);
     
     // Calculate values and determine colors
     const stats = [
-        {
+      {
             label: 'DMG',
-            value: `${gameState.playerStats?.damageBonus || 0}%`,
-            color: getStatColor(gameState.playerStats?.damageBonus || 0, 0)
+            value: `+${totalDamageIncrease}%`,
+            color: getStatColor(totalDamageIncrease, 0)
         },
         {
             label: 'Crit',
@@ -230,7 +237,7 @@ export function updateTopStatsBar() {
         },
         {
             label: 'Move Spd',
-            value: `${gameState.playerStats?.moveSpeed || 0}%`,
+            value: `+${gameState.playerStats?.moveSpeed || 0}%`,
             color: getStatColor(gameState.playerStats?.moveSpeed || 0, 0)
         },
         {
