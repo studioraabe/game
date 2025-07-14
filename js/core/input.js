@@ -1,20 +1,18 @@
-// core/input.js - Enhanced Input System with Full Controller Support
+// core/input.js - Enhanced Input System with Full Controller Support and Weapon Hotkeys
 
 import { gameState } from './gameState.js';
-import { shoot } from '../entities.js';
 import { GameState } from './constants.js';
-import { cycleProjectileType } from '../enhanced-projectile-system.js';
 import { startJump, stopJump } from '../enhanced-player.js';
-
-
-
 
 // Input state
 export const keys = {
     left: false,
     right: false,
     space: false,
-    s: false
+    q: false,
+    w: false,
+    e: false,
+    r: false
 };
 
 // Controller state
@@ -46,26 +44,35 @@ export const inputSettings = {
 const CONTROLLER_MAPPINGS = {
     // Standard gamepad mapping (Xbox, PlayStation when using standard mapping)
     standard: {
-        jump: [0],      // A/X button
-        shoot: [1, 5],  // B/Circle button or Right Bumper
-        left: [],       // Handled by stick
-        right: [],      // Handled by stick
-        pause: [9],     // Menu/Options button
-        select: [0]     // A/X for menu selections
-    },
-    
-    // Alternative mapping
-    alternative: {
-        jump: [0, 2],   // A/X or Y/Triangle
-        shoot: [1, 5, 7], // B/Circle, RB, or RT
-        left: [],
-        right: [],
-        pause: [9],
-        select: [0]
+        jump: [7],          // RT/R2 button
+        left: [],           // Handled by stick
+        right: [],          // Handled by stick
+        pause: [9],         // Menu/Options button
+        select: [0],        // A/X for menu selections
+        weapon1: [0],       // A/X - Weapon 1 (Q equivalent)
+        weapon2: [1],       // B/Circle - Weapon 2 (W equivalent)
+        weapon3: [2],       // X/Square - Weapon 3 (E equivalent) 
+        weapon4: [3]        // Y/Triangle - Weapon 4 (R equivalent)
     }
 };
 
 let currentMapping = 'standard';
+
+// Weapon selection system
+const WEAPON_MAPPINGS = {
+    keyboard: {
+        'KeyQ': 0,  // Normal bolt
+        'KeyW': 1,  // Laser beam
+        'KeyE': 2,  // Energy shotgun
+        'KeyR': 3   // Chain lightning
+    },
+    controller: {
+        0: 0,   // A -> Q (Normal bolt)
+        1: 1,   // B -> W (Laser beam)
+        2: 2,   // X -> E (Energy shotgun)  
+        3: 3    // Y -> R (Chain lightning)
+    }
+};
 
 // Initialize input listeners
 export function initInput() {
@@ -78,7 +85,7 @@ export function initInput() {
     // Check for controller on init
     checkControllers();
     
-    console.log('🎮 Enhanced Input System initialized');
+    console.log('🎮 Enhanced Input System with Weapon Hotkeys initialized');
 }
 
 function initKeyboard() {
@@ -206,7 +213,7 @@ function updateAxisStates(gamepad) {
     controllerState.axisStates.leftStickX = Math.abs(axes[0]) > controllerState.deadzone ? axes[0] : 0;
     controllerState.axisStates.leftStickY = Math.abs(axes[1]) > controllerState.deadzone ? axes[1] : 0;
     
-    // Right stick (could be used for aiming in future)
+    // Right stick 
     controllerState.axisStates.rightStickX = Math.abs(axes[2]) > controllerState.deadzone ? axes[2] : 0;
     controllerState.axisStates.rightStickY = Math.abs(axes[3]) > controllerState.deadzone ? axes[3] : 0;
     
@@ -239,43 +246,34 @@ function processButtons(gamepad) {
         currentButtonStates[i] = buttons[i].pressed;
     }
     
-    // Jump button
-    const jumpPressed = mapping.jump.some(buttonIndex => 
-        buttons[buttonIndex] && buttons[buttonIndex].pressed
-    );
-    const jumpJustPressed = mapping.jump.some(buttonIndex => 
-        buttons[buttonIndex] && buttons[buttonIndex].pressed && !controllerState.lastButtonStates[buttonIndex]
-    );
-    const jumpJustReleased = mapping.jump.some(buttonIndex => 
-        !buttons[buttonIndex].pressed && controllerState.lastButtonStates[buttonIndex]
-    );
+    // Jump button (RT/R2 - button index 7)
+    const jumpPressed = buttons[7] && buttons[7].pressed;
+    const jumpJustPressed = buttons[7] && buttons[7].pressed && !controllerState.lastButtonStates[7];
+    const jumpJustReleased = !buttons[7].pressed && controllerState.lastButtonStates[7];
     
-    // Handle jump
+    // Handle jump press
     if (jumpJustPressed) {
         keys.space = true;
-        handleControllerJumpPress();
+        if (gameState.currentState === GameState.START) {
+            window.startGame();
+            return;
+        }
+        if (gameState.currentState === GameState.GAME_OVER) {
+            window.restartGame();
+            return;
+        }
+        if (gameState.gameRunning) {
+            startJump(gameState);
+        }
     } else if (jumpJustReleased) {
         keys.space = false;
-       if (gameState.gameRunning) {
-    startJump(gameState);  // New function from enhanced-player.js
-}
+        if (gameState.gameRunning) {
+            stopJump();
+        }
     }
     
-    // Shoot button (including triggers)
-    const shootPressed = mapping.shoot.some(buttonIndex => 
-        buttons[buttonIndex] && buttons[buttonIndex].pressed
-    ) || controllerState.axisStates.rightTrigger > inputSettings.triggerThreshold;
-    
-    const shootJustPressed = mapping.shoot.some(buttonIndex => 
-        buttons[buttonIndex] && buttons[buttonIndex].pressed && !controllerState.lastButtonStates[buttonIndex]
-    ) || (!controllerState.lastButtonStates.rightTrigger && controllerState.axisStates.rightTrigger > inputSettings.triggerThreshold);
-    
-    if (shootJustPressed) {
-        keys.s = true;
-        handleControllerShoot();
-    } else if (!shootPressed) {
-        keys.s = false;
-    }
+    // Process direct weapon selection
+    processWeaponSelection(buttons);
     
     // Pause button
     if (mapping.pause.some(buttonIndex => 
@@ -284,41 +282,84 @@ function processButtons(gamepad) {
         handleControllerPause();
     }
     
-    // Select button (for menus)
-    if (mapping.select.some(buttonIndex => 
-        buttons[buttonIndex] && buttons[buttonIndex].pressed && !controllerState.lastButtonStates[buttonIndex]
-    )) {
-        handleControllerSelect();
-    }
-    
     // Update last button states
     controllerState.lastButtonStates = { ...currentButtonStates };
-    controllerState.lastButtonStates.rightTrigger = controllerState.axisStates.rightTrigger > inputSettings.triggerThreshold;
+}
+
+// NEW: Process weapon firing via controller
+function processWeaponSelection(buttons) {
+    if (!gameState?.gameRunning || !window.projectileSystem) return;
+    
+    const weaponButtons = WEAPON_MAPPINGS.controller;
+    
+    // Check each weapon button - fire weapon while held down
+    Object.keys(weaponButtons).forEach(buttonIndex => {
+        const weaponIndex = weaponButtons[buttonIndex];
+        const isPressed = buttons[buttonIndex]?.pressed;
+        const wasPressed = controllerState.lastButtonStates[buttonIndex];
+        
+        // If button is pressed (either just pressed or held)
+        if (isPressed) {
+            // Switch to weapon if not already selected
+            if (window.projectileSystem.currentTypeIndex !== weaponIndex) {
+                switchToWeapon(weaponIndex);
+            }
+            
+            // Fire the weapon (equivalent to holding down the key)
+            fireCurrentWeapon();
+        }
+    });
+}
+
+// NEW: Process weapon wheel functionality
+// REMOVED - Using simple face button mapping instead
+
+// Weapon switching functions
+function switchToWeapon(weaponIndex) {
+    if (!window.projectileSystem || !window.projectileSystem.equippedTypes) return;
+    
+    // Ensure weapon index is valid
+    if (weaponIndex < 0 || weaponIndex >= window.projectileSystem.equippedTypes.length) return;
+    
+    // Switch to weapon
+    const oldIndex = window.projectileSystem.currentTypeIndex;
+    window.projectileSystem.currentTypeIndex = weaponIndex;
+    
+    // Show notification if weapon changed
+    if (oldIndex !== weaponIndex) {
+        const weaponType = window.projectileSystem.equippedTypes[weaponIndex];
+        const config = window.PROJECTILE_CONFIGS?.[weaponType];
+        
+        if (config && window.createScorePopup && window.player) {
+            window.createScorePopup(
+                window.player.x + window.player.width/2,
+                window.player.y - 40,
+                `${config.name}`
+            );
+        }
+        
+        // Update weapon HUD
+        if (window.updateWeaponHUD) {
+            window.updateWeaponHUD();
+        }
+        
+        // Light vibration for weapon switch
+        vibrateController(80, 0.15);
+        
+        console.log(`🎮 Switched to weapon ${weaponIndex}: ${weaponType}`);
+    }
+}
+
+function fireCurrentWeapon() {
+    // Fire the currently selected weapon
+    if (window.enhancedShoot) {
+        window.enhancedShoot(gameState);
+    } else if (window.shoot) {
+        window.shoot(gameState);
+    }
 }
 
 // Controller Input Handlers
-function handleControllerJumpPress() {
-    if (gameState.currentState === GameState.START) {
-        window.startGame();
-        return;
-    }
-    if (gameState.currentState === GameState.GAME_OVER) {
-        window.restartGame();
-        return;
-    }
-    if (gameState.gameRunning) {
-        // FIXED: Pass gameState to startJump
-        startJump(gameState);
-        vibrateController(100, 0.1); // Light vibration for jump
-    }
-}
-function handleControllerShoot() {
-    if (gameState.gameRunning) {
-        shoot(gameState);
-        vibrateController(50, 0.05); // Very light vibration for shoot
-    }
-}
-
 function handleControllerPause() {
     if (gameState.currentState === GameState.PLAYING) {
         window.pauseGame();
@@ -354,17 +395,9 @@ function vibrateController(duration = 100, intensity = 0.5) {
     }
 }
 
-// Keyboard Input Handlers (unchanged)
+// Keyboard Input Handlers (UPDATED for weapon selection)
 function handleKeyDown(e) {
     if (inputSettings.inputMode === 'controller') return; // Ignore keyboard when controller is active
-
-
-   if ((e.code === 'KeyQ' || e.code === 'KeyW' || 
-         e.code === 'KeyE' || e.code === 'KeyR') && 
-        gameState.gameRunning) {
-        // Let the weapon system handle these keys
-        return;
-    }
 
     // Escape key for pause
     if (e.code === 'Escape') {
@@ -377,8 +410,8 @@ function handleKeyDown(e) {
         return;
     }
     
-    // Jump controls (W or Up Arrow)
- if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') {
+    // Jump controls (Space or Up Arrow)
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         keys.space = true;
         
@@ -391,28 +424,59 @@ function handleKeyDown(e) {
             return;
         }
         if (gameState.gameRunning) {
-            // FIXED: Pass gameState to startJump
             startJump(gameState);
         }
     }
     
-
     // Movement controls
-    if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+    if (e.code === 'ArrowLeft') {
         e.preventDefault();
         keys.left = true;
     }
     
-    if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+    if (e.code === 'ArrowRight') {
         e.preventDefault();
         keys.right = true;
+    }
+    
+    // NEW: Weapon selection (Q, W, E, R)
+    if (e.code === 'KeyQ') {
+        e.preventDefault();
+        keys.q = true;
+        if (gameState.gameRunning) {
+            switchToWeapon(0); // Normal bolt
+        }
+    }
+    
+    if (e.code === 'KeyW') {
+        e.preventDefault(); 
+        keys.w = true;
+        if (gameState.gameRunning) {
+            switchToWeapon(1); // Laser beam
+        }
+    }
+    
+    if (e.code === 'KeyE') {
+        e.preventDefault();
+        keys.e = true;
+        if (gameState.gameRunning) {
+            switchToWeapon(2); // Energy shotgun
+        }
+    }
+    
+    if (e.code === 'KeyR') {
+        e.preventDefault();
+        keys.r = true;
+        if (gameState.gameRunning) {
+            switchToWeapon(3); // Chain lightning
+        }
     }
 }
 
 function handleKeyUp(e) {
     if (inputSettings.inputMode === 'controller') return;
     
-    if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         keys.space = false;
         if (gameState.gameRunning) {
@@ -420,19 +484,35 @@ function handleKeyUp(e) {
         }
     }
     
-    if (e.code === 'KeyS' || e.code === 'Space') {
-        e.preventDefault();
-        keys.s = false;
-    }
-    
-    if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+    if (e.code === 'ArrowLeft') {
         e.preventDefault();
         keys.left = false;
     }
     
-    if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+    if (e.code === 'ArrowRight') {
         e.preventDefault();
         keys.right = false;
+    }
+    
+    // Weapon key releases
+    if (e.code === 'KeyQ') {
+        e.preventDefault();
+        keys.q = false;
+    }
+    
+    if (e.code === 'KeyW') {
+        e.preventDefault();
+        keys.w = false;
+    }
+    
+    if (e.code === 'KeyE') {
+        e.preventDefault();
+        keys.e = false;
+    }
+    
+    if (e.code === 'KeyR') {
+        e.preventDefault();
+        keys.r = false;
     }
 }
 
@@ -450,7 +530,10 @@ export function setInputMode(mode) {
     keys.left = false;
     keys.right = false;
     keys.space = false;
-    keys.s = false;
+    keys.q = false;
+    keys.w = false;
+    keys.e = false;
+    keys.r = false;
     
     console.log(`🎮 Input mode switched to: ${mode}`);
     return true;
@@ -537,7 +620,8 @@ export function getControllerInfo() {
         vibrationSupported: controllerState.vibrationSupported,
         inputMode: inputSettings.inputMode,
         deadzone: inputSettings.controllerDeadzone,
-        triggerThreshold: inputSettings.triggerThreshold
+        triggerThreshold: inputSettings.triggerThreshold,
+        weaponMapping: currentMapping
     };
 }
 

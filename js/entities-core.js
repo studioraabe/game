@@ -344,7 +344,7 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             const config = ENEMY_CONFIG[obstacleTypeStr];
             obstacleWidth = config.width;
             obstacleHeight = config.height;
-            obstacleY = CANVAS.groundY - obstacleHeight + 5;
+            obstacleY = CANVAS.groundY - obstacleHeight + 10;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
         } else if (obstacleType < thresholds.vampire) {
             obstacleTypeStr = 'vampire';
