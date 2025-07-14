@@ -229,7 +229,7 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         let timerValue;
         
         // AGGRESSIVE HAZARD SCALING
-        const hazardBoost = Math.min(4.0, 1.0 + (level - 1) * 0.3); // 30% more per level, max 400%
+        const hazardBoost = Math.min(2.0, 1.0 + (level - 1) * 0.2); // 30% more per level, max 400%
         
         // Base spawn chances (these will be modified by level)
         const boltBoxChance = 0.15; // 15% for bolt boxes
@@ -242,12 +242,12 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         const skeletonChance = 0.10; // 10% for skeletons
         
         // HAZARDS GET BOOSTED RATES
-        const teslaBaseChance = 0.10 * hazardBoost; // 10% base, scales up to 40%
+        const teslaBaseChance = 0.08 * hazardBoost; // 10% base, scales up to 40%
         const frankensteinBaseChance = 0.08 * hazardBoost; // 8% base, scales up to 32%
         
         // Rocks and sarcophagi get reduced to make room
-        const rockChance = Math.max(0.05, 0.15 - (level * 0.01)); // Starts at 15%, reduces
-        const sarcophagusChance = 0.05; // 5% constant
+        const rockChance = Math.max(0.08, 0.18 - (level * 0.01)); // Starts at 15%, reduces
+        const sarcophagusChance = 0.06; // 5% constant
         
         // Calculate cumulative thresholds
         let currentThreshold = 0;
