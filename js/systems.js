@@ -463,7 +463,7 @@ class HighscoreValidator {
             
             // Try multiple file locations
             const possiblePaths = [
-                '../assets/banned-words.txt'
+                './assets/banned-words.txt'
             ];
 
             let wordsLoaded = false;

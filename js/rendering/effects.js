@@ -26,23 +26,76 @@ function drawBloodParticles(ctx, particles) {
     }
 }
 
-// Lightning effects
 function drawLightningEffects(ctx, effects) {
     for (const effect of effects) {
         const alpha = effect.life / effect.maxLife;
-        const screenX = getScreenX(effect.x);
-        ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
-        ctx.lineWidth = 2;
         
-        for (let i = 0; i < effect.branches; i++) {
+        // Check if this is a chain lightning effect
+        if (effect.isChain && effect.startX !== undefined && effect.endX !== undefined) {
+            // Draw chain lightning line effect
+            const startScreenX = getScreenX(effect.startX);
+            const endScreenX = getScreenX(effect.endX);
+            
+            ctx.save();
+            
+            // Main chain lightning bolt
+            ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
+            ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.moveTo(screenX, effect.y);
+            ctx.moveTo(startScreenX, effect.startY);
             
-            const endX = screenX + (Math.random() - 0.5) * 40;
-            const endY = effect.y + (Math.random() - 0.5) * 40;
+            // Create zigzag effect
+            const segments = 5;
+            for (let i = 1; i <= segments; i++) {
+                const t = i / segments;
+                const x = startScreenX + (endScreenX - startScreenX) * t;
+                const y = effect.startY + (effect.endY - effect.startY) * t;
+                
+                // Add zigzag offset
+                const offset = (Math.random() - 0.5) * 20 * (1 - Math.abs(t - 0.5) * 2);
+                ctx.lineTo(x + offset, y);
+            }
             
-            ctx.lineTo(endX, endY);
             ctx.stroke();
+            
+            // Add glow effect
+            ctx.strokeStyle = `rgba(0, 255, 255, ${alpha * 0.5})`;
+            ctx.lineWidth = 6;
+            ctx.stroke();
+            
+            // Add bright core
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            ctx.restore();
+            
+            // If it's a slowing chain, add blue tint
+            if (effect.isSlowing) {
+                ctx.fillStyle = `rgba(135, 206, 235, ${alpha * 0.2})`;
+                ctx.fillRect(
+                    Math.min(startScreenX, endScreenX) - 10,
+                    Math.min(effect.startY, effect.endY) - 10,
+                    Math.abs(endScreenX - startScreenX) + 20,
+                    Math.abs(effect.endY - effect.startY) + 20
+                );
+            }
+        } else {
+            // Original lightning effect for regular hits
+            const screenX = getScreenX(effect.x);
+            ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
+            ctx.lineWidth = 2;
+            
+            for (let i = 0; i < effect.branches; i++) {
+                ctx.beginPath();
+                ctx.moveTo(screenX, effect.y);
+                
+                const endX = screenX + (Math.random() - 0.5) * 40;
+                const endY = effect.y + (Math.random() - 0.5) * 40;
+                
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
         }
     }
 }

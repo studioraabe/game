@@ -409,7 +409,7 @@ function fireChainLightning(gameStateParam, config) {
     const projectileSpeedMultiplier = 1 + (gameStateParam.playerStats?.projectileSpeed || 0) / 100;
     const bulletSpeed = config.speed * player.facingDirection * projectileSpeedMultiplier;
     const startX = player.facingDirection === 1 ? player.x + player.width + 24 : player.x - 24;
-    const startY = player.y + player.height / 2 - 2; // Lower the chain lightning height
+    const startY = player.y + player.height / 2 + 20; // Lower the chain lightning height
     
     window.bulletsFired.push({
         x: startX,
@@ -1155,61 +1155,128 @@ function renderEnhancedProjectiles(ctx) {
     renderSeekingBolts(ctx);
 }
 
+// In the renderLaserBeams function, replace with this:
+
 function renderLaserBeams(ctx) {
     if (!ctx) return;
     
-    // FIXED: Debug logging for laser rendering
-    if (projectileSystem.laserBeams.length > 0) {
-    }
-    
-    for (let i = 0; i < projectileSystem.laserBeams.length; i++) {
-        const laser = projectileSystem.laserBeams[i];
+    projectileSystem.laserBeams.forEach((laser, index) => {
+        // Calculate how much of the beam should be visible
+        const lifeRatio = laser.life / laser.maxLife;
         
-        // FIXED: Force minimum visibility and log laser state
-        const alpha = Math.max(0.4, laser.life / laser.maxLife);
-        const startScreenX = getScreenX(laser.startX);
-        const endScreenX = getScreenX(laser.endX);
+        // Determine if beam is retracting (stopping)
+        const isRetracting = laser.life < laser.maxLife;
         
+        let startScreenX, endScreenX;
+        
+        if (isRetracting) {
+            // Beam retracts from player position toward target
+            // Start from player's current position
+            const playerStartX = player.facingDirection === 1 ? 
+                player.x + player.width + 20 : 
+                player.x - 20;
+            
+            // Calculate how far the beam has retracted
+            const fullLength = Math.abs(laser.endX - playerStartX);
+            const visibleLength = fullLength * lifeRatio;
+            
+            // New start position moves away from player
+            const newStartX = player.facingDirection === 1 ?
+                playerStartX  :
+                playerStartX  ;
+            
+            startScreenX = getScreenX(newStartX);
+            endScreenX = getScreenX(laser.endX);
+        } else {
+            // Normal full beam - use laser's stored positions
+            startScreenX = getScreenX(laser.startX);
+            endScreenX = getScreenX(laser.endX);
+        }
+        
+        // Skip if beam has retracted completely
+        if (Math.abs(endScreenX - startScreenX) < 1) return;
+        
+        // Calculate alpha based on life
+        const alpha = Math.min(1, lifeRatio + 0.2); // Add 0.2 to keep it visible longer
         
         // Save context state
         ctx.save();
         
-        // Outer glow effect (draw first, behind main beam)
-        ctx.strokeStyle = `rgba(0, 255, 255, ${alpha * 0.3})`;
-        ctx.lineWidth = 16;
+        // Outer glow effect (largest, most transparent)
+        const gradient1 = ctx.createLinearGradient(startScreenX, laser.y, endScreenX, laser.y);
+        gradient1.addColorStop(0, `rgba(0, 255, 255, ${alpha * 0.1})`);
+        gradient1.addColorStop(0.5, `rgba(0, 255, 255, ${alpha * 0.3})`);
+        gradient1.addColorStop(1, `rgba(0, 255, 255, ${alpha * 0.1})`);
+        ctx.strokeStyle = gradient1;
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(startScreenX, laser.y);
         ctx.lineTo(endScreenX, laser.y);
         ctx.stroke();
         
-        // Main beam (thicker and more visible)
-        ctx.strokeStyle = `rgba(0, 255, 255, ${alpha * 0.9})`;
-        ctx.lineWidth = 8;
+        // Middle glow
+        const gradient2 = ctx.createLinearGradient(startScreenX, laser.y, endScreenX, laser.y);
+        gradient2.addColorStop(0, `rgba(0, 255, 255, ${alpha * 0.3})`);
+        gradient2.addColorStop(0.5, `rgba(0, 255, 255, ${alpha * 0.6})`);
+        gradient2.addColorStop(1, `rgba(0, 255, 255, ${alpha * 0.3})`);
+        ctx.strokeStyle = gradient2;
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(startScreenX, laser.y);
+        ctx.lineTo(endScreenX, laser.y);
+        ctx.stroke();
+        
+        // Main beam
+        const gradient3 = ctx.createLinearGradient(startScreenX, laser.y, endScreenX, laser.y);
+        gradient3.addColorStop(0, `rgba(0, 255, 255, ${alpha * 0.7})`);
+        gradient3.addColorStop(0.5, `rgba(0, 255, 255, ${alpha * 0.9})`);
+        gradient3.addColorStop(1, `rgba(0, 255, 255, ${alpha * 0.7})`);
+        ctx.strokeStyle = gradient3;
+        ctx.lineWidth = 6;
         ctx.beginPath();
         ctx.moveTo(startScreenX, laser.y);
         ctx.lineTo(endScreenX, laser.y);
         ctx.stroke();
         
         // Core beam (bright white center)
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(startScreenX, laser.y);
-        ctx.lineTo(endScreenX, laser.y);
-        ctx.stroke();
-        
-        // Inner glow
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+        const gradient4 = ctx.createLinearGradient(startScreenX, laser.y, endScreenX, laser.y);
+        gradient4.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.8})`);
+        gradient4.addColorStop(0.5, `rgba(255, 255, 255, ${alpha})`);
+        gradient4.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.8})`);
+        ctx.strokeStyle = gradient4;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(startScreenX, laser.y);
         ctx.lineTo(endScreenX, laser.y);
         ctx.stroke();
         
+        // Add tip glow effect (at the retracting start position where beam is disappearing)
+        if (isRetracting) {
+            const tipGlow = 1 - lifeRatio; // Stronger glow as beam retracts
+            const glowRadius = 10 + tipGlow * 20;
+            
+            const tipGradient = ctx.createRadialGradient(
+                startScreenX, laser.y, 0,
+                startScreenX, laser.y, glowRadius
+            );
+            tipGradient.addColorStop(0, `rgba(255, 255, 255, ${tipGlow})`);
+            tipGradient.addColorStop(0.3, `rgba(0, 255, 255, ${tipGlow * 0.8})`);
+            tipGradient.addColorStop(0.6, `rgba(0, 255, 255, ${tipGlow * 0.4})`);
+            tipGradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+            
+            ctx.fillStyle = tipGradient;
+            ctx.fillRect(
+                startScreenX - glowRadius,
+                laser.y - glowRadius,
+                glowRadius * 2,
+                glowRadius * 2
+            );
+        }
+        
         ctx.restore();
-    }
+    });
 }
-
 function renderSeekingBolts(ctx) {
     if (!ctx) return;
     

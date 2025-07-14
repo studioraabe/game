@@ -20,6 +20,7 @@ import {
 
 import { enhancedShoot } from './enhanced-projectile-system.js';
 import { getComboPointsMultiplier } from './systems.js';
+import { lightningEffects } from './entities-core.js';
 
 
 
@@ -434,6 +435,21 @@ function executeChainLightning(bullet, firstTarget, gameStateParam) {
             nextTarget.x + nextTarget.width/2,
             nextTarget.y + nextTarget.height/2
         );
+
+
+		for (let p = 0; p < 5; p++) {
+    const particleOffset = 15;
+    const px = nextTarget.x + nextTarget.width/2 + (Math.random() - 0.5) * particleOffset;
+    const py = nextTarget.y + nextTarget.height/2 + (Math.random() - 0.5) * particleOffset;
+    
+    lightningEffects.push({
+        x: px,
+        y: py,
+        life: 8,
+        maxLife: 8,
+        branches: 2
+    });
+}
         
         // Handle enemy death if needed
         if (nextTarget.health <= 0) {
@@ -551,19 +567,18 @@ function createChainLightningEffect(startX, startY, endX, endY) {
     }
     
     // Create a chain-specific effect by adding to lightningEffects array if it exists
-    if (window.lightningEffects) {
-        window.lightningEffects.push({
-            startX: startX,
-            startY: startY,
-            endX: endX,
-            endY: endY,
-            life: 12,
-            maxLife: 12,
-            branches: 2,
-            isChain: true,
-            isSlowing: true // Mark this as a slowing chain
-        });
-    }
+	 lightningEffects.push({
+		startX: startX,
+		startY: startY,
+		endX: endX,
+		endY: endY,
+		life: 12,
+		maxLife: 12,
+		branches: 2,
+		isChain: true,
+		isSlowing: true // Mark this as a slowing chain
+	});
+    
 }
 
 
