@@ -398,7 +398,7 @@ export function updateWeaponHUD(forceRefresh = false) {
                 height: 40px;
                 background: rgba(0, 0, 0, 0.8);
                 border: 2px solid #444;
-                border-radius: 50%;
+                border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -449,7 +449,7 @@ export function updateWeaponHUD(forceRefresh = false) {
                 font-size: 10px;
                 width: 14px;
                 height: 14px;
-                border-radius: 50%;
+                border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -465,7 +465,7 @@ export function updateWeaponHUD(forceRefresh = false) {
                 left: -2px;
                 right: -2px;
                 bottom: -2px;
-                border-radius: 50%;
+                border-radius: 12px%;
                 border: 2px solid transparent;
                 display: none;
                 pointer-events: none;
@@ -627,7 +627,7 @@ function updateWeaponCooldowns() {
                     pointer-events: none;
                     z-index: 10;
                     background-color: rgba(0, 0, 0, 0.6);
-                    border-radius: 50%;
+                    border-radius: 8px;
 					border: 2px solid rgb(207, 57, 59, 0.9);
                 `;
                 slot.appendChild(cooldownNumber);
