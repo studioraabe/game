@@ -553,23 +553,72 @@ export function startGame() {
 }
 
 export function restartGame() {
+    console.log('🔄 Restarting game with complete data reset...');
+    
+    // Stop the game
     gameState.gameRunning = false;
     hideAllScreens();
     
+    // Stop all audio
+    if (soundManager) {
+        soundManager.stopBackgroundMusic();
+    }
+    
     showUniversalCountdown('restart', () => {
-        gameState.currentState = GameState.PLAYING;
-        gameState.gameRunning = true;
+        // CRITICAL: Perform complete reset before starting
         resetGame();
         
+        // Set game state
+        gameState.currentState = GameState.PLAYING;
+        gameState.gameRunning = true;
+        
+        // Start fresh audio
         soundManager.startBackgroundMusic();
+        
+        // Initialize UI systems
+        if (window.initHUD) {
+            window.initHUD();
+        }
+        
         initEnhancedContainers();
         updateUI();
         
+        // Force refresh of all displays after a short delay
         setTimeout(() => {
             updateEnhancedDisplays();
-        }, 100);
+            
+            // CRITICAL: Force refresh weapon HUD to show reset configs
+            if (window.forceRefreshWeaponHUD) {
+                window.forceRefreshWeaponHUD();
+            } else if (window.updateWeaponHUD) {
+                // Fallback: clear weapons container and update
+                const weaponsContainer = document.getElementById('weaponsContainer');
+                if (weaponsContainer) {
+                    weaponsContainer.innerHTML = '';
+                }
+                window.updateWeaponHUD();
+            }
+            
+            // Force update stat display
+            if (window.updateStatDisplay) {
+                window.updateStatDisplay();
+            }
+            
+            // Force refresh entire HUD system
+            if (window.forceRefreshHUD) {
+                window.forceRefreshHUD();
+            }
+            
+            console.log('🎮 Game restart complete - all systems refreshed');
+            
+            // Debug: Log current weapon configs
+            if (window.debugWeaponConfigs) {
+                window.debugWeaponConfigs();
+            }
+        }, 200);
     });
 }
+
 
 export function pauseGame() {
     if (gameState.currentState === GameState.PLAYING) {
@@ -1168,6 +1217,97 @@ function refreshVolumeDisplay() {
         }
     }
 }
+
+
+export function forceRefreshAllSystems() {
+    console.log('🔄 Force refreshing all game systems...');
+    
+    // Reset weapon configs first
+    if (window.resetProjectileConfigs) {
+        window.resetProjectileConfigs();
+        console.log('🔫 Weapon configs reset');
+    }
+    
+    // Clear all HUD caches
+    if (window.weaponSlotStates) {
+        window.weaponSlotStates.clear();
+    }
+    
+    // Force refresh HUD
+    if (window.forceRefreshHUD) {
+        window.forceRefreshHUD();
+    }
+    
+    // Force refresh enhanced displays
+    if (window.initEnhancedContainers) {
+        window.initEnhancedContainers();
+    }
+    
+    updateEnhancedDisplays();
+    updateUI();
+    
+    console.log('✅ All systems force refreshed');
+}
+
+// Make the utility function available globally
+window.forceRefreshAllSystems = forceRefreshAllSystems;
+
+// Also add a debug command to check if weapon costs are properly reset
+window.checkWeaponCostsReset = function() {
+    console.log('🔍 Checking weapon cost reset status:');
+    
+    if (window.PROJECTILE_CONFIGS) {
+        const expectedCosts = {
+            'normal': 1,
+            'laserBeam': 10,
+            'energyShotgun': 4,
+            'chainLightning': 15
+        };
+        
+        let allCorrect = true;
+        
+        Object.keys(expectedCosts).forEach(type => {
+            const config = window.PROJECTILE_CONFIGS[type];
+            const expectedCost = expectedCosts[type];
+            const actualCost = config ? config.cost : 'MISSING';
+            
+            const isCorrect = actualCost === expectedCost;
+            if (!isCorrect) allCorrect = false;
+            
+            console.log(`  ${type}: Expected ${expectedCost}, Actual ${actualCost} ${isCorrect ? '✅' : '❌'}`);
+        });
+        
+        console.log(`Overall status: ${allCorrect ? '✅ All costs correct' : '❌ Some costs incorrect'}`);
+        
+        // Also check UI display
+        const weaponsContainer = document.getElementById('weaponsContainer');
+        if (weaponsContainer) {
+            const costElements = weaponsContainer.querySelectorAll('.weapon-cost');
+            console.log(`UI shows ${costElements.length} weapon cost elements:`);
+            costElements.forEach((element, index) => {
+                console.log(`  Slot ${index}: ${element.textContent}`);
+            });
+        }
+        
+    } else {
+        console.log('❌ PROJECTILE_CONFIGS not found');
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ===== EVENT LISTENERS =====
 
 document.addEventListener('click', (e) => {

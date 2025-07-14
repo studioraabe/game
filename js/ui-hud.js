@@ -329,12 +329,25 @@ function getStatColor(currentValue, baselineValue) {
 // WEAPONS SYSTEM
 // ========================================
 
-export function updateWeaponHUD() {
+export function updateWeaponHUD(forceRefresh = false) {
     const weaponsContainer = document.getElementById('weaponsContainer');
     if (!weaponsContainer || !projectileSystem) return;
     
-    // Clear current weapons
-    weaponsContainer.innerHTML = '';
+    // If force refresh is requested, clear everything
+    if (forceRefresh) {
+        weaponsContainer.innerHTML = '';
+        if (weaponSlotStates) {
+            weaponSlotStates.clear();
+        }
+    }
+    
+    // Only clear if we have no slots or if weapons changed
+    const existingSlots = weaponsContainer.querySelectorAll('.weapon-slot');
+    const needsRefresh = existingSlots.length !== projectileSystem.equippedTypes.length || forceRefresh;
+    
+    if (needsRefresh) {
+        weaponsContainer.innerHTML = '';
+    }
     
     // Get hotkeys from weapon hotkey system
     const WEAPON_HOTKEYS = {
@@ -360,114 +373,136 @@ export function updateWeaponHUD() {
         const hotkeyCode = hotkeys.find(key => WEAPON_HOTKEYS[key] === type) || '';
         const hotkeyChar = hotkeyCode.replace('Key', '');
         
-        const config = PROJECTILE_CONFIGS[type];
-        if (!config) return;
+        // CRITICAL: Get fresh config data every time
+        const config = window.PROJECTILE_CONFIGS[type];
+        if (!config) {
+            console.warn(`⚠️ Missing config for weapon type: ${type}`);
+            return;
+        }
+        
+        // Log current config for debugging
         
         const isActive = index === projectileSystem.currentTypeIndex;
         
-        // Create weapon slot
-        const slot = document.createElement('div');
-        slot.className = `weapon-slot ${isActive ? 'active' : ''}`;
-        slot.dataset.type = type;
-        slot.dataset.index = index;
-        slot.style.cssText = `
-            width: 40px;
-            height: 40px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #444;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            background-image: ${weaponBackgrounds[type] || 'none'};
-            background-size: 32px 32px;
-            background-position: center;
-            background-repeat: no-repeat;
-			background-size:cover;
-        `;
+        // Check if slot already exists and is current
+        let slot = weaponsContainer.querySelector(`[data-type="${type}"][data-index="${index}"]`);
+        
+        if (!slot || needsRefresh) {
+            // Create new weapon slot
+            slot = document.createElement('div');
+            slot.className = `weapon-slot ${isActive ? 'active' : ''}`;
+            slot.dataset.type = type;
+            slot.dataset.index = index;
+            slot.style.cssText = `
+                width: 40px;
+                height: 40px;
+                background: rgba(0, 0, 0, 0.8);
+                border: 2px solid #444;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                background-image: ${weaponBackgrounds[type] || 'none'};
+                background-size: 32px 32px;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: cover;
+            `;
+            
+            // Hotkey badge (top)
+            const key = document.createElement('div');
+            key.className = 'weapon-key';
+            key.textContent = hotkeyChar || index + 1;
+            key.style.cssText = `
+                position: absolute;
+                top: -6px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255, 255, 255, 0.1);
+                border: 0.5px solid rgba(49, 49, 49, 0.4);
+                backdrop-filter: blur(10.309px);
+                border-radius: 3px;
+                color: white;
+                font-size: 10px;
+                width: 14px;
+                height: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                z-index: 20;
+            `;
+            
+            // Cost badge (bottom) - ALWAYS use fresh config data
+            const cost = document.createElement('div');
+            cost.className = 'weapon-cost';
+            cost.textContent = config.cost || 1; // Use fresh config.cost
+            cost.style.cssText = `
+                position: absolute;
+                bottom: -2px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: white;
+                font-size: 10px;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+            `;
+            
+            // Cooldown overlay
+            const cooldownOverlay = document.createElement('div');
+            cooldownOverlay.className = 'weapon-cooldown-overlay';
+            cooldownOverlay.style.cssText = `
+                position: absolute;
+                top: -2px;
+                left: -2px;
+                right: -2px;
+                bottom: -2px;
+                border-radius: 50%;
+                border: 2px solid transparent;
+                display: none;
+                pointer-events: none;
+            `;
+            
+            // Assemble the slot
+            slot.appendChild(key);
+            slot.appendChild(cost);
+            slot.appendChild(cooldownOverlay);
+            
+            // Add click handler
+            slot.addEventListener('click', () => {
+                projectileSystem.currentTypeIndex = index;
+                updateWeaponHUD(false); // Don't force refresh on user click
+            });
+            
+            weaponsContainer.appendChild(slot);
+            
+        } else {
+            // Update existing slot - particularly the cost display
+            const costElement = slot.querySelector('.weapon-cost');
+            if (costElement) {
+                const newCost = config.cost || 1;
+                if (costElement.textContent !== newCost.toString()) {
+                    costElement.textContent = newCost;
+                }
+            }
+        }
         
         // Update active state styling
         if (isActive) {
             slot.style.borderColor = '#3AC2FD';
             slot.style.boxShadow = '0 0 10px rgba(60, 194, 253, 0.5)';
+        } else {
+            slot.style.borderColor = '#444';
+            slot.style.boxShadow = 'none';
         }
-        
-        // Hotkey badge (top) - with new styling
-        const key = document.createElement('div');
-        key.className = 'weapon-key';
-        key.textContent = hotkeyChar || index + 1;
-        key.style.cssText = `
-            position: absolute;
-            top: -6px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.1);
-            border: 0.5px solid rgba(49, 49, 49, 0.4);
-            backdrop-filter: blur(10.309px);
-            border-radius: 3px;
-            color: white;
-            font-size: 10px;
-            width: 14px;
-            height: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-			z-index: 20;
-        `;
-        
-        // Cost badge (bottom)
-        const cost = document.createElement('div');
-        cost.className = 'weapon-cost';
-        cost.textContent = config.cost || 1;
-        cost.style.cssText = `
-            position: absolute;
-            bottom: -2px;
-            left: 50%;
-            transform: translateX(-50%);
-    
-            color: white;
-            font-size: 10px;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-           
-        `;
-        
-        // Cooldown overlay - using border animation
-        const cooldownOverlay = document.createElement('div');
-        cooldownOverlay.className = 'weapon-cooldown-overlay';
-        cooldownOverlay.style.cssText = `
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            display: none;
-            pointer-events: none;
-        `;
-        
-        // Assemble the slot
-        slot.appendChild(key);
-        slot.appendChild(cost);
-        slot.appendChild(cooldownOverlay);
-        
-        // Add click handler
-        slot.addEventListener('click', () => {
-            projectileSystem.currentTypeIndex = index;
-            updateWeaponHUD();
-        });
-        
-        weaponsContainer.appendChild(slot);
     });
 }
 
@@ -930,6 +965,73 @@ function addHUDStyles() {
     document.head.appendChild(style);
 }
 
+
+
+
+
+
+
+export function forceRefreshWeaponHUD() {
+    
+    // Clear weapon slot states cache
+    if (weaponSlotStates) {
+        weaponSlotStates.clear();
+    }
+    
+    // Get the weapons container
+    const weaponsContainer = document.getElementById('weaponsContainer');
+    if (!weaponsContainer) {
+        return;
+    }
+    
+    // Completely clear and rebuild weapon slots
+    weaponsContainer.innerHTML = '';
+    
+    // Force rebuild with fresh data
+    updateWeaponHUD();
+    
+    // Also update other HUD elements that might show weapon data
+    updateBulletCounter();
+    updateTopStatsBar();
+    
+}
+
+// Force refresh entire HUD system
+export function forceRefreshHUD() {
+    
+    // Clear all caches
+    if (weaponSlotStates) {
+        weaponSlotStates.clear();
+    }
+    
+    // Stop and restart update intervals
+    stopUpdateIntervals();
+    
+    // Clear and rebuild all containers
+    const containers = ['weaponsContainer', 'energyContainer', 'healthContainer', 'topStatsBar'];
+    containers.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) {
+            if (id === 'topStatsBar') {
+                // Don't clear the top stats bar container, just its content
+                container.innerHTML = '';
+            } else if (id === 'weaponsContainer') {
+                // Completely clear weapons
+                container.innerHTML = '';
+            }
+            // For energy and health containers, they'll be refreshed by their update functions
+        }
+    });
+    
+    // Force complete HUD update
+    updateHUD();
+    
+}
+
+
+
+
+
 // ========================================
 // UPDATE INTERVALS
 // ========================================
@@ -994,3 +1096,6 @@ window.updateBulletCounter = updateBulletCounter;
 window.updateWeaponHUD = updateWeaponHUD;
 window.updateTopStatsBar = updateTopStatsBar;
 window.cleanupHUD = cleanupHUD;
+
+window.forceRefreshWeaponHUD = forceRefreshWeaponHUD;
+window.forceRefreshHUD = forceRefreshHUD;

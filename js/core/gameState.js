@@ -1,8 +1,7 @@
-// core/gameState.js - Game State Management - FPS KORRIGIERT
+// core/gameState.js - Game State Management - COMPLETE FILE WITH ENHANCED RESET
 
 import { GameState, GAME_CONSTANTS, DUNGEON_THEME, calculatePlayerMaxHP, calculatePlayerDamage, calculatePlayerMaxBullets, calculateEnemyHP } from './constants.js';
 import { updateBackground } from '../background-system.js';
-
 import { resetCamera } from './camera.js';
 import { resetPlayer } from './player.js';
 import { resetBulletBoxesFound } from '../entities.js';
@@ -11,17 +10,12 @@ import { loadHighScore, checkAchievements, activeDropBuffs, loadAchievements, lo
 import { updateDamageEffects, resetDamageEffects, triggerDamageEffects } from '../enhanced-damage-system.js';
 import { updateEnhancedProjectiles } from '../enhanced-projectile-system.js';
 
-
-
-
-
 // Resume Transition für Sound Overlay
 export let resumeTransition = {
     active: false,
     progress: 0,
     duration: 120 // 2 Sekunden bei 60 FPS
 };
-
 
 // Game state object
 export const gameState = {
@@ -31,18 +25,18 @@ export const gameState = {
     gameLoop: null,
     needsRedraw: true,
     shieldCharges: 0,
-	playerStats: {
-    damageBonus: 0,       // Percentage bonus to base damage
-    attackSpeed: 0,       // Percentage increase to attack rate
-    moveSpeed: 0,         // Percentage increase to movement speed
-    projectileSpeed: 0,   // Percentage increase to bullet speed
-    healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // Should be 0.5
-    bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,
-    lifeSteal: 0,         // Percentage of damage dealt returned as healing
-    critChance: 0,        // Percentage chance to land a critical hit
-    critDamage: 1.5,      // Multiplier for critical hit damage (starts at 50% bonus)
-    selectedBuffs: []     // Track selected buffs
-	},
+    playerStats: {
+        damageBonus: 0,       // Percentage bonus to base damage
+        attackSpeed: 0,       // Percentage increase to attack rate
+        moveSpeed: 0,         // Percentage increase to movement speed
+        projectileSpeed: 0,   // Percentage increase to bullet speed
+        healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // Should be 0.5
+        bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,
+        lifeSteal: 0,         // Percentage of damage dealt returned as healing
+        critChance: 0,        // Percentage chance to land a critical hit
+        critDamage: 1.5,      // Multiplier for critical hit damage (starts at 50% bonus)
+        selectedBuffs: []     // Track selected buffs
+    },
     
     isCorrupted: false,
     corruptionTimer: 0,
@@ -59,7 +53,7 @@ export const gameState = {
     baseDamage: 20,
     gameSpeed: 1,
     bullets: 100,
-	maxBullets: 100,        // NEW: Maximum bullet capacity
+    maxBullets: 100,        // NEW: Maximum bullet capacity
 
     level: 1,
     levelProgress: 0,
@@ -102,24 +96,21 @@ export const gameState = {
     ctx: null
 };
 
-
-
-
+// ========================================
+// ENHANCED RESET GAME FUNCTION
+// ========================================
 
 export function resetGame() {
+    console.log('🔄 Starting complete game reset...');
+    
+    // ========================================
+    // CORE GAME STATE RESET
+    // ========================================
+    
+    // Reset basic game state
     gameState.shieldCharges = 0;
     gameState.hasShield = false;
-    resetBulletBoxesFound();
     gameState.score = 0;
-	
-	 gameState.maxBullets = calculatePlayerMaxBullets(1);
-    gameState.bullets = gameState.maxBullets; // Start at full capacity
-    
-    // NEW: Initialize HP system
-    gameState.maxHP = calculatePlayerMaxHP(1);
-    gameState.currentHP = gameState.maxHP;
-    gameState.baseDamage = calculatePlayerDamage(1);
-    
     gameState.level = 1;
     gameState.levelProgress = 0;
     gameState.gameSpeed = 2;
@@ -134,34 +125,17 @@ export function resetGame() {
     gameState.playerIdleTime = 0;
     gameState.isCorrupted = false;
     gameState.corruptionTimer = 0;
+    gameState.frameCount = 0;
     
-    // FIXED: Properly initialize playerStats
-      gameState.playerStats = {
-        damageBonus: 0,
-        attackSpeed: 0,
-        moveSpeed: 0,
-        projectileSpeed: 0,
-        healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // Start with 0.5 HP/sec
-        bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,  // Start with 0.5 bullets/sec
-        lifeSteal: 0,
-        critChance: 0,
-        critDamage: 1.5,
-        selectedBuffs: []
-    };
-    
-	gameState.frameCount = 0;
-    
-    // Initialize roguelike system if available
-    if (window.initRoguelikeSystem) {
-        window.initRoguelikeSystem();
-    }
-    
+    // Reset combat stats
     gameState.comboCount = 0;
     gameState.comboTimer = 0;
     gameState.lastScoreTime = Date.now();
     gameState.scoreIn30Seconds = 0;
     gameState.consecutiveHits = 0;
+    gameState.bossesKilled = 0;
     
+    // Reset power-up states
     gameState.hasShield = false;
     gameState.scoreMultiplier = 1;
     gameState.speedMultiplier = window.ACHIEVEMENTS?.speedDemon?.unlocked ? 1.1 : 1;
@@ -171,9 +145,54 @@ export function resetGame() {
     gameState.enemySlowFactor = 1;
     gameState.isBerserker = false;
     
+    // ========================================
+    // HP AND BULLET SYSTEM RESET
+    // ========================================
+    
+    // Calculate fresh stats for level 1
+    gameState.maxBullets = calculatePlayerMaxBullets(1);
+    gameState.bullets = gameState.maxBullets;
+    gameState.maxHP = calculatePlayerMaxHP(1);
+    gameState.currentHP = gameState.maxHP;
+    gameState.baseDamage = calculatePlayerDamage(1);
+    
+    console.log(`💖 HP Reset: ${gameState.currentHP}/${gameState.maxHP}`);
+    console.log(`⚡ Bullets Reset: ${gameState.bullets}/${gameState.maxBullets}`);
+    
+    // ========================================
+    // PLAYER STATS SYSTEM RESET
+    // ========================================
+    
+    // CRITICAL: Reset all player stats to baseline
+    gameState.playerStats = {
+        damageBonus: 0,
+        attackSpeed: 0,
+        moveSpeed: 0,
+        projectileSpeed: 0,
+        healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,  // 0.5 HP/sec baseline
+        bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,  // 0.5 bullets/sec baseline
+        lifeSteal: 0,
+        critChance: 0,
+        critDamage: 1.5,
+        selectedBuffs: []
+    };
+    
+    // Reset regeneration timers
+    gameState.healthRegenTimer = 0;
+    gameState.bulletRegenTimer = 0;
+    gameState.healthRegenAccumulator = 0;
+    gameState.bulletRegenAccumulator = 0;
+    
+    console.log(`📊 Player stats reset to baseline`);
+    
+    // ========================================
+    // BUFF SYSTEM RESET
+    // ========================================
+    
+    // Clear all active buffs
     gameState.activeBuffs = {};
     
-    // FIXED: Initialize available buffs properly
+    // Reset available buffs to full selection
     if (window.STAT_BUFFS) {
         gameState.availableBuffs = [...window.STAT_BUFFS];
     } else {
@@ -181,7 +200,7 @@ export function resetGame() {
         gameState.availableBuffs = [
             { id: 'undeadResilience', title: '🧟 Undead Vigor', desc: 'Gain extra life every 10 bullet hits (was 15)' },
             { id: 'shadowLeap', title: '🌙 Shadow Leap', desc: 'Unlock double jump with ethereal shadow form' },
-            { id: 'vampiricStrikes', title: '🩸 Vampiric Strikes', desc: 'Gain 2% life steal, healing on enemy kills' },
+            { id: 'vampiricStrikes', title: '🩸 Vampiric Strikes', desc: 'Gain 5% life steal, healing on enemy kills' },
             { id: 'bulletStorm', title: '🔥 Bullet Storm', desc: 'Regenerate 1 bullet every 2 seconds' },
             { id: 'berserkerRage', title: '💢 Berserker Rage', desc: 'Gain +25% damage and +15% attack speed' },
             { id: 'survivalInstinct', title: '💚 Survival Instinct', desc: 'Regenerate 1 HP every 3 seconds' },
@@ -190,11 +209,23 @@ export function resetGame() {
         ];
     }
     
-    Object.keys(activeDropBuffs).forEach(key => delete activeDropBuffs[key]);
-	
-	
-	
-	   // ADDED: Ensure weapons remain equipped after reset
+    // Clear all drop buffs
+    if (window.activeDropBuffs) {
+        Object.keys(window.activeDropBuffs).forEach(key => delete window.activeDropBuffs[key]);
+    }
+    
+    console.log(`🔮 Buff systems reset`);
+    
+    // ========================================
+    // WEAPON SYSTEM RESET
+    // ========================================
+    
+    // Reset projectile configurations to defaults
+    if (window.resetProjectileConfigs) {
+        window.resetProjectileConfigs();
+    }
+    
+    // Ensure all main weapons remain equipped after reset
     if (window.projectileSystem && window.ProjectileType) {
         const { ProjectileType } = window;
         
@@ -206,37 +237,154 @@ export function resetGame() {
             ProjectileType.CHAIN_LIGHTNING
         ];
         
-        // Only reset if weapons are missing
-        const missingWeapons = requiredWeapons.filter(weapon => 
-            !window.projectileSystem.equippedTypes.includes(weapon)
-        );
+        // Reset to default weapon selection
+        window.projectileSystem.unlockedTypes = [...requiredWeapons];
+        window.projectileSystem.equippedTypes = [...requiredWeapons];
+        window.projectileSystem.currentTypeIndex = 0;
         
-        if (missingWeapons.length > 0) {
-            console.log('🔫 Re-equipping missing weapons after reset');
-            window.projectileSystem.unlockedTypes = [...requiredWeapons];
-            window.projectileSystem.equippedTypes = [...requiredWeapons];
-            window.projectileSystem.currentTypeIndex = 0;
+        // Reset all weapon cooldowns
+        window.projectileSystem.normalCooldown = 0;
+        window.projectileSystem.laserCooldown = 0;
+        window.projectileSystem.shotgunCooldown = 0;
+        window.projectileSystem.lightningCooldown = 0;
+        window.projectileSystem.seekingCooldown = 0;
+        
+        // Clear any active projectiles
+        if (window.projectileSystem.laserBeams) {
+            window.projectileSystem.laserBeams.length = 0;
+        }
+        if (window.projectileSystem.seekingBolts) {
+            window.projectileSystem.seekingBolts.length = 0;
+        }
+        if (window.projectileSystem.chainLightning) {
+            window.projectileSystem.chainLightning.length = 0;
+        }
+        
+        console.log(`🔫 Weapon systems reset`);
+    }
+    
+    // Stop any continuous weapons (like laser beam)
+    if (window.continuousLaserActive) {
+        window.continuousLaserActive = false;
+        if (window.stopLaserBeam) {
+            window.stopLaserBeam();
         }
     }
-	
-	    resetCamera();
+    
+    // ========================================
+    // ROGUELIKE SYSTEM RESET
+    // ========================================
+    
+    // Reinitialize the entire roguelike system
+    if (window.initRoguelikeSystem) {
+        window.initRoguelikeSystem();
+    }
+    
+    // Ensure playerStats reference is correctly linked
+    window.playerStats = gameState.playerStats;
+    
+    console.log(`🎲 Roguelike systems reset`);
+    
+    // ========================================
+    // ENTITY AND WORLD RESET
+    // ========================================
+    
+    // Reset camera and player
+    resetCamera();
     resetPlayer();
     
+    // Clear all entity arrays
     clearArrays();
+    
+    // Reset entity counters
     window.obstacleTimer = 0;
     window.bulletBoxesFound = 0;
+    resetBulletBoxesFound();
     
+    // ========================================
+    // VISUAL EFFECTS RESET
+    // ========================================
+    
+    // Reset damage effects system
     resetDamageEffects();
-    gameState.needsRedraw = true;
-	
-	
-    if (window.resetProjectileConfigs) {
-        window.resetProjectileConfigs();
-    }
-}
-	
     
+    // Clear combo glow
+    if (window.clearComboGlow) {
+        window.clearComboGlow();
+    }
+    
+    // ========================================
+    // UI SYSTEM RESET
+    // ========================================
+    
+    // Force UI refresh
+    gameState.needsRedraw = true;
+    
+    // Reset enhanced displays
+    if (window.initEnhancedContainers) {
+        setTimeout(() => {
+            window.initEnhancedContainers();
+        }, 100);
+    }
+    
+    // Update weapon HUD with force refresh
+    if (window.updateWeaponHUD) {
+        setTimeout(() => {
+            // Force clear weapon HUD cache
+            if (window.weaponSlotStates) {
+                window.weaponSlotStates.clear();
+            }
+            
+            // Force recreation of weapon slots
+            const weaponsContainer = document.getElementById('weaponsContainer');
+            if (weaponsContainer) {
+                weaponsContainer.innerHTML = '';
+            }
+            
+            window.updateWeaponHUD();
+            console.log('🔫 Weapon HUD forcefully refreshed');
+        }, 100);
+    }
+    
+    // ========================================
+    // SESSION TRACKING RESET
+    // ========================================
+    
+    // Reset session tracker for score validation
+    if (window.sessionTracker && window.GameSessionTracker) {
+        try {
+            window.sessionTracker = new window.GameSessionTracker();
+        } catch (error) {
+            console.warn('⚠️ Could not reset session tracker:', error);
+            // Fallback: just reset the existing tracker properties if it exists
+            if (window.sessionTracker) {
+                window.sessionTracker.startTime = Date.now();
+                window.sessionTracker.events = [];
+            }
+        }
+    } else if (window.sessionTracker) {
+        // Fallback: manually reset session tracker properties
+        window.sessionTracker.startTime = Date.now();
+        window.sessionTracker.events = [];
+        console.log('📊 Session tracker properties reset manually');
+    }
+    
+    // ========================================
+    // BACKGROUND SYSTEM RESET
+    // ========================================
+    
+    // Reset background scroll position
+    if (window.setBackgroundScrollSpeed) {
+        window.setBackgroundScrollSpeed(1.0); // Reset to normal speed
+    }
+    
+    console.log('✅ Complete game reset finished!');
+    console.log(`📊 Final Status: Level ${gameState.level}, HP ${gameState.currentHP}/${gameState.maxHP}, Bullets ${gameState.bullets}/${gameState.maxBullets}`);
+}
 
+// ========================================
+// DAMAGE AND HEALING FUNCTIONS
+// ========================================
 
 export function takeDamage(damage) {
     const actualDamage = Math.min(damage, gameState.currentHP);
@@ -277,10 +425,9 @@ export function updatePlayerStatsForLevel(level) {
     console.log(`📈 Level ${level}: HP ${gameState.currentHP}/${gameState.maxHP} (+${hpIncrease}), Bullets ${gameState.bullets}/${gameState.maxBullets} (+${bulletIncrease})`);
 }
 
-
-
-
-
+// ========================================
+// MAIN UPDATE FUNCTION
+// ========================================
 
 export function update() {
     if (!gameState.gameRunning || gameState.currentState !== GameState.PLAYING) return;
@@ -429,6 +576,10 @@ export function update() {
     gameState.needsRedraw = true;
 }
 
+// ========================================
+// LEVEL PROGRESSION SYSTEM
+// ========================================
+
 export function checkLevelComplete() {
     if (gameState.levelProgress >= GAME_CONSTANTS.MAX_LEVEL_PROGRESS) {
         gameState.levelsCompleted++;
@@ -477,10 +628,12 @@ function proceedToNextLevel() {
     
     // Update player stats for new level
     updatePlayerStatsForLevel(gameState.level);
-    
 }
 
-// KORRIGIERTER 60 FPS GAME LOOP
+// ========================================
+// GAME LOOP FUNCTIONS
+// ========================================
+
 function gameLoop() {
     if (gameState.gameRunning) {
         update();
@@ -518,8 +671,79 @@ export function loadGame() {
     loadGlobalHighscores();
 }
 
+// ========================================
+// UTILITY RESET FUNCTIONS (FOR DEBUGGING)
+// ========================================
+
+// Function to reset only player stats (for debugging)
+export function resetPlayerStatsOnly() {
+    if (!gameState.playerStats) return;
+    
+    gameState.playerStats = {
+        damageBonus: 0,
+        attackSpeed: 0,
+        moveSpeed: 0,
+        projectileSpeed: 0,
+        healthRegen: GAME_CONSTANTS.PLAYER_BASE_HEALTH_REGEN,
+        bulletRegen: GAME_CONSTANTS.PLAYER_BASE_BULLET_REGEN,
+        lifeSteal: 0,
+        critChance: 0,
+        critDamage: 1.5,
+        selectedBuffs: []
+    };
+    
+    console.log('📊 Player stats reset to baseline');
+}
+
+// Function to reset only buffs (for debugging)
+export function resetBuffsOnly() {
+    gameState.activeBuffs = {};
+    
+    if (window.activeDropBuffs) {
+        Object.keys(window.activeDropBuffs).forEach(key => delete window.activeDropBuffs[key]);
+    }
+    
+    if (window.STAT_BUFFS) {
+        gameState.availableBuffs = [...window.STAT_BUFFS];
+    }
+    
+    console.log('🔮 Buffs reset');
+}
+
+// Function to reset only weapons (for debugging)
+export function resetWeaponsOnly() {
+    if (window.resetProjectileConfigs) {
+        window.resetProjectileConfigs();
+    }
+    
+    if (window.projectileSystem) {
+        // Reset cooldowns
+        window.projectileSystem.normalCooldown = 0;
+        window.projectileSystem.laserCooldown = 0;
+        window.projectileSystem.shotgunCooldown = 0;
+        window.projectileSystem.lightningCooldown = 0;
+        window.projectileSystem.seekingCooldown = 0;
+        
+        // Clear active projectiles
+        if (window.projectileSystem.laserBeams) {
+            window.projectileSystem.laserBeams.length = 0;
+        }
+    }
+    
+    console.log('🔫 Weapons reset');
+}
+
+// ========================================
+// EXPORTS
+// ========================================
+
 // Export all gameState properties individually for easier access
 export const { 
     score, lives, level, comboCount, scoreMultiplier, consecutiveHits, 
     scoreIn30Seconds, bossesKilled, damageThisLevel 
 } = gameState;
+
+// Make utility functions available globally for debugging
+window.resetPlayerStatsOnly = resetPlayerStatsOnly;
+window.resetBuffsOnly = resetBuffsOnly;
+window.resetWeaponsOnly = resetWeaponsOnly;
