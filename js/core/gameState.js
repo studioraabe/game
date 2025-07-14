@@ -375,7 +375,7 @@ export function resetGame() {
     
     // Reset background scroll position
     if (window.setBackgroundScrollSpeed) {
-        window.setBackgroundScrollSpeed(1.0); // Reset to normal speed
+        window.setBackgroundScrollSpeed(0.5); // Reset to normal speed
     }
     
     console.log('✅ Complete game reset finished!');

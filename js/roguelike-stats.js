@@ -240,64 +240,7 @@ export const STAT_BUFFS = [
         }
     },
     
-    // PROJECTILE BUFFS - Weapon unlocks (already unlocked with hotkey system)
-    {
-        id: 'laserMastery',
-        title: '🔵 Laser Mastery',
-        desc: 'Unlock Laser Beam - instant piercing damage (Q/E to cycle)',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.selectedBuffs.push('laserMastery');
-                if (window.unlockProjectileType) {
-                    window.unlockProjectileType('laserBeam');
-                }
-            }
-        }
-    },
-    {
-        id: 'shotgunBlast',
-        title: '💥 Shotgun Blast',
-        desc: 'Unlock Energy Shotgun - 5 pellet spread (Q/E to cycle)',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.selectedBuffs.push('shotgunBlast');
-                if (window.unlockProjectileType) {
-                    window.unlockProjectileType('energyShotgun');
-                }
-            }
-        }
-    },
-    {
-        id: 'chainLightning',
-        title: '⚡ Chain Lightning',
-        desc: 'Unlock Chain Lightning - jumps 3 enemies (Q/E to cycle)',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.selectedBuffs.push('chainLightning');
-                if (window.unlockProjectileType) {
-                    window.unlockProjectileType('chainLightning');
-                }
-            }
-        }
-    },
-    {
-        id: 'seekingBolt',
-        title: '🎯 Seeking Bolt',
-        desc: 'Unlock Seeking Bolt - homes on enemies (Q/E to cycle)',
-        effect: () => {
-            const gameState = window.gameState;
-            if (gameState && gameState.playerStats) {
-                gameState.playerStats.selectedBuffs.push('seekingBolt');
-                if (window.unlockProjectileType) {
-                    window.unlockProjectileType('seekingBolt');
-                }
-            }
-        }
-    },
-    
+  
     // Weapon modifier buffs
     {
         id: 'energyEfficiency',
