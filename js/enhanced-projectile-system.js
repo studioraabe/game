@@ -887,7 +887,7 @@ function processChainLightning(bullet, gameStateParam) {
     const maxChains = bullet.maxChains || 3;
     
     // Chain jump range
-    const chainRange = bullet.chainRange || 400;
+    const chainRange = bullet.chainRange || 600;
     
     // Initialize chainedTargets if it doesn't exist
     if (!bullet.chainedTargets) {

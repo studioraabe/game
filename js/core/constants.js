@@ -18,20 +18,20 @@ export const GAME_CONSTANTS = {
     
     // NEW: HP SYSTEM CONSTANTS
     PLAYER_BASE_HP: 100,
-    PLAYER_HP_PER_LEVEL: 25,
+    PLAYER_HP_PER_LEVEL: 50,
     PLAYER_BASE_DAMAGE: 20,
-    PLAYER_DAMAGE_PER_LEVEL: 5,
+    PLAYER_DAMAGE_PER_LEVEL: 10,
 	
 	    PLAYER_BASE_HEALTH_REGEN: 0.5,    // 1 HP every 2 seconds
     PLAYER_BASE_BULLET_REGEN: 0.5,    // 1 bullet every 2 seconds
 	
 	    PLAYER_BASE_MAX_BULLETS: 100,        // Start with 100 bullets max
-    PLAYER_BULLETS_PER_LEVEL: 100,        // +25 bullets per level (matches HP scaling)
+    PLAYER_BULLETS_PER_LEVEL: 50,        // +25 bullets per level (matches HP scaling)
 	 PLAYER_MAX_BULLET_CAP: 500,
 
     // NEW: ENEMY SCALING MULTIPLIERS
-    ENEMY_HP_MULTIPLIER_PER_LEVEL: 1.11,
-    ENEMY_DAMAGE_MULTIPLIER_PER_LEVEL: 1.08
+    ENEMY_HP_MULTIPLIER_PER_LEVEL: 1.15,
+    ENEMY_DAMAGE_MULTIPLIER_PER_LEVEL: 1.10
 };
 
 // NEW: ENEMY BASE STATS OBJECT (separate from GAME_CONSTANTS)
@@ -97,8 +97,8 @@ export function calculateEnemyDamage(enemyType, level) {
 }
 
 export const CAMERA_CONSTANTS = {
-    DEAD_ZONE_RATIO: 0.44,
-    FOLLOW_ZONE_RATIO: 0.56
+    DEAD_ZONE_RATIO: 0.45,
+    FOLLOW_ZONE_RATIO: 0.55
 };
 
 export const GameState = {
@@ -140,12 +140,12 @@ export const DROP_CONFIG = {
     common: {
         chance: 0.01,
         items: [
-            { type: DropType.SHIELD, chance: 0.20, duration: 0 },
-            { type: DropType.SCORE_MULTIPLIER, chance: 0.30, duration: 900 },
-            { type: DropType.MAGNET_MODE, chance: 0.20, duration: 1200 },
+            { type: DropType.SHIELD, chance: 0.30, duration: 0 },
+            { type: DropType.SCORE_MULTIPLIER, chance: 0.20, duration: 900 },
+            { type: DropType.MAGNET_MODE, chance: 0.20, duration: 1800 },
             { type: DropType.BERSERKER_MODE, chance: 0.15, duration: 600 },
             { type: DropType.GHOST_WALK, chance: 0.10, duration: 300 },
-            { type: DropType.TIME_SLOW, chance: 0.05, duration: 450 }
+            { type: DropType.TIME_SLOW, chance: 0.05, duration: 300 }
         ]
     }
 };

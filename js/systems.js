@@ -5,6 +5,7 @@ import { gameState, healPlayer } from './core/gameState.js'; // FIXED: Added hea
 import { createScorePopup, drops } from './entities.js';
 import { showAchievementPopup } from './ui-enhancements.js';
 
+
 // Achievement System
 export function checkAchievements() {
     // First Blood: Statt 1 Boss -> 1000 Bosse
