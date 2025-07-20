@@ -3,7 +3,7 @@
 import { getScreenX } from '../core/camera.js';
 import { gameState } from '../core/gameState.js';
 import { CANVAS } from '../core/constants.js';
-import { spriteManager, drawSkeletonSprite, drawProfessorSprite } from './sprite-system.js';
+import { spriteManager, drawSkeletonSprite, drawProfessorSprite, drawMunstaSprite } from './sprite-system.js';
 
 
 
@@ -778,12 +778,32 @@ export function drawEnemy(obstacle, ctx, gameState) {
             case 'frankensteinTable': 
                 drawFrankensteinTable(ctx, screenX, obstacle.y, obstacle.width, obstacle.height, obstacle); 
                 break;
+		case 'munsta':
+    if (spriteManager.loaded) {
+        const success = drawMunstaSprite(ctx, obstacle, gameState, screenX);
+        if (success) {
+            // Show health bar for multi-health enemies
+            if (obstacle.maxHealth > 1) {
+                drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, 
+                             obstacle.health, obstacle.maxHealth, obstacle.type);
+            }
+            return;
+        }
+    }
+    // If sprite fails, show a simple red rectangle as fallback
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(screenX, obstacle.y, obstacle.width, obstacle.height);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('MUNSTA', screenX + obstacle.width/2, obstacle.y + obstacle.height/2);
+    break;
 		
         }
     }
     
     // FIXED: Enhanced health bar display logic
-    const enemyTypesWithHealth = ['skeleton', 'vampire', 'spider', 'wolf', 'alphaWolf', 'bat'];
+const enemyTypesWithHealth = ['skeleton', 'vampire', 'spider', 'wolf', 'alphaWolf', 'bat', 'munsta'];
     
     if (enemyTypesWithHealth.includes(obstacle.type) && obstacle.maxHealth > 1) {
         drawHealthBar(ctx, screenX, obstacle.y - 8, obstacle.width, 

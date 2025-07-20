@@ -308,6 +308,18 @@ export const ENEMY_CONFIG = {
         timerBase: 80,
         timerMin: 20
     },
+	
+		munsta: {
+		width: 40,
+		height: 40,
+		health: 80,
+		points: 75,
+		timerBase: 400,
+		timerMin: 200,
+		damage: 15
+		},
+
+	
     bat: {
         width: 60,
         height: 44,

@@ -91,6 +91,9 @@ export class SpriteManager {
 			
 			
 			
+			
+			
+			
 						await this.loadSprite('professor', {
 				imagePath: 'assets/sprites/professor.png',
 				frameWidth: 480,
@@ -133,6 +136,62 @@ export class SpriteManager {
 					}
 				}
 			});
+			
+			
+						await this.loadSprite('munsta', {
+				imagePath: 'assets/sprites/munsta.png',
+				frameWidth: 480,
+				frameHeight: 480,
+				animations: {
+					idle: { 
+						row: 0, 
+						frames: 1,
+						frameRate: 4,
+						loop: true,
+						smooth: false
+					},
+					walk: { 
+						row: 0, 
+						frames: 1,
+						frameRate: 6,
+						loop: true,
+						smooth: false
+					},
+					attack: { 
+						row: 0, 
+						frames: 1,
+						frameRate: 10,
+						loop: false,
+						smooth: false
+					},
+					charging: {
+						row: 0,
+						frames: 1,
+						frameRate: 8,
+						loop: true,
+						smooth: false
+					},
+					laser: {
+						row: 0,
+						frames: 1,
+						frameRate: 12,
+						loop: false,
+						smooth: false
+					},
+					hit: {
+						row: 0,
+						frames: 1,
+						frameRate: 12,
+						loop: false,
+						smooth: false
+					}
+				}
+			});
+
+			
+			
+			
+			
             
             this.loaded = true;
             console.log('✅ All sprites loaded successfully!');
@@ -594,6 +653,186 @@ export function drawProfessorSprite(ctx, professor, gameState, screenX = null) {
 
 
 
+export function drawMunstaSprite(ctx, munsta, gameState, screenX = null) {
+    if (!spriteManager.loaded || !spriteManager.sprites.munsta) {
+        console.warn('⚠️ Munsta sprite not loaded - enemy will be invisible!');
+        return false;
+    }
+    
+    if (screenX === null) {
+        screenX = getScreenX(munsta.x);
+    }
+    
+    const entityId = munsta.id;
+    const scale = 0.3;
+    const facingLeft = munsta.facingDirection === 1;
+    
+    // Enhanced animation state determination
+    let currentAnimation = 'idle';
+    
+    if (munsta.isDead || munsta.health <= 0) {
+        currentAnimation = 'laser'; // Dramatic death effect
+        munsta.canDamagePlayer = false;
+    } else if (munsta.damageResistance > 25) {
+        currentAnimation = 'hit';
+        munsta.canDamagePlayer = true;
+    } else if (munsta.laserActive) {
+        currentAnimation = 'laser';
+        munsta.canDamagePlayer = false;
+    } else if (munsta.chargingLaser) {
+        currentAnimation = 'charging';
+        munsta.canDamagePlayer = false;
+    } else if (munsta.isAttacking) {
+        currentAnimation = 'attack';
+        munsta.canDamagePlayer = false;
+    } else if (Math.abs(munsta.velocityX || 0) > 0.1) {
+        currentAnimation = 'walk';
+        munsta.canDamagePlayer = true;
+    } else {
+        currentAnimation = 'idle';
+        munsta.canDamagePlayer = true;
+    }
+    
+    // Handle animation transitions
+    if (munsta.lastAnimation !== currentAnimation) {
+        spriteManager.setAnimation('munsta', entityId, currentAnimation);
+        munsta.lastAnimation = currentAnimation;
+    }
+    
+    ctx.save();
+    
+    // Death fade effect
+    if (munsta.isDead || munsta.health <= 0) {
+        const fadeProgress = Math.min((munsta.deathTimer || 10) / 30, 1);
+        ctx.globalAlpha = Math.max(0.1, 1 - fadeProgress);
+        ctx.filter = 'sepia(100%) hue-rotate(15deg)'; // Red death effect
+    }
+    
+    // RED MECHANICAL AURA
+    if (!munsta.isDead && munsta.health > 0) {
+        const mechanicalPulse = 0.3 + Math.sin(Date.now() * 0.006) * 0.2;
+        const gradient = ctx.createRadialGradient(
+            screenX + munsta.width/2, munsta.y + munsta.height/2, 0,
+            screenX + munsta.width/2, munsta.y + munsta.height/2, 40 * scale
+        );
+        gradient.addColorStop(0, `rgba(255, 0, 0, ${mechanicalPulse * 0.25})`);
+        gradient.addColorStop(0.5, `rgba(200, 0, 0, ${mechanicalPulse * 0.15})`);
+        gradient.addColorStop(1, 'rgba(150, 0, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(screenX - 20, munsta.y - 20, munsta.width + 40, munsta.height + 40);
+    }
+    
+    // CHARGING LASER EFFECT - RED ENERGY
+    if (munsta.chargingLaser) {
+        const chargingIntensity = (munsta.chargeTime || 0) / (munsta.maxChargeTime || 90);
+        const sparkleAlpha = 0.9 * chargingIntensity;
+        
+        // Red energy buildup particles
+        for (let i = 0; i < 8; i++) {
+            const angle = (Date.now() * 0.005 + i * 0.785) % (Math.PI * 2);
+            const radius = 30 * scale * (0.5 + chargingIntensity * 0.7);
+            const sparkleX = screenX + munsta.width/2 + Math.cos(angle) * radius;
+            const sparkleY = munsta.y + munsta.height/2 + Math.sin(angle) * radius;
+            
+            ctx.fillStyle = `rgba(255, 0, 0, ${sparkleAlpha})`;
+            ctx.fillRect(sparkleX - 3, sparkleY - 3, 6, 6);
+            
+            // Inner bright core
+            ctx.fillStyle = `rgba(255, 100, 100, ${sparkleAlpha * 0.8})`;
+            ctx.fillRect(sparkleX - 1, sparkleY - 1, 2, 2);
+        }
+        
+        // Central charging core
+        const coreSize = 8 + chargingIntensity * 12;
+        ctx.fillStyle = `rgba(255, 0, 0, ${sparkleAlpha})`;
+        ctx.fillRect(
+            screenX + munsta.width/2 - coreSize/2, 
+            munsta.y + munsta.height/2 - coreSize/2, 
+            coreSize, coreSize
+        );
+        
+        // Warning flash when almost ready
+        if (chargingIntensity > 0.8) {
+            const flashAlpha = Math.sin(Date.now() * 0.03) * 0.3 + 0.4;
+            ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+            ctx.fillRect(screenX - 5, munsta.y - 5, munsta.width + 10, munsta.height + 10);
+        }
+    }
+    
+    // ACTIVE LASER BEAM EFFECT
+    if (munsta.laserActive) {
+        const beamY = munsta.y + munsta.height/2 - 30;
+        const beamStartX = screenX + munsta.width/2;
+        const beamLength = 400;
+        const beamDirection = facingLeft;
+        const actualBeamEndX = beamStartX + (beamLength * beamDirection);
+        
+        // Outer glow layer
+        ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
+        ctx.fillRect(
+            Math.min(beamStartX, actualBeamEndX) - 6, 
+            beamY - 8, 
+            Math.abs(beamLength) + 12, 
+            16
+        );
+        
+        // Middle glow layer
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.fillRect(
+            Math.min(beamStartX, actualBeamEndX) - 3, 
+            beamY - 4, 
+            Math.abs(beamLength) + 6, 
+            8
+        );
+        
+        // Main laser beam
+        ctx.fillStyle = 'rgba(255, 0, 0, 1.0)';
+        ctx.fillRect(
+            Math.min(beamStartX, actualBeamEndX), 
+            beamY - 2, 
+            Math.abs(beamLength), 
+            4
+        );
+        
+        // Bright core
+        ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+        ctx.fillRect(
+            Math.min(beamStartX, actualBeamEndX), 
+            beamY - 1, 
+            Math.abs(beamLength), 
+            2
+        );
+        
+        // Muzzle flash at munsta's position
+        const flashSize = 15 + Math.sin(Date.now() * 0.1) * 5;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(
+            beamStartX - flashSize/2, 
+            beamY - flashSize/2, 
+            flashSize, flashSize
+        );
+        
+        // Screen flash effect (subtle)
+        ctx.fillStyle = 'rgba(255, 200, 200, 0.03)';
+        ctx.fillRect(0, 0, 2000, 2000);
+    }
+    
+    // Align sprite positioning
+    const spriteWidth = 480 * scale;
+    const spriteHeight = 480 * scale;
+    const spriteX = screenX - (spriteWidth - munsta.width) / 2;
+    const spriteY = munsta.y + munsta.height - spriteHeight + 5;
+    
+    // Draw the munsta sprite
+    const success = spriteManager.drawSprite(
+        ctx, 'munsta', currentAnimation,
+        spriteX, spriteY, scale, facingLeft,
+        gameState.deltaTime, entityId
+    );
+    
+    ctx.restore();
+    return success;
+}
 
 
 
@@ -647,4 +886,10 @@ export function getEntityAnimationInfo(spriteName, entityId) {
         return spriteManager.animations[spriteName][entityId];
     }
     return null;
+}
+
+export function cleanupMunstaEntity(munstaId) {
+    if (spriteManager && spriteManager.cleanupEntity) {
+        spriteManager.cleanupEntity('munsta', munstaId);
+    }
 }

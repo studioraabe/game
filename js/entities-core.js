@@ -160,7 +160,7 @@ function createObstacle(type, x, y, width, height) {
     };
     
     // FIXED: Comprehensive health assignment for ALL enemy types including professor
-    const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf', 'professor'];
+const enemyTypes = ['skeleton', 'bat', 'vampire', 'spider', 'wolf', 'alphaWolf', 'professor', 'munsta'];
     
     if (enemyTypes.includes(type)) {
         obstacle.maxHealth = calculateEnemyHP(type, gameState.level);
@@ -207,6 +207,23 @@ function createObstacle(type, x, y, width, height) {
         obstacle.moveSpeed = 0.25;
         obstacle.hasDetectedPlayer = false;
     }
+	
+	if (type === 'munsta') {
+    obstacle.attackCooldown = 0;
+    obstacle.isAttacking = false;
+    obstacle.facingDirection = -1;
+    obstacle.detectionRange = 450;
+    obstacle.attackRange = 400;
+    obstacle.moveSpeed = 0.8;
+    obstacle.hasDetectedPlayer = false;
+    obstacle.chargingLaser = false;
+    obstacle.chargeTime = 0;
+    obstacle.maxChargeTime = 90;
+    obstacle.laserDuration = 60;
+    obstacle.laserActive = false;
+    obstacle.laserTimer = 0;
+}
+	
     
     return obstacle;
 }
@@ -236,10 +253,21 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         const bossChance = SPAWN_CHANCES.getBossChance(level);
         const batChance = 0.15; // 15% for bats
         const spiderChance = 0.08; // 8% for spiders
-        const wolfChance = 0.03; // 3% for wolves
-        const professorChance = 0.05; // 5% for professors
-        const vampireChance = 0.04; // 4% for vampires
+		const wolfChance = 0.03; // 3% for wolves
+		const professorChance = 0.05; // 5% for professors
+		const munstaChance = 0.04; // 4% for munsta  // ADD THIS LINE
+		const vampireChance = 0.04; // 4% for vampires
         const skeletonChance = 0.10; // 10% for skeletons
+		
+		
+
+		// In threshold building section:
+
+
+
+
+		
+		
         
         // HAZARDS GET BOOSTED RATES
         const teslaBaseChance = 0.08 * hazardBoost; // 10% base, scales up to 40%
@@ -261,6 +289,8 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         
         thresholds.alphaWolf = currentThreshold + bossChance;
         currentThreshold = thresholds.alphaWolf;
+		
+
         
         thresholds.bat = currentThreshold + batChance;
         currentThreshold = thresholds.bat;
@@ -273,6 +303,9 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         
         thresholds.professor = currentThreshold + professorChance;
         currentThreshold = thresholds.professor;
+		
+		thresholds.munsta = currentThreshold + munstaChance;  // ADD THIS
+currentThreshold = thresholds.munsta;  
         
         thresholds.vampire = currentThreshold + vampireChance;
         currentThreshold = thresholds.vampire;
@@ -346,6 +379,16 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
             obstacleHeight = config.height;
             obstacleY = CANVAS.groundY - obstacleHeight + 10;
             timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+			
+				} else if (obstacleType < thresholds.munsta) {           // ADD THIS ENTIRE BLOCK
+					obstacleTypeStr = 'munsta';
+					const config = ENEMY_CONFIG[obstacleTypeStr];
+					obstacleWidth = config.width;
+					obstacleHeight = config.height;
+					obstacleY = CANVAS.groundY - obstacleHeight + 10;
+					timerValue = calculateSpawnTimer(config.timerBase, config.timerMin, level);
+			
+			
         } else if (obstacleType < thresholds.vampire) {
             obstacleTypeStr = 'vampire';
             const config = ENEMY_CONFIG[obstacleTypeStr];
@@ -433,6 +476,9 @@ export function spawnObstacle(level, gameSpeed, timeSlowFactor) {
         if (obstacleTypeStr === 'boltBox') {
             bulletBoxesFound++;
         }
+		
+
+
         
         if (obstacleTypeStr === 'teslaCoil') {
             newObstacle.chargeTime = 120;

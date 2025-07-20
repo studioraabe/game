@@ -781,6 +781,8 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
             updateAlphaWolf(obstacle, level, gameStateParam);
         }
         
+
+
         // BAT AI SYSTEM - FIXED: Apply speed multiplier to bat movement
         if (obstacle.type === 'bat') {
             updateBatAI(obstacle, gameStateParam, individualSpeedMultiplier);
@@ -790,6 +792,11 @@ export function updateObstacles(gameSpeed, enemySlowFactor, level, magnetRange, 
 				if (obstacle.type === 'professor') {
 			updateProfessorAI(obstacle, level, gameStateParam);
 		}
+
+		if (obstacle.type === 'munsta') {
+			updateMunstaAI(obstacle, level, gameStateParam);
+		}
+
 
         // Ground enemy movement
         if (obstacle.type === 'spider') {
@@ -1654,4 +1661,105 @@ function createMagicalProjectile(startX, startY, targetX, targetY, power) {
     
 }
 
+function updateMunstaAI(obstacle, level, gameStateParam) {
+    // Floating movement (slight hover effect)
+    obstacle.y += Math.sin(Date.now() * 0.003 + obstacle.animationTime) * 0.5 * gameState.deltaTime;
+    
+    const playerDistance = Math.abs(player.x - obstacle.x);
+    const playerVerticalDistance = Math.abs(player.y - obstacle.y);
+    const playerInDetectionRange = playerDistance < obstacle.detectionRange;
+    const playerInAttackRange = playerDistance < obstacle.attackRange && playerVerticalDistance < 200;
+    
+    // FIXED: Face the player when detected - correct direction logic
+    if (playerInDetectionRange) {
+        // If player is to the LEFT of munsta, face LEFT (-1)
+        // If player is to the RIGHT of munsta, face RIGHT (1)
+        obstacle.facingDirection = player.x < obstacle.x ? -1 : 1;
+        obstacle.hasDetectedPlayer = true;
+        
+        // DEBUG: Log facing direction
+    }
+    
+    // Movement behavior
+    if (!obstacle.hasDetectedPlayer) {
+        obstacle.x -= obstacle.moveSpeed * gameState.deltaTime;
+    } else if (playerInDetectionRange && playerDistance > obstacle.attackRange) {
+        const direction = player.x > obstacle.x ? 1 : -1;
+        obstacle.x += (obstacle.moveSpeed * 0.25) * direction * gameState.deltaTime;
+    }
+    
+    // Attack cooldown management
+    obstacle.attackCooldown -= gameState.deltaTime;
+    
+    // Laser charging logic
+    if (obstacle.chargingLaser) {
+        obstacle.chargeTime += gameState.deltaTime;
+        
+        if (obstacle.chargeTime >= obstacle.maxChargeTime) {
+            // Fire laser beam
+            obstacle.chargingLaser = false;
+            obstacle.laserActive = true;
+            obstacle.laserTimer = obstacle.laserDuration;
+            obstacle.chargeTime = 0;
+            
+        }
+    }
+    
+    // FIXED: Active laser beam collision logic
+    if (obstacle.laserActive) {
+        obstacle.laserTimer -= gameState.deltaTime;
+        
+        // Check for player collision with laser beam
+        if (!gameStateParam.isGhostWalking && !isPlayerInvulnerable(gameStateParam)) {
+            const laserY = obstacle.y + obstacle.height/2 - 5;
+            const laserHeight = 10;
+            
+            // FIXED: Correct laser beam direction calculation
+            let beamStartX, beamEndX;
+            
+            if (obstacle.facingDirection < 0) {
+                // Facing RIGHT: beam goes from munsta's right side to the right
+                beamStartX = obstacle.x + obstacle.width;
+                beamEndX = beamStartX + 400;
+            } else {
+                // Facing LEFT: beam goes from munsta's left side to the left
+                beamEndX = obstacle.x;
+                beamStartX = beamEndX - 400;
+            }
+            
+            // DEBUG: Log laser beam coordinates
+            
+            // Check if player is in laser beam path
+            if (player.x < beamEndX && player.x + player.width > beamStartX &&
+                player.y < laserY + laserHeight && player.y + player.height > laserY) {
+                
+                
+                // Player hit by laser beam
+                const playerDied = handlePlayerDamageWithAmount(gameStateParam, 20, 'Munsta Laser', 'laser');
+                
+                if (playerDied) {
+                    return true; // Signal game over
+                }
+            }
+        }
+        
+        if (obstacle.laserTimer <= 0) {
+            obstacle.laserActive = false;
+            obstacle.attackCooldown = 180; // 3 seconds cooldown
+        }
+    }
+    
+    // Start attack sequence
+    if (obstacle.attackCooldown <= 0 && 
+        playerInAttackRange && 
+        !obstacle.isAttacking && 
+        !obstacle.chargingLaser &&
+        !obstacle.laserActive &&
+        obstacle.hasDetectedPlayer &&
+        !gameStateParam.isGhostWalking) {
+        
+        obstacle.chargingLaser = true;
+        obstacle.chargeTime = 0;
+    }
+}
 
