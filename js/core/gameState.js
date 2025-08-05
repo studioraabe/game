@@ -548,12 +548,55 @@ export function update() {
     }
     
     // FIXED: Check bat projectiles for player death BEFORE other collision checks
-    const batKilledPlayer = window.updateBatProjectiles();
-    if (batKilledPlayer) {
-        console.log("🦇 Player killed by bat projectile!");
-        window.gameOver();
-        return;
+  // FIXED: Check bat projectiles for player death BEFORE other collision checks
+const batKilledPlayer = window.updateBatProjectiles();
+if (batKilledPlayer) {
+    console.log("🦇 Player killed by bat projectile!");
+    window.gameOver();
+    return;
+}
+
+// CHECK MUNSTA LASERS
+for (const obstacle of window.obstacles) {
+    if (obstacle.type === 'munsta' && obstacle.laserActive) {
+        // Check if laser hits player
+        const laserY = obstacle.y + obstacle.height/2 - 30;
+        const laserHeight = 10;
+        const laserLength = 400;
+        
+        let beamStartX, beamEndX;
+        
+        // Match the reversed direction from updateMunstaAI
+        if (obstacle.facingDirection < 0) {
+            // Facing LEFT - laser shoots RIGHT
+            beamStartX = obstacle.x + obstacle.width/2;
+            beamEndX = beamStartX + laserLength;
+        } else {
+            // Facing RIGHT - laser shoots LEFT
+            beamStartX = obstacle.x + obstacle.width/2;
+            beamEndX = beamStartX - laserLength;
+        }
+        
+        const beamMinX = Math.min(beamStartX, beamEndX);
+        const beamMaxX = Math.max(beamStartX, beamEndX);
+        
+        // Check collision
+        if (window.player.x < beamMaxX && 
+            window.player.x + window.player.width > beamMinX &&
+            window.player.y < laserY + laserHeight && 
+            window.player.y + window.player.height > laserY &&
+            !window.isPlayerInvulnerable(gameState)) {
+            
+            console.log("🔴 Player killed by munsta laser!");
+            // Apply damage
+            const playerDied = window.handlePlayerDamageWithAmount(gameState, 20, 'Munsta Laser', 'laser');
+            if (playerDied) {
+                window.gameOver();
+                return;
+            }
+        }
     }
+}
     
     updateDropBuffs();
     updateDamageEffects();

@@ -759,13 +759,14 @@ export function drawMunstaSprite(ctx, munsta, gameState, screenX = null) {
         }
     }
     
-    // ACTIVE LASER BEAM EFFECT
-    if (munsta.laserActive) {
-        const beamY = munsta.y + munsta.height/2 - 30;
-        const beamStartX = screenX + munsta.width/2;
-        const beamLength = 400;
-        const beamDirection = facingLeft;
-        const actualBeamEndX = beamStartX + (beamLength * beamDirection);
+	// ACTIVE LASER BEAM EFFECT
+	if (munsta.laserActive) {
+		const beamY = munsta.y + munsta.height/2 - 30;
+		const beamStartX = screenX + munsta.width/2;
+		const beamLength = 200;
+		// FIXED: Correct beam direction based on facing
+		const beamDirection = facingLeft ? 1 : -1;  // facingLeft means shoot left (-1)
+		const actualBeamEndX = beamStartX + (beamLength * beamDirection);
         
         // Outer glow layer
         ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
